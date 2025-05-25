@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%; /* Almost White */
+    --foreground: 0 0% 13%; /* Very Dark Gray */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 0 0% 13%;
+
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 0 0% 13%;
+
+    --primary: 330 100% 50%; /* Logo Pink */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 0 0% 94%; /* Light Gray */
+    --secondary-foreground: 0 0% 20%; /* Dark Gray */
+
+    --muted: 0 0% 90%; /* Slightly darker gray */
+    --muted-foreground: 0 0% 40%; /* Medium Gray */
+
+    --accent: 0 72% 51%; /* Red (was previously primary) */
+    --accent-foreground: 0 0% 100%; /* White */
+
+    --destructive: 0 84.2% 60.2%; /* Standard Destructive Red */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 85%; /* Gray Border */
+    --input: 0 0% 92%; /* Light Gray Input Background */
+    --ring: 330 100% 50%; /* Logo Pink for Rings */
+
+    --radius: 0.5rem;
+
+    /* Sidebar specific theme variables */
+    --sidebar-background: 0 0% 96%; 
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 330 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 72% 51%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 85%;
+    --sidebar-ring: 330 100% 50%;
+
+    /* Chart colors reflecting new theme */
+    --chart-1: 330 100% 50%; /* Logo Pink (Primary) */
+    --chart-2: 0 72% 51%;   /* Red (Accent) */
+    --chart-3: 210 70% 55%; /* Complementary Blue */
+    --chart-4: 45 70% 60%;  /* Warm Yellow/Gold */
+    --chart-5: 260 60% 65%; /* Purple/Violet */
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 95%;
+
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 330 100% 65%; /* Lighter Pink for Dark Mode */
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 0 75% 65%; /* Lighter Red for Dark Mode */
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 25%;
+    --input: 0 0% 18%;
+    --ring: 330 100% 65%; /* Lighter Pink Ring for Dark Mode */
+    
+    /* Dark Sidebar specific theme variables */
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 330 100% 65%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 75% 65%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 330 100% 65%;
+
+    /* Chart colors for dark mode */
+    --chart-1: 330 100% 65%;   /* Lighter Pink */
+    --chart-2: 0 75% 65%;      /* Lighter Red */
+    --chart-3: 210 70% 65%;    /* Lighter Blue */
+    --chart-4: 45 70% 70%;     /* Lighter Yellow/Gold */
+    --chart-5: 260 60% 75%;    /* Lighter Purple/Violet */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans);
+  }
+}

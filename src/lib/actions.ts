@@ -4,7 +4,10 @@
 import { z } from "zod";
 import nodemailer from "nodemailer";
 import { chatbotAssistant, type ChatbotAssistantInput } from "@/ai/flows/chatbot-assistant";
-import { PRODUCT_DOCUMENTATION, EMAIL_USER, EMAIL_PASS } from "@/constants";
+import { PRODUCT_DOCUMENTATION } from "@/constants";
+
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
 import type { InquiryFormState } from "./schemas";
 import { inquirySchema } from "./schemas";
 

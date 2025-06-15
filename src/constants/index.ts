@@ -29,4 +29,17 @@ EduMax School Management Software Features:
 - Transport management: Features for managing school bus routes, student transportation details, and communication with transport staff.
 - Examination and results management: Comprehensive module for planning exams, entering marks, generating report cards, and publishing results online.
 - Communication tools: Built-in messaging, email, and SMS integration for effective communication between school, students, and parents.
+
+EduMax Realtime Student Management (RSM) Features:
+- Enhanced school-to-parent communication: Tools for seamless and real-time communication between schools and parents.
+- Student safety: Features designed to ensure and monitor student safety.
+- Smarter financial management: Support for efficient financial management for students.
+- Real-time visibility: Provides immediate insights into student-related activities and data.
+- Seamless oversight: Enables easy monitoring and management for schools and families.
+
+EduMax ExamVault Features:
+- Secure and independent platform: Curates, verifies, and safeguards high-quality exam questions.
+- Teacher removal from assessment: Completely removes teachers from the assessment process, allowing them to focus solely on teaching.
+- Academic integrity: Guarantees that every exam reflects true student ability by eliminating bias and preventing leaks.
+- No prior exposure: Ensures students have no prior exposure to the questions, making every test a fair and honest measure of learning.
 `;

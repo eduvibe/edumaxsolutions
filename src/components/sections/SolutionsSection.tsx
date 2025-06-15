@@ -9,18 +9,30 @@ const solutions = [
   {
     title: "Learning Management System (LMS)",
     description: "A comprehensive platform to create, deliver, and manage educational content, track student progress, and foster interactive learning environments.",
-    icon: <BookOpenCheck className="h-10 w-10 text-primary" />,
     image: "https://placehold.co/400x300.png",
     dataAiHint: "LMS dashboard",
-    link: "/#lms",
+    link: "/lms",
   },
   {
     title: "School Management Software",
     description: "An all-in-one solution to streamline administrative tasks, manage student data, facilitate communication, and improve overall school efficiency.",
-    icon: <Building className="h-10 w-10 text-primary" />,
     image: "https://placehold.co/400x300.png",
     dataAiHint: "admin panel",
-    link: "/#management-software",
+    link: "/management-software",
+  },
+  {
+    title: "Realtime Student Management (RSM)",
+    description: "Smart tracking. Safer students. Connected parents. All-in-one school management that brings peace of mind to every family.",
+    image: "https://placehold.co/400x300.png",
+    dataAiHint: "student management dashboard",
+    link: "/rsm",
+  },
+  {
+    title: "ExamVault",
+    description: "Teach without limits. Test without bias. Trusted exam integrity for true student performance.",
+    image: "https://placehold.co/400x300.png",
+    dataAiHint: "exam platform",
+    link: "/examvault"
   },
 ];
 
@@ -35,7 +47,7 @@ export function SolutionsSection() {
             Tailored software to meet the unique needs of primary and secondary schools in Nigeria.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {solutions.map((solution, index) => (
             <Card 
               key={solution.title} 
@@ -44,12 +56,10 @@ export function SolutionsSection() {
             >
               <CardHeader className="p-6">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-full bg-primary/10 flex-shrink-0">
-                    {solution.icon}
-                  </div>
+
                   <div>
-                    <CardTitle className="text-2xl font-semibold">{solution.title}</CardTitle>
-                    <CardDescription className="mt-2 text-muted-foreground leading-relaxed">{solution.description}</CardDescription>
+                    <CardTitle className="text-xl font-semibold">{solution.title}</CardTitle>
+                    <CardDescription className="mt-1 text-base text-muted-foreground leading-relaxed">{solution.description}</CardDescription>
                   </div>
                 </div>
               </CardHeader>

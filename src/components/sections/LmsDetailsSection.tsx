@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Presentation, TrendingUp, FileText, UsersRound, CheckCircle } from "lucide-react";
 import Image from "next/image";
 
+
 const lmsFeatures = [
   {
-    title: "Interactive Courses",
+    title: "Interactive Subjects",
     description: "Engage students with multimedia content, quizzes, and assignments.",
     icon: <Presentation className="h-6 w-6 text-primary" />,
   },
@@ -15,8 +16,8 @@ const lmsFeatures = [
     icon: <TrendingUp className="h-6 w-6 text-primary" />,
   },
   {
-    title: "Online Assessments",
-    description: "Create and manage secure online tests and examinations.",
+    title: "Offline Assessments",
+    description: "Create and manage secure offline tests and examinations.",
     icon: <FileText className="h-6 w-6 text-primary" />,
   },
   {
@@ -59,7 +60,7 @@ export function LmsDetailsSection() {
           <div className="relative group animate-in fade-in slide-in-from-right-12 duration-700 ease-out delay-200">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <Image
-              src="https://placehold.co/500x450.png"
+              src="/media/lms.png"
               alt="LMS Dashboard Showcase"
               width={500}
               height={450}

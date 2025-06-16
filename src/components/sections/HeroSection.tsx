@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 
+
 export function HeroSection() {
   const contactPageLink = "/contact";
   return (
@@ -36,14 +37,14 @@ export function HeroSection() {
           <div className="relative group animate-in fade-in zoom-in-95 duration-1000 ease-out delay-300">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-accent to-primary/50 rounded-lg blur opacity-40 group-hover:opacity-60 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <Image
-              src="https://placehold.co/600x400.png"
-              alt="EduMax Solutions Platform Showcase"
-              width={600}
-              height={400}
-              className="rounded-lg shadow-2xl relative"
-              data-ai-hint="education tech"
-              priority
-            />
+  src="/media/heroimage.png"
+  alt="EduMax Solutions Platform Showcase"
+  width={600}
+  height={400}
+  className="rounded-lg shadow-2xl relative"
+  data-ai-hint="education tech"
+  priority
+/>
           </div>
         </div>
       </div>

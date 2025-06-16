@@ -17,7 +17,7 @@ export function FounderProfileSection() {
           <div className="grid md:grid-cols-3">
             <div className="md:col-span-1">
               <Image
-                src="https://placehold.co/400x500.png"
+                src="/media/ceoedumax.png"
                 alt="Okolo Uchenna Maxwell, Founder of EduMax Solutions"
                 width={400}
                 height={500}

@@ -33,7 +33,7 @@ export function ManagementSoftwareSection() {
           <div className="relative group order-last md:order-first animate-in fade-in slide-in-from-left-12 duration-700 ease-out delay-200">
              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <Image
-              src="https://placehold.co/500x450.png"
+              src="/media/sms.jpg"
               alt="School Management Software Interface"
               width={500}
               height={450}

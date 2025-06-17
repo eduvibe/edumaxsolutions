@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export function ExamVaultSection() {
   return (
-    <section className="py-16 bg-white">
+    <section id="examvault" className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-12">
           <div className="flex-1 max-w-xl">

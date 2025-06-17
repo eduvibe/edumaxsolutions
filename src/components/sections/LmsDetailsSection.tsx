@@ -29,7 +29,7 @@ const lmsFeatures = [
 
 export function LmsDetailsSection() {
   return (
-    <section id="lms" className="py-16 md:py-24 bg-background">
+    <section id="lms-details" className="py-16 md:py-24 bg-background">
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-in fade-in slide-in-from-left-12 duration-700 ease-out">

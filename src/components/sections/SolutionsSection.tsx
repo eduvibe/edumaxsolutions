@@ -11,28 +11,28 @@ const solutions = [
     description: "A comprehensive platform to create, deliver, and manage educational content, track student progress, and foster interactive learning environments.",
     image: "/media/lms.png",
     dataAiHint: "LMS dashboard",
-    link: "/lms",
+    link: "#lms-details",
   },
   {
     title: "School Management Software",
     description: "An all-in-one solution to streamline administrative tasks, manage student data, facilitate communication, and improve overall school efficiency.",
     image: "/media/sms.jpg",
     dataAiHint: "admin panel",
-    link: "/management-software",
+    link: "#management-software",
   },
   {
     title: "Realtime Student Management (RSM)",
     description: "Smart tracking. Safer students. Connected parents. All-in-one school management that brings peace of mind to every family.",
     image: "/media/attd.png",
     dataAiHint: "student management dashboard",
-    link: "/rsm",
+    link: "#rms",
   },
   {
     title: "ExamVault",
     description: "Teach without limits. Test without bias. Trusted exam integrity for true student performance.",
     image: "/media/examv.png",
     dataAiHint: "exam platform",
-    link: "/examvault"
+    link: "#examvault"
   },
 ];
 

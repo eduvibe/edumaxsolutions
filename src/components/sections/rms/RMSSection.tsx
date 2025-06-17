@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export function RMSSection() {
   return (
-    <section className="py-16 bg-gray-50">
+    <section id="rms" className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="flex-1 max-w-xl">

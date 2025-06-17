@@ -4,6 +4,8 @@ import { SolutionsSection } from "@/components/sections/SolutionsSection";
 import { FounderProfileSection } from "@/components/sections/FounderProfileSection";
 import { LmsDetailsSection } from "@/components/sections/LmsDetailsSection";
 import { ManagementSoftwareSection } from "@/components/sections/ManagementSoftwareSection";
+import { RMSSection } from "@/components/sections/rms/RMSSection";
+import { ExamVaultSection } from "@/components/sections/examvault/ExamVaultSection";
 import { InquirySection } from "@/components/sections/InquirySection";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +23,14 @@ export default function HomePage() {
         <Separator className="my-8 md:my-12" />
       </div>
       <ManagementSoftwareSection />
+      <div className="animate-in fade-in duration-500 ease-out delay-300">
+        <Separator className="my-8 md:my-12" />
+      </div>
+      <RMSSection />
+      <div className="animate-in fade-in duration-500 ease-out delay-300">
+        <Separator className="my-8 md:my-12" />
+      </div>
+      <ExamVaultSection />
       <div className="animate-in fade-in duration-500 ease-out delay-300">
         <Separator className="my-8 md:my-12" />
       </div>

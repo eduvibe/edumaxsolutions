@@ -35,7 +35,7 @@ export function RMSSection() {
           </div>
           <div className="flex-1 relative w-full max-w-lg aspect-video">
             <Image
-              src="/media/rms-dashboard.png"
+              src="/media/attd.png"
               alt="RMS Dashboard"
               fill
               className="object-cover rounded-lg shadow-xl"

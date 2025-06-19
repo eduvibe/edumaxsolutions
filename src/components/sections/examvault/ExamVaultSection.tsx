@@ -35,7 +35,7 @@ export function ExamVaultSection() {
           </div>
           <div className="flex-1 relative w-full max-w-lg aspect-video">
             <Image
-              src="/media/examvpng"
+              src="/media/examv.png"
               alt="ExamVault Interface"
               fill
               className="object-cover rounded-lg shadow-xl"

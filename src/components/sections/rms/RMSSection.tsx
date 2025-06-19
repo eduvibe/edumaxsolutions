@@ -6,11 +6,9 @@ export function RMSSection() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="flex-1 max-w-xl">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Result Management System (RMS)</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Realtime Student Management (RSM)</h2>
             <p className="text-lg text-gray-600 mb-8">
-              Streamline your academic result processing and management with our comprehensive RMS solution. 
-              Designed specifically for educational institutions, our system ensures accurate, efficient, and 
-              secure handling of student results.
+              Smart tracking. Safer students. Connected parents. All-in-one school management that brings peace of mind to every family.
             </p>
             <ul className="space-y-4">
               <li className="flex items-start">

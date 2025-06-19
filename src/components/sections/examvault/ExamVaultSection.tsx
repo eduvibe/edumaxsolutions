@@ -33,6 +33,7 @@ export function ExamVaultSection() {
               </li>
             </ul>
           </div>
+          
           <div className="flex-1 relative w-full max-w-lg aspect-video">
             <Image
               src="/media/examv.png"

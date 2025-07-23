@@ -31,8 +31,8 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-medium text-foreground">Office Address</h3>
                     <p className="text-muted-foreground">
-                      123 Education Drive, <br />
-                      Ikeja, Lagos, Nigeria.
+                      B12 Wemabod Estate Magboro. <br />
+                      Ogun State, Nigeria.
                     </p>
                   </div>
                 </div>

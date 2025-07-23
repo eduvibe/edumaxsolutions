@@ -17,11 +17,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { inquirySchema } from "@/lib/schemas";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { SuccessCard } from "./SuccessCard";
 
 
 
 export function InquiryForm() {
-  const form = useForm<z.infer<typeof inquirySchema>>({
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+    const form = useForm<z.infer<typeof inquirySchema>>({
     resolver: zodResolver(inquirySchema),
     defaultValues: {
       schoolName: "",
@@ -32,16 +36,39 @@ export function InquiryForm() {
     },
   });
 
+  async function onSubmit(data: z.infer<typeof inquirySchema>) {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("https://formsubmit.co/edumaxsolutions.ng@gmail.com", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        setIsSubmitted(true);
+      } else {
+        // Handle error - maybe show a toast notification
+        console.error("Form submission failed");
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+
+  if (isSubmitted) {
+    return <SuccessCard />;
+  }
 
   return (
     <Form {...form}>
-            <form
-        action="https://formsubmit.co/edumaxsolutions.ng@gmail.com"
-        method="POST"
-        className="space-y-6"
-      >
-        <input type="hidden" name="_next" value="/contact" />
-        <input type="hidden" name="_captcha" value="false" />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="schoolName"
@@ -111,8 +138,8 @@ export function InquiryForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? (
+        <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
+          {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Sending...

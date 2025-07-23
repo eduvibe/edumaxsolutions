@@ -43,8 +43,8 @@ export function Footer() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              EduMax Solutions Ltd.<br />
-              Lagos, Nigeria.
+              B12 Wemabod Estate Magboro.<br />
+              Ogun State, Nigeria.
             </p>
           </div>
         </div>

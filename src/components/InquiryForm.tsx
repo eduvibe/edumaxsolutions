@@ -39,7 +39,7 @@ export function InquiryForm() {
   async function onSubmit(data: z.infer<typeof inquirySchema>) {
     setIsSubmitting(true);
     try {
-      const response = await fetch("https://formsubmit.co/65141489b49df8b28bf2aab1e5aaa84c", {
+      const response = await fetch("https://formsubmit.co/6301b598d231260f112d17dd40cd1071", {
         method: "POST",
         headers: {
           'Content-Type': 'application/json',

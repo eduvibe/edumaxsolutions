@@ -15,22 +15,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useFormState } from "react-dom";
-import { submitInquiry } from "@/lib/actions";
-import { inquirySchema, type InquiryFormState } from "@/lib/schemas";
-import { useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { inquirySchema } from "@/lib/schemas";
 import { Loader2 } from "lucide-react";
 
-const initialFormState: InquiryFormState = {
-  message: "",
-  status: "idle",
-};
+
 
 export function InquiryForm() {
-  const [state, formAction] = useFormState(submitInquiry, initialFormState);
-  const { toast } = useToast();
-
   const form = useForm<z.infer<typeof inquirySchema>>({
     resolver: zodResolver(inquirySchema),
     defaultValues: {
@@ -42,40 +32,16 @@ export function InquiryForm() {
     },
   });
 
-  useEffect(() => {
-    if (state.status === "success") {
-      toast({
-        title: "Success!",
-        description: state.message,
-      });
-      form.reset();
-    } else if (state.status === "error" && state.message && !state.errors) {
-      // Show general error toast if no field errors
-      toast({
-        title: "Error",
-        description: state.message,
-        variant: "destructive",
-      });
-    }
-  }, [state, toast, form]);
-  
-  // Set field errors from server action
-  useEffect(() => {
-    if (state.errors) {
-      Object.keys(state.errors).forEach((key) => {
-        const field = key as keyof z.infer<typeof inquirySchema>;
-        const errorMessages = state.errors?.[field];
-        if (errorMessages && errorMessages.length > 0) {
-          form.setError(field, { type: 'server', message: errorMessages[0] });
-        }
-      });
-    }
-  }, [state.errors, form]);
-
 
   return (
     <Form {...form}>
-      <form action={formAction} className="space-y-6">
+            <form
+        action="https://formsubmit.co/edumaxsolutions.ng@gmail.com"
+        method="POST"
+        className="space-y-6"
+      >
+        <input type="hidden" name="_next" value="/contact" />
+        <input type="hidden" name="_captcha" value="false" />
         <FormField
           control={form.control}
           name="schoolName"

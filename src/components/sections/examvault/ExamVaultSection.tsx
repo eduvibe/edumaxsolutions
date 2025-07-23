@@ -6,7 +6,10 @@ export function ExamVaultSection() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-12">
           <div className="flex-1 max-w-xl">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">ExamVault - Secure Exam Management</h2>
+                        <div className="flex items-center gap-4 mb-6">
+              <h2 className="text-3xl font-bold text-gray-900">ExamVault - Secure Exam Management</h2>
+              <span className="inline-block bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">Coming Soon</span>
+            </div>
             <p className="text-lg text-gray-600 mb-8">
               Transform your examination process with ExamVault, our state-of-the-art exam management solution. 
               From question paper creation to result analysis, ExamVault provides a secure and efficient platform 

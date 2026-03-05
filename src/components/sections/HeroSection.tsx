@@ -47,11 +47,17 @@ export function HeroSection() {
                 data-ai-hint="education tech"
                 priority
               />
-              
-              {/* Floating Cards */}
-              
-              {/* Card 1: CBT Software & LMS (Top Left) */}
-              <div className="absolute -top-6 -left-4 md:-left-12 bg-card p-3 rounded-xl shadow-lg border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-500 max-w-[200px] md:max-w-xs z-20">
+            </div>
+          </div>
+        </div>
+
+        {/* Services Section */}
+        <div className="mt-16 md:mt-24">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+            <h3 className="text-xl font-semibold text-muted-foreground whitespace-nowrap mb-4 md:mb-0">Services:</h3>
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+              {/* Card 1: CBT Software & LMS */}
+              <div className="bg-card p-3 rounded-xl shadow-md border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-200 min-w-[200px] hover:shadow-lg transition-shadow">
                 <div className="bg-primary/10 p-2 rounded-full">
                   <Laptop className="h-5 w-5 text-primary" />
                 </div>
@@ -61,8 +67,8 @@ export function HeroSection() {
                 </div>
               </div>
 
-              {/* Card 2: Modern & Sleek Website (Top Right) */}
-              <div className="absolute top-8 -right-4 md:-right-8 bg-card p-3 rounded-xl shadow-lg border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-700 max-w-[180px] md:max-w-xs z-20">
+              {/* Card 2: Modern & Sleek Website */}
+              <div className="bg-card p-3 rounded-xl shadow-md border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-300 min-w-[200px] hover:shadow-lg transition-shadow">
                 <div className="bg-accent/10 p-2 rounded-full">
                   <Layout className="h-5 w-5 text-accent" />
                 </div>
@@ -72,8 +78,8 @@ export function HeroSection() {
                 </div>
               </div>
 
-              {/* Card 3: School Portal (Bottom Right) */}
-              <div className="absolute bottom-12 -right-2 md:-right-6 bg-card p-3 rounded-xl shadow-lg border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-1000 max-w-[180px] md:max-w-xs z-20">
+              {/* Card 3: School Portal */}
+              <div className="bg-card p-3 rounded-xl shadow-md border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-400 min-w-[200px] hover:shadow-lg transition-shadow">
                 <div className="bg-blue-500/10 p-2 rounded-full">
                   <GraduationCap className="h-5 w-5 text-blue-500" />
                 </div>
@@ -83,8 +89,8 @@ export function HeroSection() {
                 </div>
               </div>
 
-               {/* Card 4: Academics Planning (Bottom Left) */}
-               <div className="absolute -bottom-6 -left-2 md:left-8 bg-card p-3 rounded-xl shadow-lg border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-1000 max-w-[180px] md:max-w-xs z-20">
+              {/* Card 4: Academics Planning */}
+              <div className="bg-card p-3 rounded-xl shadow-md border border-border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-500 min-w-[200px] hover:shadow-lg transition-shadow">
                 <div className="bg-green-500/10 p-2 rounded-full">
                   <CalendarDays className="h-5 w-5 text-green-500" />
                 </div>
@@ -93,7 +99,6 @@ export function HeroSection() {
                   <p className="text-sm font-bold leading-tight">Academics Planning</p>
                 </div>
               </div>
-
             </div>
           </div>
         </div>

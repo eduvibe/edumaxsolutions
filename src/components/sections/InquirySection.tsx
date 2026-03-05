@@ -25,12 +25,12 @@ export function InquirySection() {
                 <div className="space-y-3">
                     <div className="flex items-center gap-3">
                         <Mail className="h-5 w-5 text-primary"/>
-                        <a href="mailto:edumaxsolutions.ng@gmail.com" className="text-foreground hover:text-primary transition-colors">edumaxsolutions.ng@gmail.com</a>
+                        <a href="mailto:info@edumaxsolutions.com.ng" className="text-foreground hover:text-primary transition-colors">info@edumaxsolutions.com.ng</a>
                     </div>
                 </div>
                  <h3 className="text-xl font-semibold text-primary mt-8">Our Office</h3>
                  <p className="text-muted-foreground">
-                    No liberty Estate, Greenroof Bus/Stop Magboro,<br/>
+                    No 1 Liberty Estate, Greenroof Bus/Stop Magboro,<br/>
                     Ogun State Nigeria
                  </p>
             </div>

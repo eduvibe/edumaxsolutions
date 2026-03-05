@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://edumaxsolutions.com'; // Replace with your actual domain
+  const baseUrl = 'https://edumaxsolutions.com.ng'; // Replace with your actual domain
 
   return [
     {

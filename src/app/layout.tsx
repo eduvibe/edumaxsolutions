@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://edumaxsolutions.com'), // Replace with actual domain
+  metadataBase: new URL('https://edumaxsolutions.ng'), // Replace with actual domain
   title: {
     default: 'EduMax Solutions | Best CBT & School Management Software in Nigeria',
     template: '%s | EduMax Solutions'
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://edumaxsolutions.com',
+    canonical: 'https://edumaxsolutions.com.ng',
   },
 };
 
@@ -88,19 +88,19 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'EduMax Solutions',
-    url: 'https://edumaxsolutions.com',
-    logo: 'https://edumaxsolutions.com/logo.png',
+    url: 'https://edumaxsolutions.ng',
+    logo: 'https://edumaxsolutions.ng/logo.png',
     description: 'Leading provider of CBT software, LMS, and School Portals in Nigeria.',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'No liberty Estate, Greenroof Bus/Stop Magboro',
+      streetAddress: 'No 1 Liberty Estate, Greenroof Bus/Stop Magboro',
       addressLocality: 'Magboro',
       addressRegion: 'Ogun State',
       addressCountry: 'NG'
     },
     contactPoint: {
       '@type': 'ContactPoint',
-      email: 'edumaxsolutions.ng@gmail.com',
+      email: 'info@edumaxsolutions.com.ng',
       contactType: 'customer service',
       areaServed: 'NG',
       availableLanguage: 'en',

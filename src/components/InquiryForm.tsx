@@ -22,7 +22,15 @@ import { SuccessCard } from "./SuccessCard";
 
 
 
-export function InquiryForm() {
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export function InquiryForm({ isModal = false, onSuccess }: { isModal?: boolean, onSuccess?: () => void }) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
     const form = useForm<z.infer<typeof inquirySchema>>({
@@ -32,6 +40,7 @@ export function InquiryForm() {
       contactPerson: "",
       email: "",
       phone: "",
+      service: undefined,
       message: "",
     },
   });
@@ -39,17 +48,19 @@ export function InquiryForm() {
   async function onSubmit(data: z.infer<typeof inquirySchema>) {
     setIsSubmitting(true);
     try {
-      const response = await fetch("https://formsubmit.co/edumaxsolutions.ng@gmail.com", {
+      const response = await fetch("/api/contact", {
         method: "POST",
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
         body: JSON.stringify(data),
       });
 
       if (response.ok) {
         setIsSubmitted(true);
+        if (onSuccess) {
+            setTimeout(onSuccess, 3000); // Close modal after 3 seconds if callback provided
+        }
       } else {
         // Handle error - maybe show a toast notification
         console.error("Form submission failed");
@@ -102,7 +113,7 @@ export function InquiryForm() {
             <FormItem>
               <FormLabel>Email Address</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="your.email@example.com" {...field} />
+                <Input placeholder="your.email@example.com" type="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -115,8 +126,32 @@ export function InquiryForm() {
             <FormItem>
               <FormLabel>Phone Number (Optional)</FormLabel>
               <FormControl>
-                <Input type="tel" placeholder="Your Phone Number" {...field} />
+                <Input placeholder="Your Phone Number" type="tel" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="service"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Service Interested In</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a service" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="CBT Software">CBT Software</SelectItem>
+                  <SelectItem value="School Portal">School Portal</SelectItem>
+                  <SelectItem value="Website Design">Website Design</SelectItem>
+                  <SelectItem value="Academics Planning">Academics Planning</SelectItem>
+                  <SelectItem value="General Inquiry">General Inquiry</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

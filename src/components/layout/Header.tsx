@@ -9,6 +9,7 @@ import { NAV_LINKS } from "@/constants";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
+import { RequestDemoModal } from "@/components/RequestDemoModal";
 import React from "react";
 
 export function Header() {
@@ -102,12 +103,14 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+          <RequestDemoModal>
+            <Button size="sm" className="shadow-md hover:shadow-lg transition-shadow bg-primary text-primary-foreground">
+              Request a Demo
+            </Button>
+          </RequestDemoModal>
         </nav>
-        <div className="hidden md:block">
-          <Button asChild variant="default" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Link href={contactPageLink}>Request a Demo</Link>
-          </Button>
-        </div>
+
+        {/* Mobile Menu */}
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="md:hidden">

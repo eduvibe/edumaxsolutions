@@ -43,7 +43,7 @@ export function Footer() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              No liberty Estate, Greenroof Bus/Stop Magboro,<br />
+              No 1 Liberty Estate, Greenroof Bus/Stop Magboro,<br />
               Ogun State Nigeria
             </p>
           </div>

@@ -22,18 +22,18 @@ export default function ContactPage() {
                   <Mail className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
                   <div>
                     <h3 className="font-medium text-foreground">Email</h3>
-                    <a href="mailto:edumaxsolutions.ng@gmail.com" className="text-muted-foreground hover:text-primary transition-colors">edumaxsolutions.ng@gmail.com</a>
+                    <a href="mailto:info@edumaxsolutions.com.ng" className="text-muted-foreground hover:text-primary transition-colors">info@edumaxsolutions.com.ng</a>
                     <p className="text-sm text-muted-foreground">For general inquiries and demo requests.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
                   <div>
-                    <h3 className="font-medium text-foreground">Office Address</h3>
-                    <p className="text-muted-foreground">
-                      B12 Wemabod Estate Magboro. <br />
-                      Ogun State, Nigeria.
-                    </p>
+                    <h3 className="font-semibold text-foreground">Office Address</h3>
+                  <p className="text-muted-foreground">
+                    No 1 Liberty Estate, Greenroof Bus/Stop Magboro,<br />
+                    Ogun State Nigeria.
+                  </p>
                   </div>
                 </div>
               </div>

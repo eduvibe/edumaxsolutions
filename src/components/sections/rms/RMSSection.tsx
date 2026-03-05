@@ -11,26 +11,26 @@ export function RMSSection() {
               <span className="inline-block bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">Coming Soon</span>
             </div>
             <p className="text-lg text-gray-600 mb-8">
-              Smart tracking. Safer students. Connected parents. All-in-one school management that brings peace of mind to every family.
+              An attendance system that allows students to sign in and out, sends notifications to parents to keep them in the loop, and tracks spending by replacing physical cash with a voucher system.
             </p>
             <ul className="space-y-4">
               <li className="flex items-start">
                 <svg className="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">Automated result calculation and grade processing</span>
+                <span className="text-gray-700">Student sign-in/out and parent notifications</span>
               </li>
               <li className="flex items-start">
                 <svg className="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">Customizable result templates and reporting formats</span>
+                <span className="text-gray-700">Cashless voucher system for spending tracking</span>
               </li>
               <li className="flex items-start">
                 <svg className="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-700">Secure result publication and student portal access</span>
+                <span className="text-gray-700">Real-time visibility and seamless oversight</span>
               </li>
             </ul>
           </div>

@@ -12,7 +12,7 @@ export function HeroSection() {
   const services = [
     {
       icon: <Laptop className="h-6 w-6 text-white" />,
-      title: "CBT & LMS Installations",
+      title: "Offline CBT & LMS Installations",
       description: "Robust computer-based testing and learning management for seamless education.",
       color: "bg-primary",
       link: "/#solutions"
@@ -60,7 +60,7 @@ export function HeroSection() {
               <span className="text-primary">Best CBT</span> & <span className="text-primary">School Portal</span> Software in Nigeria
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground">
-              EduMax Solutions provides the most <strong>affordable LMS</strong> and comprehensive <strong>School Management Software</strong>. Trusted by top software providers in Nigeria for primary and secondary education.
+              EduMax Solutions provides the most <strong>affordable LMS</strong> and comprehensive <strong>School Portal</strong>. Trusted by top software providers in Nigeria for primary and secondary education.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg transform hover:scale-105 transition-transform duration-300">

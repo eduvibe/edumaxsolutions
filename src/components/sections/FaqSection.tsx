@@ -14,13 +14,13 @@ const faqItems = [
     value: "item-1",
   },
   {
-    question: "Is the LMS difficult to use for teachers who are not tech-savvy?",
-    answer: "Not at all! Our LMS is designed with user-friendliness in mind. We provide comprehensive training and ongoing support to ensure all teachers, regardless of their tech skills, can comfortably use the platform.",
+    question: "Is the Offline CBT and LMS difficult to use for teachers who are not tech-savvy?",
+    answer: "Not at all! Our platform is designed with user-friendliness in mind. We provide comprehensive training and ongoing support to ensure all teachers, regardless of their tech skills, can comfortably use the platform.",
     value: "item-2",
   },
   {
-    question: "Can the School Management Software handle student billing and online payments?",
-    answer: "Yes, our School Management Software includes robust fee management modules that can handle invoicing, track payments, and integrate with online payment gateways for convenient and secure transactions.",
+    question: "Can the School Portal handle student billing and online payments?",
+    answer: "Yes, our School Portal includes robust fee management modules that can handle invoicing, track payments, and integrate with online payment gateways for convenient and secure transactions.",
     value: "item-3",
   },
   {

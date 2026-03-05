@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: 'EduMax Solutions | Best CBT & School Management Software in Nigeria',
+    title: 'EduMax Solutions | Best CBT & School Portal Software in Nigeria',
     description: 'Empowering Nigerian schools with affordable LMS, robust CBT software, and comprehensive school portals.',
     url: 'https://edumaxsolutions.com',
     siteName: 'EduMax Solutions',

@@ -34,7 +34,7 @@ export function ManagementSoftwareSection() {
              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <Image
               src="/media/sms.jpg"
-              alt="School Management Software Interface"
+              alt="School Portal Interface"
               width={500}
               height={450}
               className="rounded-lg shadow-xl relative"
@@ -43,10 +43,10 @@ export function ManagementSoftwareSection() {
           </div>
           <div className="animate-in fade-in slide-in-from-right-12 duration-700 ease-out">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              Comprehensive <span className="text-accent">School Management Software</span>
+              Comprehensive <span className="text-accent">School Portal</span>
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Streamline your school's operations, enhance productivity, and foster better communication with our robust management platform.
+              Streamline your school's operations, manage student data, and foster better communication with our all-in-one School Portal.
             </p>
             <ul className="mt-8 space-y-4">
               {softwareFeatures.map((feature, index) => (

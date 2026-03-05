@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export function WhatsAppChat() {
-  const phoneNumber = "2348067819642";
+  const phoneNumber = "2348059403939";
   const message = "Hello EduMax Solutions, I would like to make an inquiry.";
   const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
 

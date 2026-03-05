@@ -34,10 +34,10 @@ export function LmsDetailsSection() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-in fade-in slide-in-from-left-12 duration-700 ease-out">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              Advanced <span className="text-primary">Learning Management System</span>
+              Advanced <span className="text-primary">Offline CBT and LMS</span>
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Our LMS is designed to create a dynamic and effective digital learning experience for students and educators alike.
+              Our platform combines robust offline Computer Based Testing with a dynamic Learning Management System for a complete educational experience.
             </p>
             <ul className="mt-8 space-y-4">
               {lmsFeatures.map((feature, index) => (
@@ -61,7 +61,7 @@ export function LmsDetailsSection() {
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <Image
               src="/media/lms.png"
-              alt="LMS Dashboard Showcase"
+              alt="Offline CBT and LMS Dashboard"
               width={500}
               height={450}
               className="rounded-lg shadow-xl relative"

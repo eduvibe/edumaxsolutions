@@ -9,7 +9,7 @@ export const NAV_LINKS = [
 ];
 
 export const PRODUCT_DOCUMENTATION = `
-EduMax Learning Management System (LMS) Features:
+EduMax Advanced Offline CBT and LMS Features:
 - Interactive course creation: Tools for educators to build engaging courses with multimedia content including videos, presentations, and interactive quizzes.
 - Student progress tracking: Dashboards and reports for teachers and administrators to monitor student performance, completion rates, and areas needing improvement.
 - Automated and manual grading: Flexible grading options with automated scoring for quizzes and assignments, alongside manual grading capabilities for essays and projects.
@@ -18,7 +18,7 @@ EduMax Learning Management System (LMS) Features:
 - Customizable learning paths: Ability to create personalized learning journeys for students based on their needs and pace.
 - Secure assessment tools: Robust features for creating and administering secure online exams and quizzes with various question types.
 
-EduMax School Management Software Features:
+EduMax Comprehensive School Portal Features:
 - Centralized student information system (SIS): A comprehensive database for managing student records, demographics, academic history, and emergency contacts.
 - Timetable generation and management: Automated tools for creating and managing complex school timetables, including class schedules, teacher assignments, and room bookings.
 - Attendance tracking and reporting: Efficient systems for recording daily and subject-wise attendance, with automated alerts for absentees and detailed reports.
@@ -31,9 +31,9 @@ EduMax School Management Software Features:
 - Communication tools: Built-in messaging, email, and SMS integration for effective communication between school, students, and parents.
 
 EduMax Realtime Student Management (RSM) Features:
-- Enhanced school-to-parent communication: Tools for seamless and real-time communication between schools and parents.
-- Student safety: Features designed to ensure and monitor student safety.
-- Smarter financial management: Support for efficient financial management for students.
+- Student Attendance System: Allows students to sign in and out efficiently.
+- Parent Notifications: Sends real-time notifications to parents, keeping them in the loop about their child's presence.
+- Cashless Voucher System: Tracks spending and replaces physical cash with a secure voucher system.
 - Real-time visibility: Provides immediate insights into student-related activities and data.
 - Seamless oversight: Enables easy monitoring and management for schools and families.
 

@@ -7,14 +7,14 @@ import Link from "next/link";
 
 const solutions = [
   {
-    title: "Learning Management System (LMS)",
+    title: "Advanced Offline CBT and LMS",
     description: "A comprehensive platform to create, deliver, and manage educational content, track student progress, and foster interactive learning environments.",
     image: "/media/lms.png",
     dataAiHint: "LMS dashboard",
     link: "#lms-details",
   },
   {
-    title: "School Management Software",
+    title: "Comprehensive School Portal",
     description: "An all-in-one solution to streamline administrative tasks, manage student data, facilitate communication, and improve overall school efficiency.",
     image: "/media/sms.jpg",
     dataAiHint: "admin panel",
@@ -22,7 +22,7 @@ const solutions = [
   },
   {
     title: "Realtime Student Management (RSM)",
-    description: "Smart tracking. Safer students. Connected parents. All-in-one school management that brings peace of mind to every family.",
+    description: "An attendance system that allows students to sign in and out, sends notifications to parents to keep them in the loop, and tracks spending by replacing physical cash with a voucher system.",
     image: "/media/attd.png",
     dataAiHint: "student management dashboard",
     link: "#rms",

@@ -30,9 +30,8 @@ export function InquirySection() {
                 </div>
                  <h3 className="text-xl font-semibold text-primary mt-8">Our Office</h3>
                  <p className="text-muted-foreground">
-                    123 Education Drive,<br/>
-                    Ikeja, Lagos,<br/>
-                    Nigeria
+                    No liberty Estate, Greenroof Bus/Stop Magboro,<br/>
+                    Ogun State Nigeria
                  </p>
             </div>
             <div>

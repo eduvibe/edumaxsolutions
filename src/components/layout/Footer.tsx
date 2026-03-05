@@ -43,8 +43,8 @@ export function Footer() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              B12 Wemabod Estate Magboro.<br />
-              Ogun State, Nigeria.
+              No liberty Estate, Greenroof Bus/Stop Magboro,<br />
+              Ogun State Nigeria
             </p>
           </div>
         </div>

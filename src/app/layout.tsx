@@ -101,6 +101,7 @@ export default function RootLayout({
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'info@edumaxsolutions.com.ng',
+      telephone: '+2348059403939',
       contactType: 'customer service',
       areaServed: 'NG',
       availableLanguage: 'en',

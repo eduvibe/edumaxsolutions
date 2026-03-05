@@ -46,6 +46,10 @@ export function Footer() {
               No 1 Liberty Estate, Greenroof Bus/Stop Magboro,<br />
               Ogun State Nigeria
             </p>
+            <p className="mt-2 text-sm text-muted-foreground flex flex-col gap-1">
+              <a href="tel:+2348059403939" className="hover:text-primary transition-colors">+234 805 940 3939</a>
+              <a href="tel:+2348067819642" className="hover:text-primary transition-colors">+234 806 781 9642</a>
+            </p>
           </div>
         </div>
         <div className="mt-8 border-t border-border pt-8 text-center">

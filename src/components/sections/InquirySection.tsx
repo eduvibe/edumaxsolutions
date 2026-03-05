@@ -1,6 +1,6 @@
 
 import { InquiryForm } from "@/components/InquiryForm";
-import { Mail } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 
 export function InquirySection() {
   return (
@@ -23,6 +23,13 @@ export function InquirySection() {
                 Feel free to reach out to us directly via email for any inquiries or demo requests.
                 </p>
                 <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                        <Phone className="h-5 w-5 text-primary mt-1"/>
+                        <div className="flex flex-col">
+                            <a href="tel:+2348059403939" className="text-foreground hover:text-primary transition-colors">+234 805 940 3939</a>
+                            <a href="tel:+2348067819642" className="text-foreground hover:text-primary transition-colors">+234 806 781 9642</a>
+                        </div>
+                    </div>
                     <div className="flex items-center gap-3">
                         <Mail className="h-5 w-5 text-primary"/>
                         <a href="mailto:info@edumaxsolutions.com.ng" className="text-foreground hover:text-primary transition-colors">info@edumaxsolutions.com.ng</a>

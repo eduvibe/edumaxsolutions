@@ -33,6 +33,41 @@ const faqItems = [
     answer: "EduMax provides comprehensive post-purchase support, including onboarding assistance, training sessions for staff, a dedicated helpdesk, and regular software updates to ensure smooth operation and user satisfaction.",
     value: "item-5",
   },
+  {
+    question: "Can I see examples of schools using your software?",
+    answer: (
+      <div className="space-y-4">
+        <p>Yes, we are trusted by top schools including:</p>
+        
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">Offline CBT and LMS:</p>
+          <ul className="list-disc pl-5">
+            <li>Straitgate College</li>
+            <li>Distinct Star College</li>
+          </ul>
+        </div>
+
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">School Portal:</p>
+          <ul className="list-disc pl-5">
+            <li>Vester International School</li>
+          </ul>
+        </div>
+
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">School Website:</p>
+          <ul className="list-disc pl-5">
+            <li>
+              <a href="https://www.distinctstarschools.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Distinct Star Schools
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    ),
+    value: "item-6",
+  },
 ];
 
 export function FaqSection() {

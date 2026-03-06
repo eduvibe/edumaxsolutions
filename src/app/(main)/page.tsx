@@ -9,40 +9,57 @@ import { ExamVaultSection } from "@/components/sections/examvault/ExamVaultSecti
 import { InquirySection } from "@/components/sections/InquirySection";
 import { FaqSection } from "@/components/sections/FaqSection";
 import { Separator } from "@/components/ui/separator";
+import { RevealOnScroll } from "@/components/RevealOnScroll";
 
 export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <SolutionsSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <LmsDetailsSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <ManagementSoftwareSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <RMSSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <ExamVaultSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <FaqSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <FounderProfileSection />
-      <div className="animate-in fade-in duration-500 ease-out delay-300">
-        <Separator className="my-8 md:my-12" />
-      </div>
-      <InquirySection />
+      <RevealOnScroll>
+        <SolutionsSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <LmsDetailsSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <ManagementSoftwareSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <RMSSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <ExamVaultSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <FaqSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <FounderProfileSection />
+      </RevealOnScroll>
+      <RevealOnScroll className="my-8 md:my-12">
+        <Separator />
+      </RevealOnScroll>
+      <RevealOnScroll>
+        <InquirySection />
+      </RevealOnScroll>
     </>
   );
 }

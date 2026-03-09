@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpenCheck, Building, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { ParallaxWrapper } from "@/components/ParallaxWrapper";
 
 const solutions = [
   {
@@ -49,38 +50,43 @@ export function SolutionsSection() {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {solutions.map((solution, index) => (
-            <Card 
-              key={solution.title} 
-              className="overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col animate-in fade-in slide-in-from-bottom-12 duration-700 ease-out"
-              style={{ animationDelay: `${index * 200}ms` }}
+            <ParallaxWrapper 
+              key={solution.title}
+              offset={index % 2 === 0 ? 30 : -30} // Staggered parallax effect
+              className="h-full"
             >
-              <CardHeader className="p-6">
-                <div className="flex items-start gap-4">
+              <Card 
+                className="overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col h-full animate-in fade-in slide-in-from-bottom-12 duration-700 ease-out"
+                style={{ animationDelay: `${index * 200}ms` }}
+              >
+                <CardHeader className="p-6">
+                  <div className="flex items-start gap-4">
 
-                  <div>
-                    <CardTitle className="text-xl font-semibold">{solution.title}</CardTitle>
-                    <CardDescription className="mt-1 text-base text-muted-foreground leading-relaxed">{solution.description}</CardDescription>
+                    <div>
+                      <CardTitle className="text-xl font-semibold">{solution.title}</CardTitle>
+                      <CardDescription className="mt-1 text-base text-muted-foreground leading-relaxed">{solution.description}</CardDescription>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
-                <div className="mb-6 rounded-md overflow-hidden">
-                  <Image
-                    src={solution.image}
-                    alt={solution.title}
-                    width={400}
-                    height={300}
-                    className="w-full h-auto object-cover aspect-[4/3]"
-                    data-ai-hint={solution.dataAiHint}
-                  />
-                </div>
-                <Button asChild variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground mt-auto">
-                  <Link href={solution.link}>
-                    Learn More <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-between">
+                  <div className="mb-6 rounded-md overflow-hidden">
+                    <Image
+                      src={solution.image}
+                      alt={solution.title}
+                      width={400}
+                      height={300}
+                      className="w-full h-auto object-cover aspect-[4/3]"
+                      data-ai-hint={solution.dataAiHint}
+                    />
+                  </div>
+                  <Button asChild variant="default" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground mt-auto">
+                    <Link href={solution.link}>
+                      Learn More <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </ParallaxWrapper>
           ))}
         </div>
       </div>

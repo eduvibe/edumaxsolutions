@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight, Sparkles } from "lucide-react";
 import { RequestDemoModal } from "@/components/RequestDemoModal";
 import { FloatingDecor } from "@/components/FloatingDecor";
+import { ParallaxWrapper } from "@/components/ParallaxWrapper";
 
 
 export function HeroSection() {
@@ -42,22 +43,25 @@ export function HeroSection() {
   ];
 
   return (
-    <section className="relative pt-20 md:pt-32 bg-gradient-to-br from-primary/5 via-background to-background">
-       <FloatingDecor />
-       {/* Background Elements - Contained to avoid overflow issues */}
-       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div
+    <section className="relative pt-20 md:pt-32 bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden">
+       {/* Background Parallax Layer (Slower) */}
+       <ParallaxWrapper 
+         offset={100} 
+         className="absolute inset-0 overflow-hidden pointer-events-none z-0"
+       >
+         <FloatingDecor />
+         <div
             aria-hidden="true"
             className="absolute inset-0 grid grid-cols-2 -space-x-52 opacity-20 dark:opacity-10"
           >
             <div className="blur-[106px] h-56 bg-gradient-to-br from-primary to-[hsl(330,100%,85%)] dark:from-primary"></div>
             <div className="blur-[106px] h-32 bg-gradient-to-r from-accent to-[hsl(0,72%,85%)] dark:from-accent"></div>
           </div>
-       </div>
+       </ParallaxWrapper>
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="grid md:grid-cols-2 gap-12 items-center mb-12">
-          <div className="space-y-6 text-center md:text-left animate-in fade-in slide-in-from-bottom-10 duration-1000 ease-out">
+          <ParallaxWrapper offset={-30} className="space-y-6 text-center md:text-left animate-in fade-in slide-in-from-bottom-10 duration-1000 ease-out">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground">
               <span className="text-primary">Best CBT</span> & <span className="text-primary">School Portal</span> Software in Nigeria
             </h1>
@@ -82,8 +86,9 @@ export function HeroSection() {
                 </Button>
               </RequestDemoModal>
             </div>
-          </div>
-          <div className="relative group animate-in fade-in zoom-in-95 duration-1000 ease-out delay-300">
+          </ParallaxWrapper>
+          
+          <ParallaxWrapper offset={-60} className="relative group animate-in fade-in zoom-in-95 duration-1000 ease-out delay-300">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-accent to-primary/50 rounded-lg blur opacity-40 group-hover:opacity-60 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <div className="relative">
               <Image
@@ -100,7 +105,7 @@ export function HeroSection() {
                 <span className="text-xs text-muted-foreground">New Animations</span>
               </div>
             </div>
-          </div>
+          </ParallaxWrapper>
         </div>
 
         {/* Resting Cards Section */}

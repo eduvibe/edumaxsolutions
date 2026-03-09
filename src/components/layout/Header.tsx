@@ -104,7 +104,7 @@ export function Header() {
             </Link>
           ))}
           <RequestDemoModal>
-            <Button size="sm" className="shadow-md hover:shadow-lg transition-shadow bg-primary text-primary-foreground">
+            <Button size="sm" className="shadow-md hover:shadow-lg transition-all bg-primary hover:bg-accent text-primary-foreground">
               Request a Demo
             </Button>
           </RequestDemoModal>
@@ -135,9 +135,11 @@ export function Header() {
                   </Link>
                 ))}
               </nav>
-              <Button asChild variant="default" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Link href={contactPageLink}>Request a Demo</Link>
-              </Button>
+              <RequestDemoModal className="w-full">
+                <Button size="lg" className="w-full mt-4 bg-primary hover:bg-accent text-primary-foreground">
+                  Request a Demo
+                </Button>
+              </RequestDemoModal>
             </div>
           </SheetContent>
         </Sheet>

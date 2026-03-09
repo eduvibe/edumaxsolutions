@@ -2,8 +2,9 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight } from "lucide-react";
+import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight, Sparkles } from "lucide-react";
 import { RequestDemoModal } from "@/components/RequestDemoModal";
+import { FloatingDecor } from "@/components/FloatingDecor";
 
 
 export function HeroSection() {
@@ -42,6 +43,7 @@ export function HeroSection() {
 
   return (
     <section className="relative pt-20 md:pt-32 bg-gradient-to-br from-primary/5 via-background to-background">
+       <FloatingDecor />
        {/* Background Elements - Contained to avoid overflow issues */}
        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
@@ -63,12 +65,20 @@ export function HeroSection() {
               EduMax Solutions provides the most <strong>affordable LMS</strong> and comprehensive <strong>School Portal</strong>. Trusted by top software providers in Nigeria for primary and secondary education.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg transform hover:scale-105 transition-transform duration-300">
-                <Link href="/#solutions">Explore Solutions</Link>
+              <Button asChild size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-lg transform hover:scale-[1.03] transition-all duration-300">
+                <Link href="/#solutions">
+                  <span className="flex items-center gap-2">
+                    Explore Solutions
+                    <ArrowRight className="h-5 w-5" />
+                  </span>
+                </Link>
               </Button>
               <RequestDemoModal>
-                <Button size="lg" variant="outline" className="shadow-lg transform hover:scale-105 transition-transform duration-300 border-accent text-accent hover:bg-accent/10 hover:text-accent">
-                  Request a Demo
+                <Button size="lg" variant="outline" className="shadow-lg transform hover:scale-[1.03] transition-all duration-300 border-accent text-accent hover:bg-accent/10 hover:text-accent">
+                  <span className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5" />
+                    Request a Demo
+                  </span>
                 </Button>
               </RequestDemoModal>
             </div>
@@ -85,6 +95,10 @@ export function HeroSection() {
                 data-ai-hint="education tech"
                 priority
               />
+              <div className="absolute -top-3 -right-3 flex items-center gap-1 rounded-full bg-background/80 px-3 py-1 shadow-md backdrop-blur-sm">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">New Animations</span>
+              </div>
             </div>
           </div>
         </div>

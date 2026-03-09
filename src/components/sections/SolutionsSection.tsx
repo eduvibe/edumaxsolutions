@@ -5,6 +5,7 @@ import { BookOpenCheck, Building, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ParallaxWrapper } from "@/components/ParallaxWrapper";
+import { FloatingIcons } from "@/components/FloatingIcons";
 
 const solutions = [
   {
@@ -40,6 +41,14 @@ const solutions = [
 export function SolutionsSection() {
   return (
     <section id="solutions" className="relative py-16 md:py-24 bg-background overflow-hidden">
+      {/* Floating Icons Background with Parallax */}
+      <ParallaxWrapper 
+        offset={50} 
+        className="absolute -top-[100px] -bottom-[100px] left-0 right-0 overflow-hidden pointer-events-none z-0"
+      >
+        <FloatingIcons />
+      </ParallaxWrapper>
+
       {/* Removed floating vector elements */}
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div className="text-center mb-12 animate-in fade-in slide-in-from-top-8 duration-700 ease-out">

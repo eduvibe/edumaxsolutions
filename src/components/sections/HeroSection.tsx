@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight, Sparkles } from "lucide-react";
 import { RequestDemoModal } from "@/components/RequestDemoModal";
 import { FloatingDecor } from "@/components/FloatingDecor";
+import { FloatingIcons } from "@/components/FloatingIcons";
 import { ParallaxWrapper } from "@/components/ParallaxWrapper";
 
 
@@ -46,12 +47,13 @@ export function HeroSection() {
     <section className="relative pt-20 md:pt-32 bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden">
        {/* Background Parallax Layer (Slower) */}
        <ParallaxWrapper 
-         offset={100} 
-         className="absolute inset-0 overflow-hidden pointer-events-none z-0"
-       >
-         <FloatingDecor />
-         <div
-            aria-hidden="true"
+          offset={100} 
+          className="absolute inset-0 overflow-hidden pointer-events-none z-0"
+        >
+          <FloatingDecor />
+          <FloatingIcons />
+          <div
+             aria-hidden="true"
             className="absolute inset-0 grid grid-cols-2 -space-x-52 opacity-20 dark:opacity-10"
           >
             <div className="blur-[106px] h-56 bg-gradient-to-br from-primary to-[hsl(330,100%,85%)] dark:from-primary"></div>
@@ -100,10 +102,6 @@ export function HeroSection() {
                 data-ai-hint="education tech"
                 priority
               />
-              <div className="absolute -top-3 -right-3 flex items-center gap-1 rounded-full bg-background/80 px-3 py-1 shadow-md backdrop-blur-sm">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground">New Animations</span>
-              </div>
             </div>
           </ParallaxWrapper>
         </div>

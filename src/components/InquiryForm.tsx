@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function InquiryForm({ isModal = false, onSuccess }: { isModal?: boolean, onSuccess?: () => void }) {
+export function InquiryForm({ onSuccess }: { onSuccess?: () => void }) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
     const form = useForm<z.infer<typeof inquirySchema>>({

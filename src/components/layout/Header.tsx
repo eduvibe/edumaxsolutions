@@ -37,8 +37,6 @@ export function Header() {
     };
   }, []);
 
-  const contactPageLink = "/contact";
-
   const getLinkActiveClass = (linkHref: string) => {
     const isHomePage = pathname === "/";
 

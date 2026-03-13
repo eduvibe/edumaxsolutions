@@ -4,6 +4,8 @@ export const NAV_LINKS = [
   { href: "/#solutions", label: "Solutions" },
   // LMS and Management Software are detailed within the Solutions section or discoverable by scrolling.
   // FAQ is also discoverable by scrolling.
+  { href: "/learn", label: "Resources" },
+  { href: "/teacher/login", label: "Teacher" },
   { href: "/#founder", label: "About Us" }, // This points to the founder section.
   { href: "/contact", label: "Contact" },
 ];

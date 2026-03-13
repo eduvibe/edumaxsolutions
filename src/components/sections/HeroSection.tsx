@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight, Sparkles } from "lucide-react";
+import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight } from "lucide-react";
 import { RequestDemoModal } from "@/components/RequestDemoModal";
 import { FloatingDecor } from "@/components/FloatingDecor";
 import { FloatingIcons } from "@/components/FloatingIcons";
@@ -10,8 +10,6 @@ import { ParallaxWrapper } from "@/components/ParallaxWrapper";
 
 
 export function HeroSection() {
-  const contactPageLink = "/contact";
-  
   const services = [
     {
       icon: <Laptop className="h-6 w-6 text-white" />,

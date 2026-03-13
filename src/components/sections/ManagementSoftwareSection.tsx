@@ -46,7 +46,7 @@ export function ManagementSoftwareSection() {
               Comprehensive <span className="text-accent">School Portal</span>
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Streamline your school's operations, manage student data, and foster better communication with our all-in-one School Portal.
+              Streamline your school&apos;s operations, manage student data, and foster better communication with our all-in-one School Portal.
             </p>
             <ul className="mt-8 space-y-4">
               {softwareFeatures.map((feature, index) => (

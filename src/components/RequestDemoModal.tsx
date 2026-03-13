@@ -29,7 +29,7 @@ export function RequestDemoModal({ children, className }: { children: React.Reac
             </DialogHeader>
         </div>
         <div className="p-6 md:p-8 bg-background">
-          <InquiryForm isModal={true} onSuccess={() => setOpen(false)} />
+          <InquiryForm onSuccess={() => setOpen(false)} />
         </div>
       </DialogContent>
     </Dialog>

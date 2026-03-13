@@ -12,7 +12,7 @@ export function InquirySection() {
               Get in Touch or Request a Demo
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              We're here to help you find the perfect solution for your school. Fill out the form below, or email us, and we'll contact you shortly.
+              We&apos;re here to help you find the perfect solution for your school. Fill out the form below, or email us, and we&apos;ll contact you shortly.
             </p>
           </div>
           

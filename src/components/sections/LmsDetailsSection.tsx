@@ -1,6 +1,5 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Presentation, TrendingUp, FileText, UsersRound, CheckCircle } from "lucide-react";
+import { Presentation, TrendingUp, FileText, UsersRound } from "lucide-react";
 import Image from "next/image";
 
 

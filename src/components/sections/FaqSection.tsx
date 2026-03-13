@@ -86,7 +86,7 @@ export function FaqSection() {
           </div>
           <div className="animate-in fade-in slide-in-from-bottom-12 duration-700 ease-out delay-200">
             <Accordion type="single" collapsible className="w-full">
-              {faqItems.map((item, index) => (
+              {faqItems.map((item) => (
                 <AccordionItem 
                   value={item.value} 
                   key={item.value}

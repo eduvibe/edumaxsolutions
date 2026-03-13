@@ -18,7 +18,7 @@ export default function ContactPage() {
         <div className="text-center mb-12 md:mb-16">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Contact Us</h1>
           <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            We're excited to hear from you! Whether you have questions, need a demo, or want to discuss your school's specific needs, please get in touch using the form below or our direct contact details.
+            We&apos;re excited to hear from you! Whether you have questions, need a demo, or want to discuss your school&apos;s specific needs, please get in touch using the form below or our direct contact details.
           </p>
         </div>
 

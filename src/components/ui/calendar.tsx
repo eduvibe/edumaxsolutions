@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -54,12 +54,24 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Chevron: ({ className, orientation, ...props }: any) =>
-          orientation === "left" ? (
-            <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
-          ) : (
-            <ChevronRight className={cn("h-4 w-4", className)} {...props} />
-          ),
+        Chevron: ({
+          className,
+          orientation,
+          ...props
+        }: React.SVGProps<SVGSVGElement> & {
+          orientation?: "left" | "right" | "up" | "down";
+        }) => {
+          if (orientation === "left") {
+            return <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+          }
+          if (orientation === "up") {
+            return <ChevronUp className={cn("h-4 w-4", className)} {...props} />
+          }
+          if (orientation === "down") {
+            return <ChevronDown className={cn("h-4 w-4", className)} {...props} />
+          }
+          return <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+        },
       }}
       {...props}
     />

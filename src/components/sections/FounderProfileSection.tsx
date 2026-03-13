@@ -1,6 +1,6 @@
 
 import Image from "next/image";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Briefcase, Award } from "lucide-react";
 
 export function FounderProfileSection() {
@@ -42,7 +42,7 @@ export function FounderProfileSection() {
                 With over six years of dedicated experience in teaching and school management, Okolo Uchenna Maxwell founded EduMax Solutions to bridge the gap between traditional education and modern technology. His firsthand understanding of the challenges and opportunities within Nigerian schools fuels his passion for empowering students and educators.
               </p>
               <p className="mt-4 text-foreground/90 leading-relaxed">
-                Okolo's vision is to deliver impactful, user-friendly software solutions that enhance learning outcomes and streamline school operations, ultimately transforming the educational landscape in Nigeria.
+                Okolo&apos;s vision is to deliver impactful, user-friendly software solutions that enhance learning outcomes and streamline school operations, ultimately transforming the educational landscape in Nigeria.
               </p>
             </div>
           </div>

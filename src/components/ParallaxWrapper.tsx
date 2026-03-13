@@ -36,9 +36,8 @@ export function ParallaxWrapper({
   const targetY = useTransform(scrollYProgress, [0, 1], [-offset, offset]);
   
   // Optionally apply spring physics for smoother animation
-  const y = smooth 
-    ? useSpring(targetY, { stiffness: 100, damping: 30, restDelta: 0.001 }) 
-    : targetY;
+  const springY = useSpring(targetY, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  const y = smooth ? springY : targetY;
 
   return (
     <motion.div 

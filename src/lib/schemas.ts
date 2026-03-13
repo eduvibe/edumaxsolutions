@@ -48,7 +48,9 @@ export const essayCreateSchema = z.object({
 
 export const templateUploadSchema = z.object({
   title: z.string().min(3),
-  subjectCategory: z.string().min(2),
+  subjectSlug: z.string().min(1),
+  topicSlug: z.string().optional().or(z.literal("")),
+  resourceType: z.enum(["slides", "worksheet", "scheme"]).default("slides"),
   description: z.string().min(10),
   fileUrl: z.string().url().optional().or(z.literal("")),
   previewImageUrl: z.string().url().optional().or(z.literal("")),

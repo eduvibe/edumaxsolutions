@@ -24,7 +24,9 @@ export async function POST(req: Request) {
     const template = createTemplate({
       title: parsed.data.title,
       description: parsed.data.description,
-      subjectCategory: parsed.data.subjectCategory,
+      subjectSlug: parsed.data.subjectSlug,
+      topicSlug: parsed.data.topicSlug ? parsed.data.topicSlug : null,
+      resourceType: parsed.data.resourceType,
       fileUrl,
       previewImageUrl: parsed.data.previewImageUrl ? parsed.data.previewImageUrl : null,
     });
@@ -34,4 +36,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -1,11 +1,12 @@
 import { getTemplateById, incrementTemplateDownloads } from "@/lib/platform/store";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  _req: Request,
-  ctx: { params: { templateId: string } }
+  _req: NextRequest,
+  ctx: { params: Promise<{ templateId: string }> }
 ) {
-  const tpl = getTemplateById(ctx.params.templateId);
+  const { templateId } = await ctx.params;
+  const tpl = getTemplateById(templateId);
   if (!tpl) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -13,4 +14,3 @@ export async function GET(
   incrementTemplateDownloads(tpl.id);
   return NextResponse.redirect(tpl.fileUrl, 302);
 }
-

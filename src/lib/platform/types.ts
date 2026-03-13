@@ -14,6 +14,8 @@ export type Subject = {
   id: Id;
   name: string;
   slug: string;
+  keyStages?: string[] | null;
+  isNew?: boolean | null;
 };
 
 export type Topic = {
@@ -22,6 +24,10 @@ export type Topic = {
   name: string;
   slug: string;
   description?: string | null;
+  yearGroup?: string | null;
+  thread?: string | null;
+  lessonCount?: number | null;
+  schoolSection?: "primary" | "jss" | "sss" | null;
 };
 
 export type Note = {
@@ -75,6 +81,9 @@ export type PresentationTemplate = {
   title: string;
   description: string;
   subjectCategory: string;
+  subjectId?: Id | null;
+  topicId?: Id | null;
+  resourceType?: "slides" | "worksheet" | "scheme" | null;
   fileUrl: string;
   previewImageUrl?: string | null;
   uploadedBy: Id;
@@ -90,4 +99,3 @@ export type TopicResources = {
   essays: EssayQuestion[];
   templates: PresentationTemplate[];
 };
-

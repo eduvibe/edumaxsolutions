@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,43 +57,50 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Practice Test: {topicName}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="space-y-2">
-            <Label>Number of questions</Label>
-            <Select value={limit} onValueChange={setLimit}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Choose amount" />
-              </SelectTrigger>
-              <SelectContent>
-                {["5", "10", "15", "20"].map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="rounded-3xl border border-black/10 bg-white/30 p-6 dark:border-white/10 dark:bg-white/5 md:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-1">
+            <div className="text-xl font-semibold tracking-tight">Practice test</div>
+            <div className="text-sm text-black/70 dark:text-white/70">{topicName}</div>
           </div>
 
-          <div className="flex gap-3">
-            <Button onClick={generateQuiz} disabled={isBusy}>
-              Generate quiz
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-2">
+              <Label className="text-black/70 dark:text-white/70">Number of questions</Label>
+              <Select value={limit} onValueChange={setLimit}>
+                <SelectTrigger className="h-10 w-[220px] rounded-full border-black/10 bg-white/60 shadow-sm focus-visible:ring-0 dark:border-white/10 dark:bg-white/5">
+                  <SelectValue placeholder="Choose amount" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["5", "10", "15", "20"].map((n) => (
+                    <SelectItem key={n} value={n}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={generateQuiz} disabled={isBusy} className="rounded-full">
+              Generate
             </Button>
-            <Button onClick={submitQuiz} disabled={!canSubmit || quiz.status !== "ready"} variant="secondary">
+            <Button
+              onClick={submitQuiz}
+              disabled={!canSubmit || quiz.status !== "ready"}
+              variant="secondary"
+              className="rounded-full bg-black/5 text-black hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+            >
               Submit
             </Button>
           </div>
+        </div>
 
-          {quiz.status === "submitted" ? (
-            <div className="ml-auto text-sm">
-              Score: <span className="font-semibold">{quiz.score}</span> / {quiz.questions.length}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+        {quiz.status === "submitted" ? (
+          <div className="mt-4 text-sm text-black/70 dark:text-white/70">
+            Score: <span className="font-semibold text-black dark:text-white">{quiz.score}</span> / {quiz.questions.length}
+          </div>
+        ) : null}
+      </div>
 
       {questions.length === 0 ? null : (
         <div className="space-y-4">
@@ -102,13 +108,11 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
             const selected = answers[q.id];
             const showReview = quiz.status === "submitted";
             return (
-              <Card key={q.id}>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {idx + 1}. {q.questionText}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div key={q.id} className="rounded-3xl border border-black/10 bg-transparent p-5 dark:border-white/10 md:p-6">
+                <div className="text-base font-semibold tracking-tight">
+                  {idx + 1}. {q.questionText}
+                </div>
+                <div className="mt-4 space-y-4">
                   <RadioGroup
                     value={selected ?? ""}
                     onValueChange={(v) => setAnswers((prev) => ({ ...prev, [q.id]: v as McqOptionKey }))}
@@ -127,7 +131,7 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
                         <div
                           key={key}
                           className={[
-                            "flex items-start gap-3 rounded-md border p-3 transition-colors",
+                            "flex items-start gap-3 rounded-2xl border border-black/10 bg-white/30 p-3 transition-colors dark:border-white/10 dark:bg-white/5",
                             isCorrect ? "border-emerald-500/60 bg-emerald-500/5" : "",
                             isWrongSelected ? "border-rose-500/60 bg-rose-500/5" : "",
                           ].join(" ")}
@@ -143,15 +147,15 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
                   </RadioGroup>
 
                   {showReview ? (
-                    <div className="rounded-md border bg-muted/30 p-4 text-sm">
+                    <div className="rounded-2xl border border-black/10 bg-white/30 p-4 text-sm dark:border-white/10 dark:bg-white/5">
                       <div>
                         Correct answer: <span className="font-semibold">{q.correctAnswer}</span>
                       </div>
                       <div className="mt-2 whitespace-pre-wrap">{q.explanation}</div>
                     </div>
                   ) : null}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -159,4 +163,3 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
     </div>
   );
 }
-

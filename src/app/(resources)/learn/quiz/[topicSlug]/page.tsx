@@ -12,12 +12,15 @@ export default function QuizPage({ params }: PageProps) {
   if (!topic) notFound();
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-10 space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/learn/topics/${topic.slug}`} className="text-sm text-primary hover:underline">
+    <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <Link
+          href={`/learn/topics/${topic.slug}`}
+          className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white"
+        >
           Back to topic
         </Link>
-        <Link href="/learn" className="text-sm text-primary hover:underline">
+        <Link href="/learn" className="text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white">
           All subjects
         </Link>
       </div>
@@ -26,4 +29,3 @@ export default function QuizPage({ params }: PageProps) {
     </div>
   );
 }
-

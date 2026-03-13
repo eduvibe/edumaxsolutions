@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { listNotesByTopicSlug } from "@/lib/platform/store";
 
 export async function GET(
-  _req: Request,
-  ctx: { params: { topicSlug: string } }
+  _req: NextRequest,
+  ctx: { params: Promise<{ topicSlug: string }> }
 ) {
-  const { topicSlug } = ctx.params;
+  const { topicSlug } = await ctx.params;
   const notes = listNotesByTopicSlug(topicSlug);
   return NextResponse.json({ notes });
 }

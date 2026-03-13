@@ -109,7 +109,8 @@ export function Header() {
         </nav>
 
         {/* Mobile Menu */}
-        <Sheet>
+        <div className="flex items-center gap-2 md:hidden">
+          <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="md:hidden">
               <Menu className="h-6 w-6" />
@@ -140,7 +141,8 @@ export function Header() {
               </RequestDemoModal>
             </div>
           </SheetContent>
-        </Sheet>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

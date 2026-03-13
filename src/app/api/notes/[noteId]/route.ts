@@ -1,14 +1,14 @@
 import { getNoteById } from "@/lib/platform/store";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  _req: Request,
-  ctx: { params: { noteId: string } }
+  _req: NextRequest,
+  ctx: { params: Promise<{ noteId: string }> }
 ) {
-  const note = getNoteById(ctx.params.noteId);
+  const { noteId } = await ctx.params;
+  const note = getNoteById(noteId);
   if (!note) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   return NextResponse.json({ note });
 }
-

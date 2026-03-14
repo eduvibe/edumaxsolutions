@@ -1,11 +1,14 @@
-import Image from 'next/image';
-import Link from 'next/link';
-// ... existing code ... // Path relative to src folder
+import Image from "next/image";
+import Link from "next/link";
 
-export function Logo() {
-  return (
-    <Link href="/" className="flex items-center">
-      <Image src="/media/chtlogo.png" alt="EduMaxSolutions Logo" width={70} height={40} priority />
-    </Link>
-  );
+export function Logo({ href }: { href?: string }) {
+  const content = <Image src="/media/chtlogo.png" alt="EduMaxSolutions Logo" width={70} height={40} priority />;
+  if (href) {
+    return (
+      <Link href={href} className="flex items-center">
+        {content}
+      </Link>
+    );
+  }
+  return <span className="flex items-center">{content}</span>;
 }

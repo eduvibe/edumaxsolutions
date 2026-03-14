@@ -5,11 +5,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: { noteId: string };
+  params: Promise<{ noteId: string }> | { noteId: string };
 };
 
-export default function NotePage({ params }: PageProps) {
-  const note = getNoteById(params.noteId);
+export default async function NotePage({ params }: PageProps) {
+  const p = await params;
+  const note = getNoteById(p.noteId);
   if (!note) notFound();
 
   const author = getTeacherById(note.authorId);

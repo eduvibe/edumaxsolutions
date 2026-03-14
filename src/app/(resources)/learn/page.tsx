@@ -13,12 +13,13 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams?: { q?: string };
+  searchParams?: Promise<{ q?: string }> | { q?: string };
 };
 
-export default function LearnPage({ searchParams }: PageProps) {
+export default async function LearnPage({ searchParams }: PageProps) {
+  const sp = searchParams ? await searchParams : undefined;
   const subjects = listSubjects();
-  const q = searchParams?.q?.trim() ?? "";
+  const q = sp?.q?.trim() ?? "";
   const qLower = q.toLowerCase();
 
   const topicCounts = Object.fromEntries(subjects.map((s) => [s.slug, listTopicsBySubjectSlug(s.slug).length]));

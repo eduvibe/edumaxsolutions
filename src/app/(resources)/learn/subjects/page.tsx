@@ -6,10 +6,11 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams?: { section?: string };
+  searchParams?: Promise<{ section?: string }> | { section?: string };
 };
 
-export default function SubjectsPage({ searchParams }: PageProps) {
+export default async function SubjectsPage({ searchParams }: PageProps) {
+  const sp = searchParams ? await searchParams : undefined;
   const subjects = listSubjects();
   const stats = Object.fromEntries(
     subjects.map((s) => [
@@ -22,8 +23,8 @@ export default function SubjectsPage({ searchParams }: PageProps) {
     ])
   );
   const initialSection =
-    searchParams?.section === "primary" || searchParams?.section === "jss" || searchParams?.section === "sss"
-      ? searchParams.section
+    sp?.section === "primary" || sp?.section === "jss" || sp?.section === "sss"
+      ? sp.section
       : undefined;
   return (
     <SubjectBrowser subjects={subjects} stats={stats} initialSection={initialSection} />

@@ -10,15 +10,16 @@ export const metadata = {
 export default async function UploadTemplatePage({
   searchParams,
 }: {
-  searchParams?: { type?: string };
+  searchParams?: Promise<{ type?: string }> | { type?: string };
 }) {
   if ((await getPlatformRole()) !== "teacher") {
     redirect("/learn/teacher/login");
   }
 
+  const sp = searchParams ? await searchParams : undefined;
   const subjects = listSubjects();
   const topics = listAllTopics();
-  const type = searchParams?.type;
+  const type = sp?.type;
   const initialResourceType =
     type === "worksheet" || type === "scheme" || type === "slides" ? type : undefined;
 

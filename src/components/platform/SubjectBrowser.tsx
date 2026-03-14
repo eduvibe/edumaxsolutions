@@ -16,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SchoolSection = "primary" | "jss" | "sss";
 
@@ -68,6 +68,10 @@ export function SubjectBrowser({
 }) {
   const [section, setSection] = useState<SchoolSection>(initialSection ?? "primary");
 
+  useEffect(() => {
+    if (initialSection) setSection(initialSection);
+  }, [initialSection]);
+
   const filtered = useMemo(() => {
     const allowed = sectionKeyStages(section);
     return [...subjects]
@@ -81,10 +85,9 @@ export function SubjectBrowser({
         <div className="text-sm font-semibold text-black/80 dark:text-white/80">Select school section</div>
         <div className="mt-4 flex flex-wrap gap-2">
           {(["primary", "jss", "sss"] as const).map((k) => (
-            <button
+            <Link
               key={k}
-              type="button"
-              onClick={() => setSection(k)}
+              href={`/learn/subjects?section=${k}`}
               className={cn(
                 "h-10 rounded-md border-2 px-4 text-sm font-semibold",
                 section === k
@@ -93,7 +96,7 @@ export function SubjectBrowser({
               )}
             >
               {sectionLabels[k]}
-            </button>
+            </Link>
           ))}
         </div>
 
@@ -134,6 +137,11 @@ export function SubjectBrowser({
             );
           })}
         </div>
+        {filtered.length === 0 ? (
+          <div className="mt-8 rounded-xl border border-black/10 bg-white/60 p-6 text-sm text-black/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+            No subjects available for {sectionLabels[section]} yet.
+          </div>
+        ) : null}
       </div>
     </div>
   );

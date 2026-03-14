@@ -226,7 +226,7 @@ export function LearnShell({
 
               <div className="flex items-start md:justify-end">
                 <div className="flex items-center gap-3">
-                  <Logo />
+                  <Logo href="/" />
                   <div className="text-sm font-semibold">EduMax Resources</div>
                 </div>
               </div>

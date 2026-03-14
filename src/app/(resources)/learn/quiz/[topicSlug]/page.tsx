@@ -4,11 +4,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: { topicSlug: string };
+  params: Promise<{ topicSlug: string }> | { topicSlug: string };
 };
 
-export default function QuizPage({ params }: PageProps) {
-  const topic = getTopicBySlug(params.topicSlug);
+export default async function QuizPage({ params }: PageProps) {
+  const p = await params;
+  const topic = getTopicBySlug(p.topicSlug);
   if (!topic) notFound();
 
   return (

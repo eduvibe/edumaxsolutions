@@ -1,5 +1,6 @@
 import type {
   EssayQuestion,
+  Lesson,
   McqQuestion,
   Note,
   PresentationTemplate,
@@ -14,6 +15,7 @@ type PlatformStore = {
   teachers: TeacherPublicProfile[];
   subjects: Subject[];
   topics: Topic[];
+  lessons: Lesson[];
   notes: Note[];
   questions: McqQuestion[];
   essays: EssayQuestion[];
@@ -21,7 +23,8 @@ type PlatformStore = {
 };
 
 const DEMO_TEACHER_ID = "teacher_demo_1";
-const STORE_VERSION = 2;
+const STORE_VERSION = 5;
+const REQUIRED_SUBJECT_SLUGS = ["mathematics", "english", "basic-science", "computing"];
 
 function nowIso() {
   return new Date().toISOString();
@@ -62,7 +65,7 @@ function seedStore(): PlatformStore {
       name: "Fractions",
       slug: "fractions",
       description: "Equivalent fractions, comparison, and basic operations.",
-      yearGroup: "Primary 4",
+      yearGroup: "Year 4",
       thread: "Number",
       lessonCount: 16,
       schoolSection: "primary",
@@ -73,7 +76,7 @@ function seedStore(): PlatformStore {
       name: "Decimals",
       slug: "decimals",
       description: "Place value, comparison and operations with decimals.",
-      yearGroup: "Primary 5",
+      yearGroup: "Year 5",
       thread: "Number",
       lessonCount: 14,
       schoolSection: "primary",
@@ -84,7 +87,7 @@ function seedStore(): PlatformStore {
       name: "Shapes and Measurement",
       slug: "shapes-and-measurement",
       description: "Angles, perimeter, area, and basic geometry.",
-      yearGroup: "Primary 6",
+      yearGroup: "Year 6",
       thread: "Geometry",
       lessonCount: 12,
       schoolSection: "primary",
@@ -95,7 +98,7 @@ function seedStore(): PlatformStore {
       name: "Grammar basics",
       slug: "grammar-basics",
       description: "Parts of speech and sentence structure.",
-      yearGroup: "Primary 5",
+      yearGroup: "Year 5",
       thread: "Writing",
       lessonCount: 14,
       schoolSection: "primary",
@@ -106,7 +109,7 @@ function seedStore(): PlatformStore {
       name: "Reading comprehension",
       slug: "reading-comprehension",
       description: "Inference, summary, and key details.",
-      yearGroup: "Primary 6",
+      yearGroup: "Year 6",
       thread: "Reading",
       lessonCount: 12,
       schoolSection: "primary",
@@ -117,7 +120,7 @@ function seedStore(): PlatformStore {
       name: "Spelling and vocabulary",
       slug: "spelling-and-vocabulary",
       description: "Spelling patterns and vocabulary building.",
-      yearGroup: "Primary 4",
+      yearGroup: "Year 4",
       thread: "Writing",
       lessonCount: 10,
       schoolSection: "primary",
@@ -128,7 +131,7 @@ function seedStore(): PlatformStore {
       name: "Computer basics",
       slug: "computer-basics",
       description: "Parts of a computer, safe use, and typing skills.",
-      yearGroup: "Primary 4",
+      yearGroup: "Year 4",
       thread: "Computing systems",
       lessonCount: 10,
       schoolSection: "primary",
@@ -139,7 +142,7 @@ function seedStore(): PlatformStore {
       name: "Networks and the internet",
       slug: "networks-and-internet",
       description: "What the internet is and how data travels.",
-      yearGroup: "Primary 6",
+      yearGroup: "Year 6",
       thread: "Networks",
       lessonCount: 8,
       schoolSection: "primary",
@@ -150,7 +153,7 @@ function seedStore(): PlatformStore {
       name: "Plants and animals",
       slug: "plants-and-animals",
       description: "Living things, habitats and life processes.",
-      yearGroup: "Primary 5",
+      yearGroup: "Year 5",
       thread: "Biology",
       lessonCount: 12,
       schoolSection: "primary",
@@ -161,7 +164,7 @@ function seedStore(): PlatformStore {
       name: "Energy and forces",
       slug: "energy-and-forces-primary",
       description: "Pushes, pulls, energy and simple machines.",
-      yearGroup: "Primary 6",
+      yearGroup: "Year 6",
       thread: "Physics",
       lessonCount: 10,
       schoolSection: "primary",
@@ -172,7 +175,7 @@ function seedStore(): PlatformStore {
       name: "Community and citizenship",
       slug: "community-and-citizenship",
       description: "Rules, rights, responsibilities and leadership.",
-      yearGroup: "Primary 5",
+      yearGroup: "Year 5",
       thread: "Citizenship",
       lessonCount: 10,
       schoolSection: "primary",
@@ -194,7 +197,7 @@ function seedStore(): PlatformStore {
       name: "Values and moral lessons",
       slug: "values-and-morals",
       description: "Respect, honesty and empathy.",
-      yearGroup: "Primary 4",
+      yearGroup: "Year 4",
       thread: "Values",
       lessonCount: 8,
       schoolSection: "primary",
@@ -216,7 +219,7 @@ function seedStore(): PlatformStore {
       name: "French greetings",
       slug: "french-greetings",
       description: "Greetings, numbers, colours and classroom phrases.",
-      yearGroup: "Primary 6",
+      yearGroup: "Year 6",
       thread: "Basics",
       lessonCount: 6,
       schoolSection: "primary",
@@ -498,6 +501,51 @@ function seedStore(): PlatformStore {
     },
   ];
 
+  const lessons: Lesson[] = [
+    {
+      id: "les_comp_media_1",
+      topicId: "top_comp_media",
+      lessonNumber: 1,
+      title: "Digital devices",
+      objective: "I can describe how digital devices work.",
+    },
+    {
+      id: "les_comp_media_2",
+      topicId: "top_comp_media",
+      lessonNumber: 2,
+      title: "Designing a digital device",
+      objective: "I can design a digital device.",
+    },
+    {
+      id: "les_comp_media_3",
+      topicId: "top_comp_media",
+      lessonNumber: 3,
+      title: "Input and output",
+      objective: "I can explain how input and output devices are used.",
+    },
+    {
+      id: "les_comp_media_4",
+      topicId: "top_comp_media",
+      lessonNumber: 4,
+      title: "Storing data",
+      objective: "I can compare different ways to store data.",
+    },
+    {
+      id: "les_comp_media_5",
+      topicId: "top_comp_media",
+      lessonNumber: 5,
+      title: "Sharing information safely",
+      objective: "I can describe how to share information safely online.",
+    },
+    {
+      id: "les_comp_media_6",
+      topicId: "top_comp_media",
+      lessonNumber: 6,
+      title: "Review and quiz",
+      objective: "I can review learning and complete a quiz.",
+    },
+  ];
+
   const notes: Note[] = [
     {
       id: "note_1",
@@ -506,6 +554,22 @@ function seedStore(): PlatformStore {
         "A quadratic equation has the form ax^2 + bx + c = 0.\n\nCommon solution methods:\n1) Factorisation\n2) Completing the square\n3) Quadratic formula: x = (-b ± √(b^2 - 4ac)) / 2a",
       subjectId: "sub_math",
       topicId: "top_quad",
+      lessonNumber: null,
+      authorId: DEMO_TEACHER_ID,
+      featuredImageUrl: null,
+      dateCreated: nowIso(),
+      dateUpdated: null,
+      views: 0,
+      published: true,
+    },
+    {
+      id: "note_comp_media_1",
+      title: "Digital devices",
+      content:
+        "Digital devices use input, processing, storage and output.\n\nKey terms:\n- Input\n- Output\n- Storage\n- Processor\n\nExamples: phones, laptops, tablets.",
+      subjectId: "sub_comp",
+      topicId: "top_comp_media",
+      lessonNumber: 1,
       authorId: DEMO_TEACHER_ID,
       featuredImageUrl: null,
       dateCreated: nowIso(),
@@ -520,6 +584,7 @@ function seedStore(): PlatformStore {
       id: "q_1",
       subjectId: "sub_math",
       topicId: "top_quad",
+      lessonNumber: null,
       authorId: DEMO_TEACHER_ID,
       questionText: "Solve: x^2 - 5x + 6 = 0",
       questionImageUrl: null,
@@ -535,6 +600,26 @@ function seedStore(): PlatformStore {
       explanation: "Factorise: (x - 2)(x - 3) = 0, so x = 2 or 3.",
       dateCreated: nowIso(),
     },
+    {
+      id: "q_comp_media_1",
+      subjectId: "sub_comp",
+      topicId: "top_comp_media",
+      lessonNumber: 1,
+      authorId: DEMO_TEACHER_ID,
+      questionText: "Which component is responsible for processing instructions in a computer?",
+      questionImageUrl: null,
+      optionAText: "CPU",
+      optionAImageUrl: null,
+      optionBText: "Monitor",
+      optionBImageUrl: null,
+      optionCText: "Keyboard",
+      optionCImageUrl: null,
+      optionDText: "Mouse",
+      optionDImageUrl: null,
+      correctAnswer: "A",
+      explanation: "The CPU (processor) executes instructions.",
+      dateCreated: nowIso(),
+    },
   ];
 
   const essays: EssayQuestion[] = [
@@ -542,6 +627,7 @@ function seedStore(): PlatformStore {
       id: "e_1",
       subjectId: "sub_phy",
       topicId: "top_newton",
+      lessonNumber: null,
       authorId: DEMO_TEACHER_ID,
       questionText:
         "Explain Newton's First Law of Motion and give one real-life example.",
@@ -560,7 +646,38 @@ function seedStore(): PlatformStore {
       subjectId: null,
       topicId: null,
       resourceType: "slides",
+      lessonNumber: null,
       fileUrl: "https://example.com/templates/lesson-plan.pptx",
+      previewImageUrl: null,
+      uploadedBy: DEMO_TEACHER_ID,
+      dateUploaded: nowIso(),
+      downloads: 0,
+    },
+    {
+      id: "t_comp_media_slides_1",
+      title: "Digital devices — slides",
+      description: "Lesson slides for digital devices.",
+      subjectCategory: "Computing",
+      subjectId: "sub_comp",
+      topicId: "top_comp_media",
+      resourceType: "slides",
+      lessonNumber: 1,
+      fileUrl: "https://example.com/templates/digital-devices-slides.pptx",
+      previewImageUrl: null,
+      uploadedBy: DEMO_TEACHER_ID,
+      dateUploaded: nowIso(),
+      downloads: 0,
+    },
+    {
+      id: "t_comp_media_ws_1",
+      title: "Digital devices — worksheet",
+      description: "Worksheet for lesson practice.",
+      subjectCategory: "Computing",
+      subjectId: "sub_comp",
+      topicId: "top_comp_media",
+      resourceType: "worksheet",
+      lessonNumber: 1,
+      fileUrl: "https://example.com/templates/digital-devices-worksheet.pdf",
       previewImageUrl: null,
       uploadedBy: DEMO_TEACHER_ID,
       dateUploaded: nowIso(),
@@ -568,22 +685,28 @@ function seedStore(): PlatformStore {
     },
   ];
 
-  return { __version: STORE_VERSION, teachers, subjects, topics, notes, questions, essays, templates };
+  return { __version: STORE_VERSION, teachers, subjects, topics, lessons, notes, questions, essays, templates };
 }
 
 function getGlobalStore(): PlatformStore {
   const g = globalThis as unknown as {
     __edumax_platform_store?: PlatformStore;
   };
+  const existing = g.__edumax_platform_store;
+  const missingRequired =
+    !existing?.subjects?.length ||
+    !Array.isArray(existing.lessons) ||
+    !REQUIRED_SUBJECT_SLUGS.every((slug) => existing.subjects.some((s) => s.slug === slug));
   if (
-    !g.__edumax_platform_store ||
-    g.__edumax_platform_store.__version !== STORE_VERSION ||
-    g.__edumax_platform_store.subjects.length === 0 ||
-    g.__edumax_platform_store.topics.length === 0
+    !existing ||
+    existing.__version !== STORE_VERSION ||
+    existing.subjects.length === 0 ||
+    existing.topics.length === 0 ||
+    missingRequired
   ) {
     g.__edumax_platform_store = seedStore();
   }
-  return g.__edumax_platform_store;
+  return g.__edumax_platform_store ?? seedStore();
 }
 
 export function listSubjects(): Subject[] {
@@ -607,6 +730,23 @@ export function listTopicsBySubjectSlug(subjectSlug: string): Topic[] {
 
 export function listTopicsBySubjectAndSection(subjectSlug: string, section: "primary" | "jss" | "sss"): Topic[] {
   return listTopicsBySubjectSlug(subjectSlug).filter((t) => (t.schoolSection ?? null) === section);
+}
+
+export function listLessonsByTopicSlug(topicSlug: string): Lesson[] {
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return [];
+  const stored = getGlobalStore().lessons.filter((l) => l.topicId === topic.id);
+  if (stored.length) {
+    return [...stored].sort((a, b) => a.lessonNumber - b.lessonNumber);
+  }
+  const count = topic.lessonCount ?? 0;
+  return Array.from({ length: Math.max(0, count) }, (_, i) => ({
+    id: `${topic.id}_lesson_${i + 1}`,
+    topicId: topic.id,
+    lessonNumber: i + 1,
+    title: `Lesson ${i + 1}`,
+    objective: null,
+  }));
 }
 
 export function listAllTopics(): Topic[] {
@@ -639,6 +779,14 @@ export function listAllNotes(): Note[] {
   return getGlobalStore().notes;
 }
 
+export function listNotesByTopicAndLesson(topicSlug: string, lessonNumber: number): Note[] {
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return [];
+  return getGlobalStore().notes.filter(
+    (n) => n.topicId === topic.id && n.published && (n.lessonNumber ?? null) === lessonNumber
+  );
+}
+
 export function getNoteById(noteId: string): Note | undefined {
   return getGlobalStore().notes.find((n) => n.id === noteId && n.published);
 }
@@ -660,6 +808,7 @@ export function createNote(input: {
   featuredImageUrl?: string | null;
   published: boolean;
   authorId?: string;
+  lessonNumber?: number | null;
 }): Note {
   const store = getGlobalStore();
   const subject = getSubjectBySlug(input.subjectSlug);
@@ -673,6 +822,7 @@ export function createNote(input: {
     content: input.content,
     subjectId: subject.id,
     topicId: topic.id,
+    lessonNumber: input.lessonNumber ?? null,
     authorId: input.authorId ?? DEMO_TEACHER_ID,
     featuredImageUrl: input.featuredImageUrl ?? null,
     dateCreated: nowIso(),
@@ -688,6 +838,12 @@ export function listQuestionsByTopicSlug(topicSlug: string): McqQuestion[] {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
   return getGlobalStore().questions.filter((q) => q.topicId === topic.id);
+}
+
+export function listQuestionsByTopicAndLesson(topicSlug: string, lessonNumber: number): McqQuestion[] {
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return [];
+  return getGlobalStore().questions.filter((q) => q.topicId === topic.id && (q.lessonNumber ?? null) === lessonNumber);
 }
 
 export function listAllQuestions(): McqQuestion[] {
@@ -709,6 +865,7 @@ export function createMcqQuestion(input: Omit<McqQuestion, "id" | "subjectId" | 
     id: crypto.randomUUID(),
     subjectId: subject.id,
     topicId: topic.id,
+    lessonNumber: input.lessonNumber ?? null,
     authorId: input.authorId ?? DEMO_TEACHER_ID,
     questionText: input.questionText,
     questionImageUrl: input.questionImageUrl ?? null,
@@ -728,8 +885,11 @@ export function createMcqQuestion(input: Omit<McqQuestion, "id" | "subjectId" | 
   return question;
 }
 
-export function getRandomQuestions(topicSlug: string, limit: number): McqQuestion[] {
-  const all = listQuestionsByTopicSlug(topicSlug);
+export function getRandomQuestions(topicSlug: string, limit: number, lessonNumber?: number): McqQuestion[] {
+  const all =
+    typeof lessonNumber === "number"
+      ? listQuestionsByTopicAndLesson(topicSlug, lessonNumber)
+      : listQuestionsByTopicSlug(topicSlug);
   const shuffled = [...all].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(0, limit));
 }
@@ -750,6 +910,7 @@ export function createEssayQuestion(input: {
   questionText: string;
   referenceAnswer?: string | null;
   authorId?: string;
+  lessonNumber?: number | null;
 }): EssayQuestion {
   const store = getGlobalStore();
   const subject = getSubjectBySlug(input.subjectSlug);
@@ -761,6 +922,7 @@ export function createEssayQuestion(input: {
     id: crypto.randomUUID(),
     subjectId: subject.id,
     topicId: topic.id,
+    lessonNumber: input.lessonNumber ?? null,
     authorId: input.authorId ?? DEMO_TEACHER_ID,
     questionText: input.questionText,
     referenceAnswer: input.referenceAnswer ?? null,
@@ -792,6 +954,7 @@ export function createTemplate(input: {
   subjectSlug: string;
   topicSlug?: string | null;
   resourceType?: "slides" | "worksheet" | "scheme" | null;
+  lessonNumber?: number | null;
   fileUrl: string;
   previewImageUrl?: string | null;
   uploadedBy?: string;
@@ -810,6 +973,7 @@ export function createTemplate(input: {
     subjectId: subject.id,
     topicId: topic?.id ?? null,
     resourceType: input.resourceType ?? "slides",
+    lessonNumber: input.lessonNumber ?? null,
     fileUrl: input.fileUrl,
     previewImageUrl: input.previewImageUrl ?? null,
     uploadedBy: input.uploadedBy ?? DEMO_TEACHER_ID,

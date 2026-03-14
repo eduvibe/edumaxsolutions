@@ -87,7 +87,7 @@ export function Header() {
       )}
     >
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
-        <Logo />
+        <Logo href="/" />
         <nav className="hidden items-center gap-6 md:flex">
           {NAV_LINKS.map((link) => (
             <Link

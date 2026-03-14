@@ -14,7 +14,15 @@ type QuizState =
   | { status: "ready"; questions: McqQuestion[] }
   | { status: "submitted"; questions: McqQuestion[]; answers: Record<string, McqOptionKey>; score: number };
 
-export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicName: string }) {
+export function QuizClient({
+  topicSlug,
+  topicName,
+  lessonNumber,
+}: {
+  topicSlug: string;
+  topicName: string;
+  lessonNumber?: number;
+}) {
   const { toast } = useToast();
   const [limit, setLimit] = useState("10");
   const [quiz, setQuiz] = useState<QuizState>({ status: "idle" });
@@ -31,11 +39,10 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
     setQuiz({ status: "loading" });
     setAnswers({});
     try {
-      const lessonParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("lesson") : null;
       const url = new URL(`/api/questions/quiz`, window.location.origin);
       url.searchParams.set("topicSlug", topicSlug);
       url.searchParams.set("limit", limit);
-      if (lessonParam) url.searchParams.set("lesson", lessonParam);
+      if (typeof lessonNumber === "number" && Number.isFinite(lessonNumber)) url.searchParams.set("lesson", String(lessonNumber));
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to load quiz");
       const data = (await res.json()) as { questions: McqQuestion[] };
@@ -62,7 +69,7 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-black/10 bg-white/30 p-6 dark:border-white/10 dark:bg-white/5 md:p-8">
+      <div className="rounded-3xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
             <div className="text-xl font-semibold tracking-tight">Practice test</div>
@@ -113,7 +120,7 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
             const selected = answers[q.id];
             const showReview = quiz.status === "submitted";
             return (
-              <div key={q.id} className="rounded-3xl border border-black/10 bg-transparent p-5 dark:border-white/10 md:p-6">
+              <div key={q.id} className="rounded-3xl border border-black/10 bg-white/5 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-6">
                 <div className="text-base font-semibold tracking-tight">
                   {idx + 1}. {q.questionText}
                 </div>
@@ -136,7 +143,7 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
                         <div
                           key={key}
                           className={[
-                            "flex items-start gap-3 rounded-2xl border border-black/10 bg-white/30 p-3 transition-colors dark:border-white/10 dark:bg-white/5",
+                            "flex items-start gap-3 rounded-2xl border border-black/10 bg-white/10 p-3 backdrop-blur-md transition-colors dark:border-white/10 dark:bg-white/5",
                             isCorrect ? "border-emerald-500/60 bg-emerald-500/5" : "",
                             isWrongSelected ? "border-rose-500/60 bg-rose-500/5" : "",
                           ].join(" ")}
@@ -152,7 +159,7 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
                   </RadioGroup>
 
                   {showReview ? (
-                    <div className="rounded-2xl border border-black/10 bg-white/30 p-4 text-sm dark:border-white/10 dark:bg-white/5">
+                    <div className="rounded-2xl border border-black/10 bg-white/10 p-4 text-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
                       <div>
                         Correct answer: <span className="font-semibold">{q.correctAnswer}</span>
                       </div>

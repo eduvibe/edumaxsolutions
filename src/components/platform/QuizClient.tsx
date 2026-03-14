@@ -31,7 +31,12 @@ export function QuizClient({ topicSlug, topicName }: { topicSlug: string; topicN
     setQuiz({ status: "loading" });
     setAnswers({});
     try {
-      const res = await fetch(`/api/questions/quiz?topicSlug=${encodeURIComponent(topicSlug)}&limit=${encodeURIComponent(limit)}`);
+      const lessonParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("lesson") : null;
+      const url = new URL(`/api/questions/quiz`, window.location.origin);
+      url.searchParams.set("topicSlug", topicSlug);
+      url.searchParams.set("limit", limit);
+      if (lessonParam) url.searchParams.set("lesson", lessonParam);
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to load quiz");
       const data = (await res.json()) as { questions: McqQuestion[] };
       setQuiz({ status: "ready", questions: data.questions });

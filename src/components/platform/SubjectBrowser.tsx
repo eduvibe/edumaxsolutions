@@ -117,7 +117,7 @@ export function SubjectBrowser({
               <Link
                 key={s.id}
                 href={`/learn/subjects/${s.slug}?section=${section}`}
-                className="group rounded-xl bg-[#cbd7ff] p-6 transition-colors hover:bg-[#bfd0ff] dark:bg-[#1f2a44] dark:hover:bg-[#24324f]"
+                className="group rounded-xl border border-black/15 bg-white/20 p-6 backdrop-blur-md transition-colors hover:bg-white/30 dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
               >
                 <div className="flex items-start justify-between">
                   <Icon className="h-10 w-10 text-black/80 dark:text-white/80" />
@@ -129,7 +129,7 @@ export function SubjectBrowser({
                 </div>
                 <div className="mt-5 text-lg font-extrabold tracking-tight text-black dark:text-white">{s.name}</div>
 
-                <div className="mt-6 rounded-lg bg-white p-4 text-sm text-black shadow-sm dark:bg-black/40 dark:text-white">
+                <div className="mt-6 rounded-lg border border-black/10 bg-white/20 p-4 text-sm text-black backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white">
                   <div>{subjectStats.units} topics</div>
                   <div className="mt-1">{subjectStats.lessons} lessons</div>
                 </div>
@@ -138,7 +138,7 @@ export function SubjectBrowser({
           })}
         </div>
         {filtered.length === 0 ? (
-          <div className="mt-8 rounded-xl border border-black/10 bg-white/60 p-6 text-sm text-black/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+          <div className="mt-8 rounded-xl border border-black/10 bg-white/30 p-6 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">
             No subjects available for {sectionLabels[section]} yet.
           </div>
         ) : null}

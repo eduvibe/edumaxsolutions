@@ -96,7 +96,10 @@ export default async function TopicPage({ params }: PageProps) {
                 const videos = 0;
 
                 return (
-                  <div key={lesson.id} className="overflow-hidden rounded-2xl border-2 border-black/70 bg-white dark:border-white/20 dark:bg-black/20">
+                  <div
+                    key={lesson.id}
+                    className="overflow-hidden rounded-2xl border-2 border-black/70 bg-white/10 backdrop-blur-md dark:border-white/20 dark:bg-white/5"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-[72px_1fr]">
                       <div className="flex items-stretch">
                         <div className="flex w-full items-center justify-center bg-[#d9b8d8] text-2xl font-extrabold text-black">

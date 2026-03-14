@@ -30,12 +30,21 @@ export type Topic = {
   schoolSection?: "primary" | "jss" | "sss" | null;
 };
 
+export type Lesson = {
+  id: Id;
+  topicId: Id;
+  lessonNumber: number;
+  title: string;
+  objective?: string | null;
+};
+
 export type Note = {
   id: Id;
   title: string;
   content: string;
   subjectId: Id;
   topicId: Id;
+  lessonNumber?: number | null;
   authorId: Id;
   featuredImageUrl?: string | null;
   dateCreated: string;
@@ -50,6 +59,7 @@ export type McqQuestion = {
   id: Id;
   subjectId: Id;
   topicId: Id;
+  lessonNumber?: number | null;
   authorId: Id;
   questionText: string;
   questionImageUrl?: string | null;
@@ -70,6 +80,7 @@ export type EssayQuestion = {
   id: Id;
   subjectId: Id;
   topicId: Id;
+  lessonNumber?: number | null;
   authorId: Id;
   questionText: string;
   referenceAnswer?: string | null;
@@ -84,6 +95,7 @@ export type PresentationTemplate = {
   subjectId?: Id | null;
   topicId?: Id | null;
   resourceType?: "slides" | "worksheet" | "scheme" | null;
+  lessonNumber?: number | null;
   fileUrl: string;
   previewImageUrl?: string | null;
   uploadedBy: Id;

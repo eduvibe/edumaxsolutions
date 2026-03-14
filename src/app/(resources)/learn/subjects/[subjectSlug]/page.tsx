@@ -67,7 +67,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
         <div className="mx-auto max-w-6xl px-4 py-10">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">
             <div className="space-y-10">
-              <div className="rounded-2xl border border-black/10 bg-white p-8 shadow-sm dark:border-white/10 dark:bg-white/5">
+              <div className="rounded-2xl border border-black/10 bg-white/15 p-8 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_180px] lg:items-center">
                   <div className="space-y-3">
                     <div className="text-2xl font-extrabold tracking-tight">
@@ -89,7 +89,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
               <div className="space-y-4">
                 <div className="text-2xl font-extrabold tracking-tight">Units ({topics.length})</div>
 
-                <div className="rounded-2xl bg-[#d9e2ff] p-6 dark:bg-[#223153]">
+                <div className="rounded-2xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
                   <div className="flex items-start justify-between gap-6">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
@@ -118,7 +118,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
 
                   <div className="mt-6 space-y-3">
                     {topics.length === 0 ? (
-                      <div className="rounded-xl bg-white p-5 text-sm text-black/70 shadow-sm dark:bg-black/30 dark:text-white/70">
+                      <div className="rounded-xl border border-black/10 bg-white/10 p-5 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">
                         No units yet.
                       </div>
                     ) : (
@@ -127,7 +127,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
                         return (
                           <div
                             key={t.id}
-                            className="flex items-center gap-4 rounded-xl bg-white px-4 py-3 shadow-sm dark:bg-black/30"
+                            className="flex items-center gap-4 rounded-xl border border-black/10 bg-white/10 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-white/5"
                           >
                             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#b7c6ff] text-sm font-extrabold text-black dark:bg-[#1f2a44] dark:text-white">
                               {idx + 1}

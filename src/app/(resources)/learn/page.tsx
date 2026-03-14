@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
 import {
   listAllTopics,
   listRecentNotes,
@@ -13,14 +14,45 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string }> | { q?: string };
+  searchParams?: Promise<{ q?: string; preview?: string }> | { q?: string; preview?: string };
 };
 
 export default async function LearnPage({ searchParams }: PageProps) {
   const sp = searchParams ? await searchParams : undefined;
+  const env = getPlatformPublicEnv();
   const subjects = listSubjects();
   const q = sp?.q?.trim() ?? "";
   const qLower = q.toLowerCase();
+  const preview = sp?.preview === "1" || sp?.preview === "true";
+
+  if (env.resourcesComingSoon && !preview) {
+    return (
+      <div className="bg-[#f3edf6] dark:bg-[#0b0f14]">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <div className="rounded-3xl border border-black/10 bg-white/10 p-8 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-10">
+            <div className="text-sm font-semibold text-black/70 dark:text-white/70">Resources</div>
+            <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-black dark:text-white">Coming soon</h1>
+            <p className="mt-3 max-w-2xl text-sm text-black/70 dark:text-white/70">
+              We’re still building the curriculum library. You can preview progress during development using the preview link.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button asChild className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
+                <Link href="/learn?preview=1">Preview resources</Link>
+              </Button>
+              <Button
+                asChild
+                variant="secondary"
+                className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+              >
+                <Link href="/">Back home</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const topicCounts = Object.fromEntries(subjects.map((s) => [s.slug, listTopicsBySubjectSlug(s.slug).length]));
 

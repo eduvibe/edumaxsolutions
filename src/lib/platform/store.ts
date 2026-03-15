@@ -1,6 +1,7 @@
 import type {
   EssayQuestion,
   Lesson,
+  LessonVideo,
   McqQuestion,
   Note,
   PresentationTemplate,
@@ -9,6 +10,7 @@ import type {
   Topic,
   TopicResources,
 } from "@/lib/platform/types";
+import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
 
 type PlatformStore = {
   __version?: number;
@@ -16,6 +18,7 @@ type PlatformStore = {
   subjects: Subject[];
   topics: Topic[];
   lessons: Lesson[];
+  videos: LessonVideo[];
   notes: Note[];
   questions: McqQuestion[];
   essays: EssayQuestion[];
@@ -23,7 +26,7 @@ type PlatformStore = {
 };
 
 const DEMO_TEACHER_ID = "teacher_demo_1";
-const STORE_VERSION = 5;
+const STORE_VERSION = 7;
 const REQUIRED_SUBJECT_SLUGS = ["mathematics", "english", "basic-science", "computing"];
 
 function nowIso() {
@@ -501,48 +504,33 @@ function seedStore(): PlatformStore {
     },
   ];
 
-  const lessons: Lesson[] = [
+  for (const t of topics) {
+    const defs = curriculumLessonsByTopicSlug[t.slug];
+    if (defs) t.lessonCount = defs.length;
+  }
+
+  const lessons: Lesson[] = Object.entries(curriculumLessonsByTopicSlug).flatMap(([topicSlug, defs]) => {
+    const topic = topics.find((t) => t.slug === topicSlug);
+    if (!topic) return [];
+    return defs.map((d, idx) => ({
+      id: `les_${topic.id}_${idx + 1}`,
+      topicId: topic.id,
+      lessonNumber: idx + 1,
+      title: d.title,
+      objective: d.objective ?? null,
+    }));
+  });
+
+  const videos: LessonVideo[] = [
     {
-      id: "les_comp_media_1",
+      id: "vid_comp_media_1",
+      subjectId: "sub_comp",
       topicId: "top_comp_media",
       lessonNumber: 1,
-      title: "Digital devices",
-      objective: "I can describe how digital devices work.",
-    },
-    {
-      id: "les_comp_media_2",
-      topicId: "top_comp_media",
-      lessonNumber: 2,
-      title: "Designing a digital device",
-      objective: "I can design a digital device.",
-    },
-    {
-      id: "les_comp_media_3",
-      topicId: "top_comp_media",
-      lessonNumber: 3,
-      title: "Input and output",
-      objective: "I can explain how input and output devices are used.",
-    },
-    {
-      id: "les_comp_media_4",
-      topicId: "top_comp_media",
-      lessonNumber: 4,
-      title: "Storing data",
-      objective: "I can compare different ways to store data.",
-    },
-    {
-      id: "les_comp_media_5",
-      topicId: "top_comp_media",
-      lessonNumber: 5,
-      title: "Sharing information safely",
-      objective: "I can describe how to share information safely online.",
-    },
-    {
-      id: "les_comp_media_6",
-      topicId: "top_comp_media",
-      lessonNumber: 6,
-      title: "Review and quiz",
-      objective: "I can review learning and complete a quiz.",
+      authorId: DEMO_TEACHER_ID,
+      title: "Digital devices (recorded lesson)",
+      videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      dateCreated: nowIso(),
     },
   ];
 
@@ -685,7 +673,7 @@ function seedStore(): PlatformStore {
     },
   ];
 
-  return { __version: STORE_VERSION, teachers, subjects, topics, lessons, notes, questions, essays, templates };
+  return { __version: STORE_VERSION, teachers, subjects, topics, lessons, videos, notes, questions, essays, templates };
 }
 
 function getGlobalStore(): PlatformStore {
@@ -696,6 +684,7 @@ function getGlobalStore(): PlatformStore {
   const missingRequired =
     !existing?.subjects?.length ||
     !Array.isArray(existing.lessons) ||
+    !Array.isArray(existing.videos) ||
     !REQUIRED_SUBJECT_SLUGS.every((slug) => existing.subjects.some((s) => s.slug === slug));
   if (
     !existing ||
@@ -739,14 +728,7 @@ export function listLessonsByTopicSlug(topicSlug: string): Lesson[] {
   if (stored.length) {
     return [...stored].sort((a, b) => a.lessonNumber - b.lessonNumber);
   }
-  const count = topic.lessonCount ?? 0;
-  return Array.from({ length: Math.max(0, count) }, (_, i) => ({
-    id: `${topic.id}_lesson_${i + 1}`,
-    topicId: topic.id,
-    lessonNumber: i + 1,
-    title: `Lesson ${i + 1}`,
-    objective: null,
-  }));
+  return [];
 }
 
 export function listAllTopics(): Topic[] {
@@ -844,6 +826,12 @@ export function listQuestionsByTopicAndLesson(topicSlug: string, lessonNumber: n
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
   return getGlobalStore().questions.filter((q) => q.topicId === topic.id && (q.lessonNumber ?? null) === lessonNumber);
+}
+
+export function listVideosByTopicAndLesson(topicSlug: string, lessonNumber: number): LessonVideo[] {
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return [];
+  return getGlobalStore().videos.filter((v) => v.topicId === topic.id && v.lessonNumber === lessonNumber);
 }
 
 export function listAllQuestions(): McqQuestion[] {

@@ -103,6 +103,17 @@ export type PresentationTemplate = {
   downloads: number;
 };
 
+export type LessonVideo = {
+  id: Id;
+  subjectId: Id;
+  topicId: Id;
+  lessonNumber: number;
+  authorId: Id;
+  title: string;
+  videoUrl: string;
+  dateCreated: string;
+};
+
 export type TopicResources = {
   topic: Topic;
   subject: Subject;

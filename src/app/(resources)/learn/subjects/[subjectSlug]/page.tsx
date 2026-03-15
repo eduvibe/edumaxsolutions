@@ -8,7 +8,7 @@ import {
   listTopicsBySubjectSlug,
 } from "@/lib/platform/store";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Bookmark } from "lucide-react";
+import { ArrowRight, Bookmark, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -45,6 +45,73 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
   });
 
   const sectionLabel = section === "primary" ? "Primary" : section === "jss" ? "Junior Secondary" : section === "sss" ? "Senior Secondary" : "All sections";
+
+  if (role === "student") {
+    return (
+      <div className="bg-[#e7eefc] dark:bg-[#0b0f14]">
+        <div className="mx-auto max-w-6xl px-4 py-10">
+          <div className="flex items-center gap-3 text-sm font-semibold text-black/80 dark:text-white/80">
+            <Link
+              href={`/learn/subjects${section ? `?section=${encodeURIComponent(section)}` : ""}`}
+              className="inline-flex items-center gap-2 hover:underline underline-offset-4"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Change subject
+            </Link>
+          </div>
+
+          <div className="mt-8 flex items-start gap-5">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#b7c6ff] text-black">
+              <div className="text-2xl font-extrabold">{subject.name.slice(0, 1)}</div>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-5xl font-extrabold tracking-tight text-black dark:text-white">{subject.name}</h1>
+              <div className="mt-1 text-sm text-black/70 dark:text-white/70">{sectionLabel}</div>
+            </div>
+          </div>
+
+          <div className="mt-10">
+            <div className="flex items-center gap-3 text-lg font-extrabold tracking-tight text-black dark:text-white">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-yellow-300 text-black">
+                i
+              </span>
+              Choose a topic ({topics.length})
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-2xl border border-black/10 bg-white/10 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+              <div className="divide-y divide-black/10 dark:divide-white/10">
+                {topics.map((t, idx) => {
+                  const lessons = getTopicLessonCount(t.slug);
+                  return (
+                    <Link
+                      key={t.id}
+                      href={`/learn/topics/${t.slug}`}
+                      className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-white/10 dark:hover:bg-white/10"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/40 text-sm font-extrabold text-black dark:bg-white/10 dark:text-white">
+                        {idx + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-base font-extrabold tracking-tight text-black dark:text-white">
+                          {t.name}
+                        </div>
+                      </div>
+                      <div className="hidden text-sm font-semibold text-black/70 dark:text-white/70 md:block">
+                        {lessons} subtopics
+                      </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/10 text-black dark:border-white/10 dark:text-white">
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#cbd7ff] dark:bg-[#1f2a44]">

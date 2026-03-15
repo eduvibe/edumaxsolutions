@@ -6,10 +6,9 @@ import type { PlatformRole } from "@/lib/platform/session";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function RoleToggle({ initialRole }: { initialRole: PlatformRole }) {
+export function RoleToggle({ role, onRoleChange }: { role: PlatformRole; onRoleChange?: (next: PlatformRole) => void }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [role, setRole] = useState<PlatformRole>(initialRole);
   const [busy, setBusy] = useState(false);
 
   async function setNextRole(next: PlatformRole) {
@@ -33,7 +32,8 @@ export function RoleToggle({ initialRole }: { initialRole: PlatformRole }) {
         body: JSON.stringify({ role: next }),
       });
       if (!res.ok) throw new Error("Unable to update role");
-      setRole(next);
+      onRoleChange?.(next);
+      router.push("/learn/subjects?section=primary");
       router.refresh();
     } catch (e) {
       toast({

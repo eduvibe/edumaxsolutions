@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { RoleToggle } from "@/components/platform/RoleToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
 import type { PlatformRole } from "@/lib/platform/session";
 import { cn } from "@/lib/utils";
 import { Moon, Search, Sun } from "lucide-react";
@@ -33,9 +34,11 @@ export function LearnShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryFromUrl = searchParams.get("q") ?? "";
+  const env = getPlatformPublicEnv();
 
   const [theme, setTheme] = useState<LearnTheme>("light");
   const [query, setQuery] = useState("");
+  const [role, setRole] = useState<PlatformRole>(initialRole);
 
   useEffect(() => {
     setTheme(getInitialTheme());
@@ -44,6 +47,10 @@ export function LearnShell({
   useEffect(() => {
     setQuery(queryFromUrl);
   }, [queryFromUrl]);
+
+  useEffect(() => {
+    setRole(initialRole);
+  }, [initialRole]);
 
   function toggleTheme() {
     const next: LearnTheme = theme === "dark" ? "light" : "dark";
@@ -54,10 +61,11 @@ export function LearnShell({
   function submitSearch() {
     const q = query.trim();
     if (!q) {
-      router.push("/learn");
+      router.push("/learn/subjects?section=primary");
       return;
     }
-    router.push(`/learn?q=${encodeURIComponent(q)}`);
+    const preview = env.resourcesComingSoon ? "&preview=1" : "";
+    router.push(`/learn?q=${encodeURIComponent(q)}${preview}`);
   }
 
   return (
@@ -67,20 +75,24 @@ export function LearnShell({
           <div className="border-b border-black/10 dark:border-white/10">
             <div className="mx-auto max-w-6xl px-4">
               <div className="flex h-16 items-center gap-4">
-                <Link href="/learn" className="flex items-center gap-3">
+                <Link href="/learn/subjects?section=primary" className="flex items-center gap-3">
                   <Logo />
                 </Link>
 
                 <nav className="hidden items-center gap-5 text-sm font-medium text-black/80 dark:text-white/80 md:flex">
-                  <Link href="/learn" className="hover:underline underline-offset-4">
-                    Teachers
+                  <Link href="/learn/subjects?section=primary" className="hover:underline underline-offset-4">
+                    Subjects
                   </Link>
-                  <Link href="/learn" className="hover:underline underline-offset-4">
-                    Curriculum
-                  </Link>
-                  <Link href="/learn/templates" className="hover:underline underline-offset-4">
-                    Templates
-                  </Link>
+                  {role === "teacher" ? (
+                    <>
+                      <Link href="/learn/teacher/dashboard" className="hover:underline underline-offset-4">
+                        Dashboard
+                      </Link>
+                      <Link href="/learn/templates" className="hover:underline underline-offset-4">
+                        Templates
+                      </Link>
+                    </>
+                  ) : null}
                   <Link href="/" className="hover:underline underline-offset-4">
                     About us
                   </Link>
@@ -102,7 +114,7 @@ export function LearnShell({
                     </div>
                   </div>
 
-                  <RoleToggle initialRole={initialRole} />
+                  <RoleToggle role={role} onRoleChange={setRole} />
 
                   <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
                     {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

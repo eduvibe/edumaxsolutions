@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type RecentNoteRow = { id: string; title: string; views: number; date_created?: string | null };
+type RecentMcqRow = { id: string; question_text: string; date_created?: string | null };
 
 export function TutorDashboardClient() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -16,6 +17,7 @@ export function TutorDashboardClient() {
   const { toast } = useToast();
   const [email, setEmail] = useState<string | null>(null);
   const [recentNotes, setRecentNotes] = useState<RecentNoteRow[]>([]);
+  const [recentMcqs, setRecentMcqs] = useState<RecentMcqRow[]>([]);
   const [noteCount, setNoteCount] = useState(0);
   const [mcqCount, setMcqCount] = useState(0);
   const [essayCount, setEssayCount] = useState(0);
@@ -38,10 +40,16 @@ export function TutorDashboardClient() {
       }
       if (!cancelled) setEmail(user.email ?? null);
 
-      const [recentNotesRes, noteCountRes, mcqRes, essayRes, tplRes, videoRes] = await Promise.all([
+      const [recentNotesRes, recentMcqsRes, noteCountRes, mcqRes, essayRes, tplRes, videoRes] = await Promise.all([
         supabase
           .from("notes")
           .select("id,title,views,date_created")
+          .eq("author_id", user.id)
+          .order("date_created", { ascending: false })
+          .limit(6),
+        supabase
+          .from("mcq_questions")
+          .select("id,question_text,date_created")
           .eq("author_id", user.id)
           .order("date_created", { ascending: false })
           .limit(6),
@@ -57,6 +65,11 @@ export function TutorDashboardClient() {
         toast({ title: "Failed to load recent notes", description: recentNotesRes.error.message });
       } else {
         setRecentNotes((recentNotesRes.data ?? []) as RecentNoteRow[]);
+      }
+      if (recentMcqsRes.error) {
+        toast({ title: "Failed to load recent MCQs", description: recentMcqsRes.error.message });
+      } else {
+        setRecentMcqs((recentMcqsRes.data ?? []) as RecentMcqRow[]);
       }
       setNoteCount(noteCountRes.count ?? 0);
       setMcqCount(mcqRes.count ?? 0);
@@ -219,43 +232,85 @@ export function TutorDashboardClient() {
         </div>
 
         <div className="lg:col-span-3">
-          <div className="rounded-2xl border border-black/10 bg-white/10 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-black/80 dark:text-white/80">Recent notes</div>
-                <div className="mt-1 text-sm text-black/70 dark:text-white/70">Latest notes you published.</div>
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-black/10 bg-white/10 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-black/80 dark:text-white/80">Recent notes</div>
+                  <div className="mt-1 text-sm text-black/70 dark:text-white/70">Latest notes you published.</div>
+                </div>
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                >
+                  <Link href="/learn/teacher/create-note">New note</Link>
+                </Button>
               </div>
-              <Button
-                asChild
-                variant="secondary"
-                className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-              >
-                <Link href="/learn/teacher/create-note">New note</Link>
-              </Button>
+
+              <div className="mt-4 divide-y divide-black/10 overflow-hidden rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/10">
+                {recentNotes.length === 0 ? (
+                  <div className="p-4 text-sm text-black/70 dark:text-white/70">No notes yet.</div>
+                ) : (
+                  recentNotes.map((n) => (
+                    <Link
+                      key={n.id}
+                      href={`/learn/notes/${n.id}`}
+                      className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/10"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-black dark:text-white">{n.title}</div>
+                        <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
+                          {n.date_created ? new Date(n.date_created).toLocaleDateString() : ""}
+                        </div>
+                      </div>
+                      <div className="shrink-0 rounded-full border border-black/10 bg-white/10 px-3 py-1 text-xs font-semibold text-black/70 dark:border-white/10 dark:text-white/70">
+                        {n.views} views
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="mt-4 divide-y divide-black/10 overflow-hidden rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/10">
-              {recentNotes.length === 0 ? (
-                <div className="p-4 text-sm text-black/70 dark:text-white/70">No notes yet.</div>
-              ) : (
-                recentNotes.map((n) => (
-                  <Link
-                    key={n.id}
-                    href={`/learn/notes/${n.id}`}
-                    className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/10"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-black dark:text-white">{n.title}</div>
-                      <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
-                        {n.date_created ? new Date(n.date_created).toLocaleDateString() : ""}
+            <div className="rounded-2xl border border-black/10 bg-white/10 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-black/80 dark:text-white/80">Recent MCQs</div>
+                  <div className="mt-1 text-sm text-black/70 dark:text-white/70">Edit questions you created.</div>
+                </div>
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                >
+                  <Link href="/learn/teacher/create-question">New MCQ</Link>
+                </Button>
+              </div>
+
+              <div className="mt-4 divide-y divide-black/10 overflow-hidden rounded-xl border border-black/10 dark:divide-white/10 dark:border-white/10">
+                {recentMcqs.length === 0 ? (
+                  <div className="p-4 text-sm text-black/70 dark:text-white/70">No MCQs yet.</div>
+                ) : (
+                  recentMcqs.map((q) => (
+                    <div key={q.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-black dark:text-white">{q.question_text}</div>
+                        <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
+                          {q.date_created ? new Date(q.date_created).toLocaleDateString() : ""}
+                        </div>
                       </div>
+                      <Button
+                        asChild
+                        variant="secondary"
+                        className="shrink-0 rounded-md border-2 border-black bg-transparent px-3 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                      >
+                        <Link href={`/learn/teacher/questions/${q.id}/edit`}>Edit</Link>
+                      </Button>
                     </div>
-                    <div className="shrink-0 rounded-full border border-black/10 bg-white/10 px-3 py-1 text-xs font-semibold text-black/70 dark:border-white/10 dark:text-white/70">
-                      {n.views} views
-                    </div>
-                  </Link>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

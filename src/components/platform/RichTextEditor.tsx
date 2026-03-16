@@ -1,11 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { richTextExtensions } from "@/lib/platform/richText";
+import { richDocToHtml, sanitizeRichHtml } from "@/lib/platform/richText";
 import type { RichTextContent } from "@/lib/platform/types";
-import { useEditor, EditorContent } from "@tiptap/react";
 import { Bold, Italic, Underline } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 export function RichTextEditor({
   value,
@@ -18,29 +17,32 @@ export function RichTextEditor({
   placeholder?: string;
   minHeightClassName?: string;
 }) {
-  const contentKey = useMemo(() => JSON.stringify(value ?? {}), [value]);
-  const editor = useEditor({
-    extensions: richTextExtensions,
-    content: value,
-    editorProps: {
-      attributes: {
-        class: [
-          "rounded-xl border border-black/10 bg-white/65 shadow-sm px-3 py-2 text-sm text-black outline-none",
-          "dark:border-white/10 dark:bg-white/5 dark:text-white",
-          "focus-visible:ring-0",
-          minHeightClassName ?? "min-h-[140px]",
-        ].join(" "),
-      },
-    },
-    onUpdate({ editor }: { editor: { getJSON: () => unknown; getText: () => string } }) {
-      onChange({ json: editor.getJSON() as RichTextContent, text: editor.getText() });
-    },
-  });
+  const html = useMemo(() => richDocToHtml(value), [value]);
+  const editableRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!editor) return;
-    editor.commands.setContent(value, false);
-  }, [contentKey, editor, value]);
+    const el = editableRef.current;
+    if (!el) return;
+    if (el.innerHTML !== html) {
+      el.innerHTML = html;
+    }
+  }, [html]);
+
+  function emitChange({ sanitize }: { sanitize: boolean }) {
+    const el = editableRef.current;
+    if (!el) return;
+    const rawHtml = el.innerHTML || "";
+    const html = sanitize ? sanitizeRichHtml(rawHtml) : rawHtml;
+    if (sanitize && html !== rawHtml) el.innerHTML = html;
+    const text = (el.innerText || "").replace(/\u00a0/g, " ").trim();
+    onChange({ json: { type: "html", html } as unknown as RichTextContent, text });
+  }
+
+  function exec(cmd: "bold" | "italic" | "underline") {
+    if (typeof document === "undefined") return;
+    document.execCommand(cmd);
+    emitChange({ sanitize: false });
+  }
 
   return (
     <div className="space-y-2">
@@ -51,11 +53,8 @@ export function RichTextEditor({
             type="button"
             variant="secondary"
             className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-            onClick={() => {
-              editor?.commands.focus?.();
-              editor?.commands.toggleBold?.();
-            }}
-            disabled={!editor}
+            onClick={() => exec("bold")}
+            onMouseDown={(e) => e.preventDefault()}
           >
             <Bold className="h-4 w-4" />
           </Button>
@@ -63,11 +62,8 @@ export function RichTextEditor({
             type="button"
             variant="secondary"
             className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-            onClick={() => {
-              editor?.commands.focus?.();
-              editor?.commands.toggleItalic?.();
-            }}
-            disabled={!editor}
+            onClick={() => exec("italic")}
+            onMouseDown={(e) => e.preventDefault()}
           >
             <Italic className="h-4 w-4" />
           </Button>
@@ -75,17 +71,26 @@ export function RichTextEditor({
             type="button"
             variant="secondary"
             className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-            onClick={() => {
-              editor?.commands.focus?.();
-              editor?.commands.toggleUnderline?.();
-            }}
-            disabled={!editor}
+            onClick={() => exec("underline")}
+            onMouseDown={(e) => e.preventDefault()}
           >
             <Underline className="h-4 w-4" />
           </Button>
         </div>
       </div>
-      <EditorContent editor={editor} />
+      <div
+        ref={editableRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={() => emitChange({ sanitize: false })}
+        onBlur={() => emitChange({ sanitize: true })}
+        className={[
+          "rounded-xl border border-black/10 bg-white/65 shadow-sm px-3 py-2 text-sm text-black outline-none",
+          "dark:border-white/10 dark:bg-white/5 dark:text-white",
+          "focus-visible:ring-0",
+          minHeightClassName ?? "min-h-[140px]",
+        ].join(" ")}
+      />
     </div>
   );
 }

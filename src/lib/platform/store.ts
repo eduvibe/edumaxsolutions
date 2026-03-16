@@ -1158,6 +1158,59 @@ export async function createMcqQuestion(input: Omit<McqQuestion, "id" | "subject
   return question;
 }
 
+export async function getQuestionById(questionId: string): Promise<McqQuestion | null> {
+  if (isSupabaseEnabled()) {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase.from("mcq_questions").select("*").eq("id", questionId).single();
+    if (error || !data) return null;
+    const topicSlug = String(pick(data as DbRow, ["topic_slug", "topicSlug"]) ?? "");
+    const topic = getTopicBySlug(topicSlug);
+    if (!topic) return null;
+    const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+    if (!subject) return null;
+    return mapMcqRowToQuestion(data as DbRow, subject.id, topic.id);
+  }
+  return getGlobalStore().questions.find((q) => q.id === questionId) ?? null;
+}
+
+export async function updateMcqQuestion(
+  questionId: string,
+  input: Omit<McqQuestion, "id" | "subjectId" | "topicId" | "authorId" | "dateCreated"> & {
+    subjectSlug: string;
+    topicSlug: string;
+  }
+): Promise<void> {
+  if (isSupabaseEnabled()) {
+    throw new Error("Supabase mode enabled: update questions via API using tutor auth");
+  }
+  const store = getGlobalStore();
+  const idx = store.questions.findIndex((q) => q.id === questionId);
+  if (idx < 0) throw new Error("Question not found");
+  const existing = store.questions[idx];
+  store.questions[idx] = {
+    ...existing,
+    lessonNumber: input.lessonNumber ?? null,
+    questionText: input.questionText,
+    questionTextJson: input.questionTextJson ?? null,
+    questionImageUrl: input.questionImageUrl ?? null,
+    optionAText: input.optionAText,
+    optionATextJson: input.optionATextJson ?? null,
+    optionAImageUrl: input.optionAImageUrl ?? null,
+    optionBText: input.optionBText,
+    optionBTextJson: input.optionBTextJson ?? null,
+    optionBImageUrl: input.optionBImageUrl ?? null,
+    optionCText: input.optionCText,
+    optionCTextJson: input.optionCTextJson ?? null,
+    optionCImageUrl: input.optionCImageUrl ?? null,
+    optionDText: input.optionDText,
+    optionDTextJson: input.optionDTextJson ?? null,
+    optionDImageUrl: input.optionDImageUrl ?? null,
+    correctAnswer: input.correctAnswer,
+    explanation: input.explanation,
+    explanationJson: input.explanationJson ?? null,
+  };
+}
+
 export async function getRandomQuestions(topicSlug: string, limit: number, lessonNumber?: number): Promise<McqQuestion[]> {
   const all = typeof lessonNumber === "number"
     ? await listQuestionsByTopicAndLesson(topicSlug, lessonNumber)

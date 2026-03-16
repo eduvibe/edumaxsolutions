@@ -1,31 +1,65 @@
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import { generateHTML } from "@tiptap/html";
 import type { RichTextContent } from "@/lib/platform/types";
-import type { Extension, JSONContent } from "@tiptap/core";
+ 
+type HtmlRichDoc = { type: "html"; html: string };
 
-export const richTextExtensions: Extension[] = [
-  StarterKit.configure({
-    heading: false,
-    codeBlock: false,
-    blockquote: false,
-    bulletList: false,
-    orderedList: false,
-    listItem: false,
-    horizontalRule: false,
-  }),
-  Underline,
-];
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+export function sanitizeRichHtml(inputHtml: string): string {
+  if (typeof window === "undefined") {
+    return `<p>${escapeHtml(inputHtml)}</p>`;
+  }
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(inputHtml, "text/html");
+  const allowed = new Set(["P", "BR", "STRONG", "EM", "U", "DIV", "SPAN", "B", "I"]);
+  const root = doc.body;
+  if (!root) {
+    return `<p>${escapeHtml(inputHtml)}</p>`;
+  }
+
+  function unwrap(el: Element) {
+    const parent = el.parentNode;
+    if (!parent) return;
+    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+    parent.removeChild(el);
+  }
+
+  function clean(node: Node) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as Element;
+      const tag = el.tagName.toUpperCase();
+      if (!allowed.has(tag)) {
+        unwrap(el);
+        return;
+      }
+      for (const attr of Array.from(el.attributes)) {
+        el.removeAttribute(attr.name);
+      }
+    }
+    for (const child of Array.from(node.childNodes)) clean(child);
+  }
+
+  for (const child of Array.from(root.childNodes)) clean(child);
+  return root.innerHTML || "";
+}
 
 export function plainTextToRichDoc(text: string): RichTextContent {
   const lines = text.replace(/\r/g, "").split("\n");
-  const content = lines.map((line) => ({
-    type: "paragraph",
-    content: line ? [{ type: "text", text: line }] : [],
-  }));
-  return { type: "doc", content } as RichTextContent;
+  const html = lines.map((l) => `<p>${escapeHtml(l)}</p>`).join("");
+  return { type: "html", html } as HtmlRichDoc as unknown as RichTextContent;
 }
 
 export function richDocToHtml(doc: RichTextContent): string {
-  return generateHTML(doc as JSONContent, richTextExtensions);
+  const d = doc as unknown as Partial<HtmlRichDoc>;
+  if (d && d.type === "html" && typeof d.html === "string") {
+    return sanitizeRichHtml(d.html);
+  }
+  const maybeText = (doc as unknown as { text?: unknown } | null)?.text;
+  return `<p>${escapeHtml(String(maybeText ?? ""))}</p>`;
 }

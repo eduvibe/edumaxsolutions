@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,12 +45,25 @@ type BulkMcqDraft = {
   explanationJson: RichTextContent;
 };
 
-export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topics: Topic[] }) {
+export function TeacherMcqForm({
+  subjects,
+  topics,
+  mode = "create",
+  questionId,
+  initialValues,
+}: {
+  subjects: Subject[];
+  topics: Topic[];
+  mode?: "create" | "edit";
+  questionId?: string;
+  initialValues?: Partial<FormValues>;
+}) {
   const env = getPlatformPublicEnv();
   const { toast } = useToast();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const isEdit = mode === "edit";
   const [activeTab, setActiveTab] = useState<"single" | "import">("single");
   const [aikenText, setAikenText] = useState("");
   const [aikenErrors, setAikenErrors] = useState<string[]>([]);
@@ -82,6 +94,7 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
       correctAnswer: "A",
       explanation: "",
       explanationJson: plainTextToRichDoc(""),
+      ...(initialValues ?? {}),
     },
   });
 
@@ -130,40 +143,22 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
     if (!env.cloudinaryConfigured) {
       throw new Error("Cloudinary is not configured");
     }
-    const sigRes = await fetch("/api/cloudinary/signature", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder }),
-    });
-    const sigData = (await sigRes.json().catch(() => ({}))) as {
-      cloudName?: string;
-      apiKey?: string;
-      timestamp?: number;
-      folder?: string;
-      signature?: string;
-      error?: string;
-      hint?: string;
-    };
-    if (!sigRes.ok || !sigData.cloudName || !sigData.apiKey || !sigData.timestamp || !sigData.folder || !sigData.signature) {
-      throw new Error(sigData.hint ?? sigData.error ?? "Unable to prepare upload");
-    }
+    const token = await getSupabaseAccessToken();
+    if (!token) throw new Error("Tutor session expired. Please sign in again.");
 
     const formData = new FormData();
     formData.set("file", file);
-    formData.set("api_key", sigData.apiKey);
-    formData.set("timestamp", String(sigData.timestamp));
-    formData.set("folder", sigData.folder);
-    formData.set("signature", sigData.signature);
+    formData.set("folder", folder);
 
-    const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(sigData.cloudName)}/image/upload`, {
+    const uploadRes = await fetch("/api/cloudinary/upload", {
       method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-    const uploadData = (await uploadRes.json().catch(() => ({}))) as { secure_url?: string; url?: string; error?: { message?: string } };
-    if (!uploadRes.ok) throw new Error(uploadData.error?.message ?? "Upload failed");
-    const url = uploadData.secure_url ?? uploadData.url;
-    if (!url) throw new Error("Cloudinary did not return a URL");
-    return url;
+    const uploadData = (await uploadRes.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!uploadRes.ok) throw new Error(uploadData.error ?? "Upload failed");
+    if (!uploadData.url) throw new Error("Upload failed");
+    return uploadData.url;
   }
 
   function ImagePickerField({
@@ -239,13 +234,6 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
             </div>
           </div>
         ) : null}
-
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Or paste image URL (optional)"
-          className="h-10 rounded-md border-black/10 bg-white/65 shadow-sm placeholder:text-black/40 focus-visible:ring-0 dark:border-white/10 dark:bg-white/5 dark:placeholder:text-white/35"
-        />
       </div>
     );
   }
@@ -255,20 +243,22 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
     try {
       const token = await getSupabaseAccessToken();
       if (!token) throw new Error("Tutor session expired. Please sign in again.");
-      const res = await fetch("/api/questions/create", {
-        method: "POST",
+      const endpoint = isEdit && questionId ? `/api/questions/${encodeURIComponent(questionId)}` : "/api/questions/create";
+      const method = isEdit ? "PATCH" : "POST";
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(values),
       });
-      const data = (await res.json()) as { question?: { id: string }; error?: string };
-      if (!res.ok || !data.question) {
-        throw new Error(data.error ?? "Failed to create question");
+      const data = (await res.json().catch(() => ({}))) as { question?: { id: string }; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? (isEdit ? "Failed to update question" : "Failed to create question"));
       }
-      toast({ title: "Question created" });
+      toast({ title: isEdit ? "Question updated" : "Question created" });
       router.push(`/learn/topics/${values.topicSlug}`);
       router.refresh();
     } catch (e) {
-      toast({ title: "Create question failed", description: e instanceof Error ? e.message : "Unknown error" });
+      toast({ title: isEdit ? "Update question failed" : "Create question failed", description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
       setSubmitting(false);
     }
@@ -482,11 +472,13 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v === "import" ? "import" : "single")}>
           <TabsList className="w-full justify-start rounded-2xl bg-white/40 p-1 dark:bg-white/10">
             <TabsTrigger value="single" className="rounded-xl">
-              Single question
+              {isEdit ? "Edit question" : "Single question"}
             </TabsTrigger>
-            <TabsTrigger value="import" className="rounded-xl">
-              Import AIKEN
-            </TabsTrigger>
+            {!isEdit ? (
+              <TabsTrigger value="import" className="rounded-xl">
+                Import AIKEN
+              </TabsTrigger>
+            ) : null}
           </TabsList>
 
           <TabsContent value="single" className="mt-4">
@@ -774,11 +766,12 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
               </div>
 
               <Button type="submit" disabled={submitting || !form.getValues("topicSlug") || !form.getValues("lessonNumber")}>
-                {submitting ? "Saving..." : "Save question"}
+                {submitting ? "Saving..." : isEdit ? "Save changes" : "Save question"}
               </Button>
             </form>
           </TabsContent>
 
+          {!isEdit ? (
           <TabsContent value="import" className="mt-4">
             <div className="space-y-6">
               <div className="rounded-3xl border border-black/10 bg-white/10 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-6">
@@ -1032,6 +1025,7 @@ export function TeacherMcqForm({ subjects, topics }: { subjects: Subject[]; topi
               ) : null}
             </div>
           </TabsContent>
+          ) : null}
         </Tabs>
       </div>
     </Form>

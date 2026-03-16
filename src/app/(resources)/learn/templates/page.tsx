@@ -12,7 +12,7 @@ export const metadata = {
 export default async function TemplatesPage() {
   const role = await getPlatformRole();
   if (role !== "teacher") redirect("/learn/subjects?section=primary");
-  const templates = listTemplates();
+  const templates = await listTemplates();
   const slidesOnly = templates.filter((t) => (t.resourceType ?? "slides") === "slides");
 
   return (

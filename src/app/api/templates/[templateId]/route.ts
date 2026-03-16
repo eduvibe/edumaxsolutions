@@ -6,11 +6,11 @@ export async function GET(
   ctx: { params: Promise<{ templateId: string }> }
 ) {
   const { templateId } = await ctx.params;
-  const tpl = getTemplateById(templateId);
+  const tpl = await getTemplateById(templateId);
   if (!tpl) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  incrementTemplateDownloads(tpl.id);
+  await incrementTemplateDownloads(tpl.id);
   return NextResponse.redirect(tpl.fileUrl, 302);
 }

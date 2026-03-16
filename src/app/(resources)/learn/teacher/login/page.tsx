@@ -1,6 +1,4 @@
-import { TutorSignInButton } from "@/components/platform/TutorSignInButton";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TutorAuthForm } from "@/components/platform/TutorAuthForm";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { Lock, School, ShieldCheck } from "lucide-react";
 import Link from "next/link";
@@ -57,25 +55,7 @@ export default function TutorLoginPage() {
             </div>
 
             <div className="mt-6 grid gap-4">
-              <div className="grid gap-2">
-                <div className="text-sm font-medium text-black/80 dark:text-white/80">Email</div>
-                <Input className="bg-white/40 dark:bg-white/5" placeholder="tutor@example.com" type="email" disabled={!env.supabaseConfigured} />
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium text-black/80 dark:text-white/80">Password</div>
-                <Input className="bg-white/40 dark:bg-white/5" placeholder="••••••••" type="password" disabled={!env.supabaseConfigured} />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <TutorSignInButton className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90" />
-                <Button
-                  disabled={!env.supabaseConfigured}
-                  variant="secondary"
-                  className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-                >
-                  Continue with Google
-                </Button>
-              </div>
+              <TutorAuthForm />
 
               {!env.supabaseConfigured ? (
                 <div className="rounded-xl border border-black/10 bg-white/10 p-4 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">

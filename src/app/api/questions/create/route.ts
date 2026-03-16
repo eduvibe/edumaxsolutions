@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { mcqCreateSchema } from "@/lib/schemas";
 import { createMcqQuestion } from "@/lib/platform/store";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { requireTutor } from "@/app/api/_lib/supabaseAuth";
 
 export async function POST(req: Request) {
   try {
@@ -13,10 +15,42 @@ export async function POST(req: Request) {
       );
     }
 
-    const q = createMcqQuestion(parsed.data);
+    const env = getPlatformPublicEnv();
+    if (env.platformMode === "supabase" && env.supabaseConfigured) {
+      const auth = await requireTutor(req);
+      if ("error" in auth) return auth.error;
+      const { supabase, user } = auth;
+      const input = parsed.data;
+      const { error, data } = await supabase
+        .from("mcq_questions")
+        .insert({
+          id: crypto.randomUUID(),
+          subject_slug: input.subjectSlug,
+          topic_slug: input.topicSlug,
+          lesson_number: input.lessonNumber,
+          author_id: user.id,
+          question_text: input.questionText,
+          question_image_url: input.questionImageUrl ? input.questionImageUrl : null,
+          option_a_text: input.optionAText,
+          option_a_image_url: input.optionAImageUrl ? input.optionAImageUrl : null,
+          option_b_text: input.optionBText,
+          option_b_image_url: input.optionBImageUrl ? input.optionBImageUrl : null,
+          option_c_text: input.optionCText,
+          option_c_image_url: input.optionCImageUrl ? input.optionCImageUrl : null,
+          option_d_text: input.optionDText,
+          option_d_image_url: input.optionDImageUrl ? input.optionDImageUrl : null,
+          correct_answer: input.correctAnswer,
+          explanation: input.explanation,
+        })
+        .select("id")
+        .single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ question: { id: data.id } }, { status: 201 });
+    }
+
+    const q = await createMcqQuestion(parsed.data);
     return NextResponse.json({ question: q }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

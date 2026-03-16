@@ -22,7 +22,7 @@ export default async function LessonPage({ params }: PageProps) {
   const lessonNumber = Number.parseInt(p.lessonNumber, 10);
   if (!Number.isFinite(lessonNumber) || lessonNumber <= 0) notFound();
 
-  const resources = getTopicResources(p.topicSlug);
+  const resources = await getTopicResources(p.topicSlug);
   if (!resources) notFound();
 
   const { subject, topic } = resources;
@@ -30,9 +30,11 @@ export default async function LessonPage({ params }: PageProps) {
   const lesson = lessons.find((l) => l.lessonNumber === lessonNumber);
   if (!lesson) notFound();
 
-  const notes = listNotesByTopicAndLesson(topic.slug, lessonNumber);
-  const questions = listQuestionsByTopicAndLesson(topic.slug, lessonNumber);
-  const videos = listVideosByTopicAndLesson(topic.slug, lessonNumber);
+  const [notes, questions, videos] = await Promise.all([
+    listNotesByTopicAndLesson(topic.slug, lessonNumber),
+    listQuestionsByTopicAndLesson(topic.slug, lessonNumber),
+    listVideosByTopicAndLesson(topic.slug, lessonNumber),
+  ]);
 
   return (
     <div className="bg-[#e7eefc] dark:bg-[#0b0f14]">

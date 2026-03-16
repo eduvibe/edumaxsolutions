@@ -12,6 +12,8 @@ import type { Subject, Topic } from "@/lib/platform/types";
 import { useToast } from "@/hooks/use-toast";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
+import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 
 type FormValues = z.infer<typeof essayCreateSchema>;
 
@@ -25,24 +27,34 @@ export function TeacherEssayForm({ subjects, topics }: { subjects: Subject[]; to
     defaultValues: {
       subjectSlug: subjects[0]?.slug ?? "",
       topicSlug: "",
+      lessonNumber: 1,
       questionText: "",
       referenceAnswer: "",
     },
   });
 
   const selectedSubjectSlug = form.watch("subjectSlug");
+  const selectedTopicSlug = form.watch("topicSlug");
   const topicOptions = useMemo(() => {
     const subject = subjects.find((s) => s.slug === selectedSubjectSlug);
     if (!subject) return [];
     return topics.filter((t) => t.subjectId === subject.id);
   }, [selectedSubjectSlug, subjects, topics]);
 
+  const lessonOptions = useMemo(() => {
+    const defs = selectedTopicSlug ? curriculumLessonsByTopicSlug[selectedTopicSlug] : undefined;
+    if (!defs || defs.length === 0) return [];
+    return defs.map((d, idx) => ({ number: idx + 1, title: d.title }));
+  }, [selectedTopicSlug]);
+
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
     try {
+      const token = await getSupabaseAccessToken();
+      if (!token) throw new Error("Tutor session expired. Please sign in again.");
       const res = await fetch("/api/essay/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(values),
       });
       const data = (await res.json()) as { essay?: { id: string }; error?: string };
@@ -116,6 +128,35 @@ export function TeacherEssayForm({ subjects, topics }: { subjects: Subject[]; to
 
         <FormField
           control={form.control}
+          name="lessonNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sub-topic</FormLabel>
+              <Select
+                onValueChange={(v) => field.onChange(Number(v))}
+                value={field.value ? String(field.value) : ""}
+                disabled={lessonOptions.length === 0}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={lessonOptions.length ? "Select sub-topic" : "No sub-topics for topic"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {lessonOptions.map((l) => (
+                    <SelectItem key={l.number} value={String(l.number)}>
+                      {l.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="questionText"
           render={({ field }) => (
             <FormItem>
@@ -142,11 +183,10 @@ export function TeacherEssayForm({ subjects, topics }: { subjects: Subject[]; to
           )}
         />
 
-        <Button type="submit" disabled={submitting || !form.getValues("topicSlug")}>
+        <Button type="submit" disabled={submitting || !form.getValues("topicSlug") || !form.getValues("lessonNumber")}>
           {submitting ? "Saving..." : "Save essay question"}
         </Button>
       </form>
     </Form>
   );
 }
-

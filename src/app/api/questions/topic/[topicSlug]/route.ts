@@ -6,6 +6,6 @@ export async function GET(
   ctx: { params: Promise<{ topicSlug: string }> }
 ) {
   const { topicSlug } = await ctx.params;
-  const questions = listQuestionsByTopicSlug(topicSlug);
+  const questions = await listQuestionsByTopicSlug(topicSlug);
   return NextResponse.json({ questions });
 }

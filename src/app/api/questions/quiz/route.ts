@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "topicSlug is required" }, { status: 400 });
   }
 
-  const questions = getRandomQuestions(
+  const questions = await getRandomQuestions(
     topicSlug,
     Number.isFinite(limit) ? limit : 10,
     Number.isFinite(lessonNumber ?? Number.NaN) ? lessonNumber : undefined

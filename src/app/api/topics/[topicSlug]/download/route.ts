@@ -38,7 +38,7 @@ async function fetchCloudinaryFile(url: string) {
 
 export async function GET(_req: NextRequest, context: { params: Promise<{ topicSlug: string }> }) {
   const { topicSlug } = await context.params;
-  const resources = getTopicResources(topicSlug);
+  const resources = await getTopicResources(topicSlug);
   if (!resources) {
     return NextResponse.json({ error: "Topic not found" }, { status: 404 });
   }
@@ -79,8 +79,10 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ topicS
       )
     );
 
-    const notes = listNotesByTopicAndLesson(topic.slug, lesson.lessonNumber);
-    const questions = listQuestionsByTopicAndLesson(topic.slug, lesson.lessonNumber);
+    const [notes, questions] = await Promise.all([
+      listNotesByTopicAndLesson(topic.slug, lesson.lessonNumber),
+      listQuestionsByTopicAndLesson(topic.slug, lesson.lessonNumber),
+    ]);
     const lessonTemplates = templates.filter((t) => (t.lessonNumber ?? null) === lesson.lessonNumber);
 
     const notesFolder = lessonFolder.folder("notes") ?? lessonFolder;

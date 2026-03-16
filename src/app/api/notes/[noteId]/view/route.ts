@@ -6,7 +6,7 @@ export async function POST(
   ctx: { params: Promise<{ noteId: string }> }
 ) {
   const { noteId } = await ctx.params;
-  const note = incrementNoteViews(noteId);
+  const note = await incrementNoteViews(noteId);
   if (!note) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

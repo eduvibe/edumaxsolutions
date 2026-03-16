@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function NotePage({ params }: PageProps) {
   const p = await params;
-  const note = getNoteById(p.noteId);
+  const note = await getNoteById(p.noteId);
   if (!note) notFound();
 
   const author = getTeacherById(note.authorId);

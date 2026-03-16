@@ -1,17 +1,21 @@
 import { z } from "zod";
 
+const trimmed = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (typeof v === "string" ? v.trim() : v), schema);
+
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
-  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
-  NEXT_PUBLIC_PLATFORM_MODE: z.enum(["demo", "supabase"]).optional(),
-  NEXT_PUBLIC_RESOURCES_STATUS: z.enum(["live", "coming_soon"]).optional(),
+  NEXT_PUBLIC_SUPABASE_URL: trimmed(z.string().url()).optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: trimmed(z.string().min(1)).optional(),
+  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: trimmed(z.string().min(1)).optional(),
+  NEXT_PUBLIC_PLATFORM_MODE: trimmed(z.enum(["demo", "supabase"])).optional(),
+  NEXT_PUBLIC_RESOURCES_STATUS: trimmed(z.enum(["live", "coming_soon"])).optional(),
 });
 
 const serverEnvSchema = z.object({
-  CLOUDINARY_API_KEY: z.string().min(1).optional(),
-  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
-  CLOUDINARY_UPLOAD_FOLDER: z.string().min(1).optional(),
+  CLOUDINARY_API_KEY: trimmed(z.string().min(1)).optional(),
+  CLOUDINARY_API_SECRET: trimmed(z.string().min(1)).optional(),
+  CLOUDINARY_UPLOAD_FOLDER: trimmed(z.string().min(1)).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: trimmed(z.string().min(1)).optional(),
 });
 
 export function getPlatformPublicEnv() {
@@ -46,16 +50,20 @@ export function getPlatformServerEnv() {
   const parsed = serverEnvSchema.safeParse(process.env);
   const env = parsed.success ? parsed.data : {};
 
+  const cloudinaryApiKey = env.CLOUDINARY_API_KEY ?? process.env["API Key"];
   const cloudinarySigningConfigured = Boolean(
-    env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET
+    cloudinaryApiKey && env.CLOUDINARY_API_SECRET
   );
 
   return {
     cloudinarySigningConfigured,
     cloudinary: {
-      apiKey: env.CLOUDINARY_API_KEY,
+      apiKey: cloudinaryApiKey,
       apiSecret: env.CLOUDINARY_API_SECRET,
       uploadFolder: env.CLOUDINARY_UPLOAD_FOLDER ?? "edumax",
+    },
+    supabase: {
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     },
   };
 }

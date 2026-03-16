@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { PlatformRole } from "@/lib/platform/session";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -26,6 +28,11 @@ export function RoleToggle({ role, onRoleChange }: { role: PlatformRole; onRoleC
     }
     setBusy(true);
     try {
+      const env = getPlatformPublicEnv();
+      if (env.platformMode === "supabase" && env.supabaseConfigured) {
+        const supabase = getSupabaseBrowserClient();
+        await supabase.auth.signOut();
+      }
       const res = await fetch("/api/session/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

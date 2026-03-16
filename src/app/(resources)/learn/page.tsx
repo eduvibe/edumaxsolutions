@@ -62,8 +62,9 @@ export default async function LearnPage({ searchParams }: PageProps) {
   const matchingTopics = q
     ? listAllTopics().filter((t) => t.name.toLowerCase().includes(qLower) || t.slug.toLowerCase().includes(qLower))
     : [];
+  const recent = q ? await listRecentNotes(50) : [];
   const matchingNotes = q
-    ? listRecentNotes(50).filter((n) => n.title.toLowerCase().includes(qLower) || n.content.toLowerCase().includes(qLower))
+    ? recent.filter((n) => n.title.toLowerCase().includes(qLower) || n.content.toLowerCase().includes(qLower))
     : [];
 
   if (!q) {

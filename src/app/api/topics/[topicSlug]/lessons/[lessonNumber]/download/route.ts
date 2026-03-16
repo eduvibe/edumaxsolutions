@@ -43,7 +43,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ topicS
     return NextResponse.json({ error: "Invalid lesson number" }, { status: 400 });
   }
 
-  const resources = getTopicResources(topicSlug);
+  const resources = await getTopicResources(topicSlug);
   if (!resources) {
     return NextResponse.json({ error: "Topic not found" }, { status: 404 });
   }
@@ -53,8 +53,10 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ topicS
   const zip = new JSZip();
   const root = zip.folder(`${subject.slug}/${topic.slug}/lesson-${String(lessonNumber).padStart(2, "0")}`) ?? zip;
 
-  const notes = listNotesByTopicAndLesson(topic.slug, lessonNumber);
-  const questions = listQuestionsByTopicAndLesson(topic.slug, lessonNumber);
+  const [notes, questions] = await Promise.all([
+    listNotesByTopicAndLesson(topic.slug, lessonNumber),
+    listQuestionsByTopicAndLesson(topic.slug, lessonNumber),
+  ]);
   const lessonTemplates = templates.filter((t) => (t.lessonNumber ?? null) === lessonNumber);
 
   root.file(

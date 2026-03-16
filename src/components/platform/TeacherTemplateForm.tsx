@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 
 type FormValues = z.infer<typeof templateUploadSchema>;
 
@@ -49,9 +50,11 @@ export function TeacherTemplateForm({
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
     try {
+      const token = await getSupabaseAccessToken();
+      if (!token) throw new Error("Tutor session expired. Please sign in again.");
       const res = await fetch("/api/templates/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(values),
       });
       const data = (await res.json()) as { template?: { id: string }; error?: string };

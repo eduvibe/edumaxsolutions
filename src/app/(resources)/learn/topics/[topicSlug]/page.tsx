@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { getPlatformRole } from "@/lib/platform/session";
-import { getTopicResources, listLessonsByTopicSlug, listVideosByTopicAndLesson } from "@/lib/platform/store";
+import { getTopicResources, listLessonsByTopicSlug, listVideosByTopicSlug } from "@/lib/platform/store";
 import { ArrowRight, Bookmark, ChevronLeft, Download, FileText, Film, HelpCircle, Monitor, Share2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,11 +12,12 @@ type PageProps = {
 export default async function TopicPage({ params }: PageProps) {
   const p = await params;
   const role = await getPlatformRole();
-  const resources = getTopicResources(p.topicSlug);
+  const resources = await getTopicResources(p.topicSlug);
   if (!resources) notFound();
 
   const { subject, topic, notes, questions, templates } = resources;
   const lessons = listLessonsByTopicSlug(topic.slug);
+  const allVideos = role === "teacher" ? await listVideosByTopicSlug(topic.slug) : [];
   const section =
     topic.schoolSection === "primary" || topic.schoolSection === "jss" || topic.schoolSection === "sss"
       ? topic.schoolSection
@@ -176,7 +177,7 @@ export default async function TopicPage({ params }: PageProps) {
                 const lessonWorksheets = templates.filter(
                   (t) => (t.resourceType ?? "slides") === "worksheet" && (t.lessonNumber ?? null) === lesson.lessonNumber
                 );
-                const videos = listVideosByTopicAndLesson(topic.slug, lesson.lessonNumber).length;
+                const videos = allVideos.filter((v) => v.lessonNumber === lesson.lessonNumber).length;
 
                 return (
                   <div

@@ -11,6 +11,8 @@ import type {
   TopicResources,
 } from "@/lib/platform/types";
 import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { getSupabaseServerClient } from "@/lib/platform/supabase";
 
 type PlatformStore = {
   __version?: number;
@@ -31,6 +33,127 @@ const REQUIRED_SUBJECT_SLUGS = ["mathematics", "english", "basic-science", "comp
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function isSupabaseEnabled() {
+  const env = getPlatformPublicEnv();
+  return env.platformMode === "supabase" && env.supabaseConfigured;
+}
+
+type DbRow = Record<string, unknown>;
+
+function pick(row: DbRow, keys: string[]) {
+  for (const k of keys) {
+    const v = row[k];
+    if (typeof v !== "undefined") return v;
+  }
+  return undefined;
+}
+
+function mapTemplateRowToTemplate(row: DbRow): PresentationTemplate {
+  const resourceTypeRaw = String(pick(row, ["resource_type", "resourceType"]) ?? "slides");
+  const resourceType: PresentationTemplate["resourceType"] =
+    resourceTypeRaw === "slides" || resourceTypeRaw === "worksheet" || resourceTypeRaw === "scheme"
+      ? resourceTypeRaw
+      : "slides";
+
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    title: String(pick(row, ["title"]) ?? ""),
+    description: String(pick(row, ["description"]) ?? ""),
+    subjectCategory: String(pick(row, ["subject_category", "subjectCategory"]) ?? "General"),
+    subjectId: null,
+    topicId: null,
+    resourceType,
+    lessonNumber:
+      typeof pick(row, ["lesson_number"]) === "number"
+        ? (pick(row, ["lesson_number"]) as number)
+        : (pick(row, ["lessonNumber"]) as number | null | undefined) ?? null,
+    fileUrl: String(pick(row, ["file_url", "fileUrl"]) ?? ""),
+    previewImageUrl: (pick(row, ["preview_image_url", "previewImageUrl"]) as string | null | undefined) ?? null,
+    uploadedBy: String(pick(row, ["uploaded_by", "uploadedBy"]) ?? DEMO_TEACHER_ID),
+    dateUploaded: String(pick(row, ["date_uploaded", "dateUploaded"]) ?? nowIso()),
+    downloads: Number(pick(row, ["downloads"]) ?? 0),
+  };
+}
+
+function mapNoteRowToNote(row: DbRow, subjectId: string, topicId: string): Note {
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    title: String(pick(row, ["title"]) ?? ""),
+    content: String(pick(row, ["content"]) ?? ""),
+    subjectId,
+    topicId,
+    lessonNumber:
+      typeof pick(row, ["lesson_number"]) === "number"
+        ? (pick(row, ["lesson_number"]) as number)
+        : (pick(row, ["lessonNumber"]) as number | null | undefined) ?? null,
+    authorId: String(pick(row, ["author_id", "authorId"]) ?? DEMO_TEACHER_ID),
+    featuredImageUrl: (pick(row, ["featured_image_url", "featuredImageUrl"]) as string | null | undefined) ?? null,
+    dateCreated: String(pick(row, ["date_created", "dateCreated"]) ?? nowIso()),
+    dateUpdated: (pick(row, ["date_updated", "dateUpdated"]) as string | null | undefined) ?? null,
+    views: Number(pick(row, ["views"]) ?? 0),
+    published: Boolean(pick(row, ["published"]) ?? true),
+  };
+}
+
+function mapMcqRowToQuestion(row: DbRow, subjectId: string, topicId: string): McqQuestion {
+  const correctRaw = String(pick(row, ["correct_answer", "correctAnswer"]) ?? "A");
+  const correctAnswer: McqQuestion["correctAnswer"] =
+    correctRaw === "A" || correctRaw === "B" || correctRaw === "C" || correctRaw === "D" ? correctRaw : "A";
+
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    subjectId,
+    topicId,
+    lessonNumber:
+      typeof pick(row, ["lesson_number"]) === "number"
+        ? (pick(row, ["lesson_number"]) as number)
+        : (pick(row, ["lessonNumber"]) as number | null | undefined) ?? null,
+    authorId: String(pick(row, ["author_id", "authorId"]) ?? DEMO_TEACHER_ID),
+    questionText: String(pick(row, ["question_text", "questionText"]) ?? ""),
+    questionImageUrl: (pick(row, ["question_image_url", "questionImageUrl"]) as string | null | undefined) ?? null,
+    optionAText: String(pick(row, ["option_a_text", "optionAText"]) ?? ""),
+    optionAImageUrl: (pick(row, ["option_a_image_url", "optionAImageUrl"]) as string | null | undefined) ?? null,
+    optionBText: String(pick(row, ["option_b_text", "optionBText"]) ?? ""),
+    optionBImageUrl: (pick(row, ["option_b_image_url", "optionBImageUrl"]) as string | null | undefined) ?? null,
+    optionCText: String(pick(row, ["option_c_text", "optionCText"]) ?? ""),
+    optionCImageUrl: (pick(row, ["option_c_image_url", "optionCImageUrl"]) as string | null | undefined) ?? null,
+    optionDText: String(pick(row, ["option_d_text", "optionDText"]) ?? ""),
+    optionDImageUrl: (pick(row, ["option_d_image_url", "optionDImageUrl"]) as string | null | undefined) ?? null,
+    correctAnswer,
+    explanation: String(pick(row, ["explanation"]) ?? ""),
+    dateCreated: String(pick(row, ["date_created", "dateCreated"]) ?? nowIso()),
+  };
+}
+
+function mapEssayRowToEssay(row: DbRow, subjectId: string, topicId: string): EssayQuestion {
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    subjectId,
+    topicId,
+    lessonNumber:
+      typeof pick(row, ["lesson_number"]) === "number"
+        ? (pick(row, ["lesson_number"]) as number)
+        : (pick(row, ["lessonNumber"]) as number | null | undefined) ?? null,
+    authorId: String(pick(row, ["author_id", "authorId"]) ?? DEMO_TEACHER_ID),
+    questionText: String(pick(row, ["question_text", "questionText"]) ?? ""),
+    referenceAnswer: (pick(row, ["reference_answer", "referenceAnswer"]) as string | null | undefined) ?? null,
+    dateCreated: String(pick(row, ["date_created", "dateCreated"]) ?? nowIso()),
+  };
+}
+
+function mapVideoRowToVideo(row: DbRow, subjectId: string, topicId: string): LessonVideo {
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    subjectId,
+    topicId,
+    lessonNumber: Number(pick(row, ["lesson_number", "lessonNumber"]) ?? 0),
+    authorId: String(pick(row, ["author_id", "authorId"]) ?? DEMO_TEACHER_ID),
+    title: String(pick(row, ["title"]) ?? ""),
+    videoUrl: String(pick(row, ["video_url", "videoUrl"]) ?? ""),
+    dateCreated: String(pick(row, ["date_created", "dateCreated"]) ?? nowIso()),
+  };
 }
 
 function seedStore(): PlatformStore {
@@ -743,46 +866,123 @@ export function getTeacherById(teacherId: string): TeacherPublicProfile | undefi
   return getGlobalStore().teachers.find((t) => t.id === teacherId);
 }
 
-export function listNotesByTopicSlug(topicSlug: string): Note[] {
+export async function listNotesByTopicSlug(topicSlug: string): Promise<Note[]> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
-  return getGlobalStore().notes.filter((n) => n.topicId === topic.id && n.published);
+  if (!isSupabaseEnabled()) {
+    return getGlobalStore().notes.filter((n) => n.topicId === topic.id && n.published);
+  }
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .eq("published", true)
+    .order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapNoteRowToNote(row, subject.id, topic.id));
 }
 
-export function listRecentNotes(limit: number): Note[] {
-  const published = getGlobalStore().notes.filter((n) => n.published);
-  const sorted = [...published].sort(
-    (a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime()
-  );
-  return sorted.slice(0, Math.max(0, limit));
+export async function listRecentNotes(limit: number): Promise<Note[]> {
+  if (!isSupabaseEnabled()) {
+    const published = getGlobalStore().notes.filter((n) => n.published);
+    const sorted = [...published].sort(
+      (a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime()
+    );
+    return sorted.slice(0, Math.max(0, limit));
+  }
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("published", true)
+    .order("date_created", { ascending: false })
+    .limit(Math.max(0, limit));
+  if (error || !data) return [];
+  return data
+    .map((row) => {
+      const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
+      const topic = getTopicBySlug(topicSlug);
+      if (!topic) return null;
+      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+      if (!subject) return null;
+      return mapNoteRowToNote(row, subject.id, topic.id);
+    })
+    .filter((n): n is Note => Boolean(n));
 }
 
-export function listAllNotes(): Note[] {
-  return getGlobalStore().notes;
+export async function listAllNotes(): Promise<Note[]> {
+  if (!isSupabaseEnabled()) return getGlobalStore().notes;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("notes").select("*").order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data
+    .map((row) => {
+      const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
+      const topic = getTopicBySlug(topicSlug);
+      if (!topic) return null;
+      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+      if (!subject) return null;
+      return mapNoteRowToNote(row, subject.id, topic.id);
+    })
+    .filter((n): n is Note => Boolean(n));
 }
 
-export function listNotesByTopicAndLesson(topicSlug: string, lessonNumber: number): Note[] {
+export async function listNotesByTopicAndLesson(topicSlug: string, lessonNumber: number): Promise<Note[]> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
-  return getGlobalStore().notes.filter(
-    (n) => n.topicId === topic.id && n.published && (n.lessonNumber ?? null) === lessonNumber
-  );
+  if (!isSupabaseEnabled()) {
+    return getGlobalStore().notes.filter(
+      (n) => n.topicId === topic.id && n.published && (n.lessonNumber ?? null) === lessonNumber
+    );
+  }
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .eq("lesson_number", lessonNumber)
+    .eq("published", true)
+    .order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapNoteRowToNote(row, subject.id, topic.id));
 }
 
-export function getNoteById(noteId: string): Note | undefined {
-  return getGlobalStore().notes.find((n) => n.id === noteId && n.published);
+export async function getNoteById(noteId: string): Promise<Note | undefined> {
+  if (!isSupabaseEnabled()) {
+    return getGlobalStore().notes.find((n) => n.id === noteId && n.published);
+  }
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("notes").select("*").eq("id", noteId).maybeSingle();
+  if (error || !data) return undefined;
+  const topicSlug = String(data.topic_slug ?? data.topicSlug ?? "");
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return undefined;
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return undefined;
+  return mapNoteRowToNote(data, subject.id, topic.id);
 }
 
-export function incrementNoteViews(noteId: string): Note | undefined {
-  const store = getGlobalStore();
-  const note = store.notes.find((n) => n.id === noteId);
-  if (!note) return undefined;
-  note.views += 1;
-  note.dateUpdated = nowIso();
-  return note;
+export async function incrementNoteViews(noteId: string): Promise<Note | undefined> {
+  if (!isSupabaseEnabled()) {
+    const store = getGlobalStore();
+    const note = store.notes.find((n) => n.id === noteId);
+    if (!note) return undefined;
+    note.views += 1;
+    note.dateUpdated = nowIso();
+    return note;
+  }
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.rpc("increment_note_views", { note_id: noteId });
+  if (error) return undefined;
+  return await getNoteById(noteId);
 }
 
-export function createNote(input: {
+export async function createNote(input: {
   subjectSlug: string;
   topicSlug: string;
   title: string;
@@ -791,7 +991,7 @@ export function createNote(input: {
   published: boolean;
   authorId?: string;
   lessonNumber?: number | null;
-}): Note {
+}): Promise<Note> {
   const store = getGlobalStore();
   const subject = getSubjectBySlug(input.subjectSlug);
   const topic = getTopicBySlug(input.topicSlug);
@@ -812,37 +1012,107 @@ export function createNote(input: {
     views: 0,
     published: input.published,
   };
+  if (isSupabaseEnabled()) {
+    throw new Error("Supabase mode enabled: create notes via API using tutor auth");
+  }
   store.notes.unshift(note);
   return note;
 }
 
-export function listQuestionsByTopicSlug(topicSlug: string): McqQuestion[] {
+export async function listQuestionsByTopicSlug(topicSlug: string): Promise<McqQuestion[]> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
-  return getGlobalStore().questions.filter((q) => q.topicId === topic.id);
+  if (!isSupabaseEnabled()) return getGlobalStore().questions.filter((q) => q.topicId === topic.id);
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("mcq_questions")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapMcqRowToQuestion(row, subject.id, topic.id));
 }
 
-export function listQuestionsByTopicAndLesson(topicSlug: string, lessonNumber: number): McqQuestion[] {
+export async function listQuestionsByTopicAndLesson(topicSlug: string, lessonNumber: number): Promise<McqQuestion[]> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
-  return getGlobalStore().questions.filter((q) => q.topicId === topic.id && (q.lessonNumber ?? null) === lessonNumber);
+  if (!isSupabaseEnabled()) {
+    return getGlobalStore().questions.filter((q) => q.topicId === topic.id && (q.lessonNumber ?? null) === lessonNumber);
+  }
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("mcq_questions")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .eq("lesson_number", lessonNumber)
+    .order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapMcqRowToQuestion(row, subject.id, topic.id));
 }
 
-export function listVideosByTopicAndLesson(topicSlug: string, lessonNumber: number): LessonVideo[] {
+export async function listVideosByTopicAndLesson(topicSlug: string, lessonNumber: number): Promise<LessonVideo[]> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
-  return getGlobalStore().videos.filter((v) => v.topicId === topic.id && v.lessonNumber === lessonNumber);
+  if (!isSupabaseEnabled()) {
+    return getGlobalStore().videos.filter((v) => v.topicId === topic.id && v.lessonNumber === lessonNumber);
+  }
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("lesson_videos")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .eq("lesson_number", lessonNumber)
+    .order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapVideoRowToVideo(row, subject.id, topic.id));
 }
 
-export function listAllQuestions(): McqQuestion[] {
-  return getGlobalStore().questions;
+export async function listVideosByTopicSlug(topicSlug: string): Promise<LessonVideo[]> {
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return [];
+  if (!isSupabaseEnabled()) {
+    return getGlobalStore().videos.filter((v) => v.topicId === topic.id);
+  }
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("lesson_videos")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapVideoRowToVideo(row, subject.id, topic.id));
 }
 
-export function createMcqQuestion(input: Omit<McqQuestion, "id" | "subjectId" | "topicId" | "authorId" | "dateCreated"> & {
+export async function listAllQuestions(): Promise<McqQuestion[]> {
+  if (!isSupabaseEnabled()) return getGlobalStore().questions;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("mcq_questions").select("*").order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data
+    .map((row) => {
+      const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
+      const topic = getTopicBySlug(topicSlug);
+      if (!topic) return null;
+      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+      if (!subject) return null;
+      return mapMcqRowToQuestion(row, subject.id, topic.id);
+    })
+    .filter((q): q is McqQuestion => Boolean(q));
+}
+
+export async function createMcqQuestion(input: Omit<McqQuestion, "id" | "subjectId" | "topicId" | "authorId" | "dateCreated"> & {
   subjectSlug: string;
   topicSlug: string;
   authorId?: string;
-}): McqQuestion {
+}): Promise<McqQuestion> {
   const store = getGlobalStore();
   const subject = getSubjectBySlug(input.subjectSlug);
   const topic = getTopicBySlug(input.topicSlug);
@@ -869,37 +1139,58 @@ export function createMcqQuestion(input: Omit<McqQuestion, "id" | "subjectId" | 
     explanation: input.explanation,
     dateCreated: nowIso(),
   };
+  if (isSupabaseEnabled()) {
+    throw new Error("Supabase mode enabled: create questions via API using tutor auth");
+  }
   store.questions.unshift(question);
   return question;
 }
 
-export function getRandomQuestions(topicSlug: string, limit: number, lessonNumber?: number): McqQuestion[] {
-  const all =
-    typeof lessonNumber === "number"
-      ? listQuestionsByTopicAndLesson(topicSlug, lessonNumber)
-      : listQuestionsByTopicSlug(topicSlug);
+export async function getRandomQuestions(topicSlug: string, limit: number, lessonNumber?: number): Promise<McqQuestion[]> {
+  const all = typeof lessonNumber === "number"
+    ? await listQuestionsByTopicAndLesson(topicSlug, lessonNumber)
+    : await listQuestionsByTopicSlug(topicSlug);
   const shuffled = [...all].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(0, limit));
 }
 
-export function listEssaysByTopicSlug(topicSlug: string): EssayQuestion[] {
+export async function listEssaysByTopicSlug(topicSlug: string): Promise<EssayQuestion[]> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return [];
-  return getGlobalStore().essays.filter((e) => e.topicId === topic.id);
+  if (!isSupabaseEnabled()) return getGlobalStore().essays.filter((e) => e.topicId === topic.id);
+  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  if (!subject) return [];
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("essay_questions").select("*").eq("topic_slug", topic.slug).order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => mapEssayRowToEssay(row, subject.id, topic.id));
 }
 
-export function listAllEssays(): EssayQuestion[] {
-  return getGlobalStore().essays;
+export async function listAllEssays(): Promise<EssayQuestion[]> {
+  if (!isSupabaseEnabled()) return getGlobalStore().essays;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("essay_questions").select("*").order("date_created", { ascending: false });
+  if (error || !data) return [];
+  return data
+    .map((row) => {
+      const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
+      const topic = getTopicBySlug(topicSlug);
+      if (!topic) return null;
+      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+      if (!subject) return null;
+      return mapEssayRowToEssay(row, subject.id, topic.id);
+    })
+    .filter((e): e is EssayQuestion => Boolean(e));
 }
 
-export function createEssayQuestion(input: {
+export async function createEssayQuestion(input: {
   subjectSlug: string;
   topicSlug: string;
   questionText: string;
   referenceAnswer?: string | null;
   authorId?: string;
   lessonNumber?: number | null;
-}): EssayQuestion {
+}): Promise<EssayQuestion> {
   const store = getGlobalStore();
   const subject = getSubjectBySlug(input.subjectSlug);
   const topic = getTopicBySlug(input.topicSlug);
@@ -916,27 +1207,44 @@ export function createEssayQuestion(input: {
     referenceAnswer: input.referenceAnswer ?? null,
     dateCreated: nowIso(),
   };
+  if (isSupabaseEnabled()) {
+    throw new Error("Supabase mode enabled: create essay questions via API using tutor auth");
+  }
   store.essays.unshift(essay);
   return essay;
 }
 
-export function listTemplates(): PresentationTemplate[] {
-  return getGlobalStore().templates;
+export async function listTemplates(): Promise<PresentationTemplate[]> {
+  if (!isSupabaseEnabled()) return getGlobalStore().templates;
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("templates").select("*").order("date_uploaded", { ascending: false });
+  if (error || !data) return [];
+  return data.map(mapTemplateRowToTemplate);
 }
 
-export function getTemplateById(templateId: string): PresentationTemplate | undefined {
-  return getGlobalStore().templates.find((t) => t.id === templateId);
+export async function getTemplateById(templateId: string): Promise<PresentationTemplate | undefined> {
+  if (!isSupabaseEnabled()) return getGlobalStore().templates.find((t) => t.id === templateId);
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("templates").select("*").eq("id", templateId).maybeSingle();
+  if (error || !data) return undefined;
+  return mapTemplateRowToTemplate(data);
 }
 
-export function incrementTemplateDownloads(templateId: string): PresentationTemplate | undefined {
-  const store = getGlobalStore();
-  const tpl = store.templates.find((t) => t.id === templateId);
-  if (!tpl) return undefined;
-  tpl.downloads += 1;
-  return tpl;
+export async function incrementTemplateDownloads(templateId: string): Promise<PresentationTemplate | undefined> {
+  if (!isSupabaseEnabled()) {
+    const store = getGlobalStore();
+    const tpl = store.templates.find((t) => t.id === templateId);
+    if (!tpl) return undefined;
+    tpl.downloads += 1;
+    return tpl;
+  }
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase.rpc("increment_template_downloads", { template_id: templateId });
+  if (error) return undefined;
+  return await getTemplateById(templateId);
 }
 
-export function createTemplate(input: {
+export async function createTemplate(input: {
   title: string;
   description: string;
   subjectSlug: string;
@@ -946,7 +1254,7 @@ export function createTemplate(input: {
   fileUrl: string;
   previewImageUrl?: string | null;
   uploadedBy?: string;
-}): PresentationTemplate {
+}): Promise<PresentationTemplate> {
   const store = getGlobalStore();
   const subject = getSubjectBySlug(input.subjectSlug);
   const topic = input.topicSlug ? getTopicBySlug(input.topicSlug) : undefined;
@@ -968,27 +1276,45 @@ export function createTemplate(input: {
     dateUploaded: nowIso(),
     downloads: 0,
   };
+  if (isSupabaseEnabled()) {
+    throw new Error("Supabase mode enabled: create templates via API using tutor auth");
+  }
   store.templates.unshift(tpl);
   return tpl;
 }
 
-export function getTopicResources(topicSlug: string): TopicResources | undefined {
+export async function getTopicResources(topicSlug: string): Promise<TopicResources | undefined> {
   const topic = getTopicBySlug(topicSlug);
   if (!topic) return undefined;
   const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
   if (!subject) return undefined;
-  return {
-    topic,
-    subject,
-    notes: getGlobalStore().notes.filter((n) => n.topicId === topic.id && n.published),
-    questions: getGlobalStore().questions.filter((q) => q.topicId === topic.id),
-    essays: getGlobalStore().essays.filter((e) => e.topicId === topic.id),
-    templates: getGlobalStore().templates.filter((t) => {
-      const subjectOk = (t.subjectId ?? null) ? t.subjectId === subject.id : true;
-      const topicOk = (t.topicId ?? null) ? t.topicId === topic.id : true;
-      return subjectOk && topicOk;
-    }),
-  };
+  if (!isSupabaseEnabled()) {
+    return {
+      topic,
+      subject,
+      notes: getGlobalStore().notes.filter((n) => n.topicId === topic.id && n.published),
+      questions: getGlobalStore().questions.filter((q) => q.topicId === topic.id),
+      essays: getGlobalStore().essays.filter((e) => e.topicId === topic.id),
+      templates: getGlobalStore().templates.filter((t) => {
+        const subjectOk = (t.subjectId ?? null) ? t.subjectId === subject.id : true;
+        const topicOk = (t.topicId ?? null) ? t.topicId === topic.id : true;
+        return subjectOk && topicOk;
+      }),
+    };
+  }
+  const [notes, questions, essays] = await Promise.all([
+    listNotesByTopicSlug(topic.slug),
+    listQuestionsByTopicSlug(topic.slug),
+    listEssaysByTopicSlug(topic.slug),
+  ]);
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("templates")
+    .select("*")
+    .eq("topic_slug", topic.slug)
+    .order("date_uploaded", { ascending: false });
+  const templates = error || !data ? [] : data.map(mapTemplateRowToTemplate);
+  return { topic, subject, notes, questions, essays, templates };
 }
 
 export function listSubjectsByKeyStage(keyStage: string): Subject[] {

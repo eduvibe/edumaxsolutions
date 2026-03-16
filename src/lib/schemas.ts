@@ -16,6 +16,7 @@ export const inquirySchema = z.object({
 export const noteCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),
+  lessonNumber: z.coerce.number().int().min(1),
   title: z.string().min(3),
   content: z.string().min(20),
   featuredImageUrl: z.string().url().optional().or(z.literal("")),
@@ -25,6 +26,7 @@ export const noteCreateSchema = z.object({
 export const mcqCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),
+  lessonNumber: z.coerce.number().int().min(1),
   questionText: z.string().min(10),
   questionImageUrl: z.string().url().optional().or(z.literal("")),
   optionAText: z.string().min(1),
@@ -42,6 +44,7 @@ export const mcqCreateSchema = z.object({
 export const essayCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),
+  lessonNumber: z.coerce.number().int().min(1),
   questionText: z.string().min(10),
   referenceAnswer: z.string().optional().or(z.literal("")),
 });
@@ -50,6 +53,7 @@ export const templateUploadSchema = z.object({
   title: z.string().min(3),
   subjectSlug: z.string().min(1),
   topicSlug: z.string().optional().or(z.literal("")),
+  lessonNumber: z.coerce.number().int().min(1).optional(),
   resourceType: z.enum(["slides", "worksheet", "scheme"]).default("slides"),
   description: z.string().min(10),
   fileUrl: z.string().url().optional().or(z.literal("")),

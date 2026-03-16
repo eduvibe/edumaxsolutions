@@ -46,6 +46,17 @@ export function TutorAuthForm() {
         if (error) throw new Error(error.message);
       }
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Account created",
+          description:
+            "Email confirmation is enabled in Supabase, so you’re not signed in yet. Disable Confirm email in Supabase Auth settings, then sign in.",
+        });
+        setMode("signin");
+        return;
+      }
+
       await setRoleTeacherCookie();
       toast({ title: mode === "signin" ? "Signed in" : "Account created" });
       router.push("/learn/teacher/dashboard");
@@ -89,4 +100,3 @@ export function TutorAuthForm() {
     </div>
   );
 }
-

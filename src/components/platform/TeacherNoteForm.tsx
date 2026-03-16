@@ -11,19 +11,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { noteCreateSchema } from "@/lib/schemas";
 import type { Subject, Topic } from "@/lib/platform/types";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
+import Image from "next/image";
 
 type FormValues = z.infer<typeof noteCreateSchema>;
 
-export function TeacherNoteForm({ subjects, topics }: { subjects: Subject[]; topics: Topic[] }) {
+export function TeacherNoteForm({
+  subjects,
+  topics,
+  mode = "create",
+  noteId,
+  initialValues,
+}: {
+  subjects: Subject[];
+  topics: Topic[];
+  mode?: "create" | "edit";
+  noteId?: string;
+  initialValues?: Partial<FormValues>;
+}) {
   const env = getPlatformPublicEnv();
   const { toast } = useToast();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(noteCreateSchema),
@@ -35,6 +49,7 @@ export function TeacherNoteForm({ subjects, topics }: { subjects: Subject[]; top
       content: "",
       featuredImageUrl: "",
       published: true,
+      ...(initialValues ?? {}),
     },
   });
 
@@ -52,25 +67,56 @@ export function TeacherNoteForm({ subjects, topics }: { subjects: Subject[]; top
     return defs.map((d, idx) => ({ number: idx + 1, title: d.title }));
   }, [selectedTopicSlug]);
 
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function uploadCloudinaryImage(file: File, folder: string) {
+    if (!env.cloudinaryConfigured) {
+      throw new Error("Cloudinary is not configured");
+    }
+    const token = await getSupabaseAccessToken();
+    if (!token) throw new Error("Tutor session expired. Please sign in again.");
+
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("folder", folder);
+
+    const uploadRes = await fetch("/api/cloudinary/upload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const uploadData = (await uploadRes.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!uploadRes.ok) throw new Error(uploadData.error ?? "Upload failed");
+    if (!uploadData.url) throw new Error("Upload failed");
+    return uploadData.url;
+  }
+
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
     try {
       const token = await getSupabaseAccessToken();
       if (!token) throw new Error("Tutor session expired. Please sign in again.");
-      const res = await fetch("/api/notes/create", {
-        method: "POST",
+      const isEdit = mode === "edit";
+      const endpoint = isEdit && noteId ? `/api/notes/${encodeURIComponent(noteId)}/edit` : "/api/notes/create";
+      const method = isEdit ? "PATCH" : "POST";
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(values),
       });
-      const data = (await res.json()) as { note?: { id: string }; error?: string };
-      if (!res.ok || !data.note) {
-        throw new Error(data.error ?? "Failed to create note");
+      const data = (await res.json().catch(() => ({}))) as { note?: { id: string }; ok?: boolean; id?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? (isEdit ? "Failed to update note" : "Failed to create note"));
       }
-      toast({ title: "Note created" });
-      router.push(`/learn/notes/${data.note.id}`);
+      toast({ title: isEdit ? "Note updated" : "Note created" });
+      if (isEdit) {
+        router.push(`/learn/notes/${noteId}`);
+      } else {
+        router.push(`/learn/notes/${data.note?.id ?? ""}`);
+      }
       router.refresh();
     } catch (e) {
-      toast({ title: "Create note failed", description: e instanceof Error ? e.message : "Unknown error" });
+      toast({ title: mode === "edit" ? "Update note failed" : "Create note failed", description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
       setSubmitting(false);
     }
@@ -204,9 +250,63 @@ export function TeacherNoteForm({ subjects, topics }: { subjects: Subject[]; top
             name="featuredImageUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Featured image URL (optional)</FormLabel>
+                <FormLabel>Featured image (optional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="https://res.cloudinary.com/..." {...field} />
+                  <div className="space-y-3">
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploading(true);
+                        void (async () => {
+                          try {
+                            const url = await uploadCloudinaryImage(file, "edumax/notes/featured");
+                            field.onChange(url);
+                            toast({ title: "Image uploaded" });
+                          } catch (err) {
+                            toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Unknown error" });
+                          } finally {
+                            setUploading(false);
+                            if (imageInputRef.current) imageInputRef.current.value = "";
+                          }
+                        })();
+                      }}
+                    />
+
+                    {field.value ? (
+                      <div className="overflow-hidden rounded-xl border border-black/10 bg-white/10 dark:border-white/10 dark:bg-white/5">
+                        <div className="relative aspect-[16/9] w-full">
+                          <Image src={field.value} alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 600px" />
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!env.cloudinaryConfigured || uploading}
+                        className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                        onClick={() => imageInputRef.current?.click()}
+                      >
+                        {uploading ? "Uploading..." : "Upload image"}
+                      </Button>
+                      {field.value ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                          onClick={() => field.onChange("")}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -214,7 +314,7 @@ export function TeacherNoteForm({ subjects, topics }: { subjects: Subject[]; top
           />
 
           <Button type="submit" disabled={submitting || !form.getValues("topicSlug") || !form.getValues("lessonNumber")}>
-            {submitting ? "Saving..." : "Publish note"}
+            {submitting ? "Saving..." : mode === "edit" ? "Save changes" : "Publish note"}
           </Button>
         </form>
       </Form>

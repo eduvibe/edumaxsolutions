@@ -253,21 +253,28 @@ export function TutorDashboardClient() {
                   <div className="p-4 text-sm text-black/70 dark:text-white/70">No notes yet.</div>
                 ) : (
                   recentNotes.map((n) => (
-                    <Link
-                      key={n.id}
-                      href={`/learn/notes/${n.id}`}
-                      className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/10"
-                    >
+                    <div key={n.id} className="flex items-center justify-between gap-4 px-4 py-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-black dark:text-white">{n.title}</div>
+                        <Link href={`/learn/notes/${n.id}`} className="truncate text-sm font-semibold text-black hover:underline underline-offset-4 dark:text-white">
+                          {n.title}
+                        </Link>
                         <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
                           {n.date_created ? new Date(n.date_created).toLocaleDateString() : ""}
                         </div>
                       </div>
-                      <div className="shrink-0 rounded-full border border-black/10 bg-white/10 px-3 py-1 text-xs font-semibold text-black/70 dark:border-white/10 dark:text-white/70">
-                        {n.views} views
+                      <div className="flex items-center gap-2">
+                        <div className="shrink-0 rounded-full border border-black/10 bg-white/10 px-3 py-1 text-xs font-semibold text-black/70 dark:border-white/10 dark:text-white/70">
+                          {n.views} views
+                        </div>
+                        <Button
+                          asChild
+                          variant="secondary"
+                          className="shrink-0 rounded-md border-2 border-black bg-transparent px-3 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                        >
+                          <Link href={`/learn/teacher/notes/${n.id}/edit`}>Edit</Link>
+                        </Button>
                       </div>
-                    </Link>
+                    </div>
                   ))
                 )}
               </div>

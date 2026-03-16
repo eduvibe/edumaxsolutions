@@ -28,17 +28,23 @@ export const mcqCreateSchema = z.object({
   topicSlug: z.string().min(1),
   lessonNumber: z.coerce.number().int().min(1),
   questionText: z.string().min(10),
+  questionTextJson: z.record(z.unknown()).optional(),
   questionImageUrl: z.string().url().optional().or(z.literal("")),
   optionAText: z.string().min(1),
+  optionATextJson: z.record(z.unknown()).optional(),
   optionAImageUrl: z.string().url().optional().or(z.literal("")),
   optionBText: z.string().min(1),
+  optionBTextJson: z.record(z.unknown()).optional(),
   optionBImageUrl: z.string().url().optional().or(z.literal("")),
   optionCText: z.string().min(1),
+  optionCTextJson: z.record(z.unknown()).optional(),
   optionCImageUrl: z.string().url().optional().or(z.literal("")),
   optionDText: z.string().min(1),
+  optionDTextJson: z.record(z.unknown()).optional(),
   optionDImageUrl: z.string().url().optional().or(z.literal("")),
   correctAnswer: z.enum(["A", "B", "C", "D"]),
   explanation: z.string().min(5),
+  explanationJson: z.record(z.unknown()).optional(),
 });
 
 export const essayCreateSchema = z.object({

@@ -55,6 +55,8 @@ export type Note = {
 
 export type McqOptionKey = "A" | "B" | "C" | "D";
 
+export type RichTextContent = Record<string, unknown>;
+
 export type McqQuestion = {
   id: Id;
   subjectId: Id;
@@ -62,17 +64,23 @@ export type McqQuestion = {
   lessonNumber?: number | null;
   authorId: Id;
   questionText: string;
+  questionTextJson?: RichTextContent | null;
   questionImageUrl?: string | null;
   optionAText: string;
+  optionATextJson?: RichTextContent | null;
   optionAImageUrl?: string | null;
   optionBText: string;
+  optionBTextJson?: RichTextContent | null;
   optionBImageUrl?: string | null;
   optionCText: string;
+  optionCTextJson?: RichTextContent | null;
   optionCImageUrl?: string | null;
   optionDText: string;
+  optionDTextJson?: RichTextContent | null;
   optionDImageUrl?: string | null;
   correctAnswer: McqOptionKey;
   explanation: string;
+  explanationJson?: RichTextContent | null;
   dateCreated: string;
 };
 

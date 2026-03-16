@@ -30,17 +30,23 @@ export async function POST(req: Request) {
           lesson_number: input.lessonNumber,
           author_id: user.id,
           question_text: input.questionText,
+          question_text_json: input.questionTextJson ?? null,
           question_image_url: input.questionImageUrl ? input.questionImageUrl : null,
           option_a_text: input.optionAText,
+          option_a_text_json: input.optionATextJson ?? null,
           option_a_image_url: input.optionAImageUrl ? input.optionAImageUrl : null,
           option_b_text: input.optionBText,
+          option_b_text_json: input.optionBTextJson ?? null,
           option_b_image_url: input.optionBImageUrl ? input.optionBImageUrl : null,
           option_c_text: input.optionCText,
+          option_c_text_json: input.optionCTextJson ?? null,
           option_c_image_url: input.optionCImageUrl ? input.optionCImageUrl : null,
           option_d_text: input.optionDText,
+          option_d_text_json: input.optionDTextJson ?? null,
           option_d_image_url: input.optionDImageUrl ? input.optionDImageUrl : null,
           correct_answer: input.correctAnswer,
           explanation: input.explanation,
+          explanation_json: input.explanationJson ?? null,
         })
         .select("id")
         .single();

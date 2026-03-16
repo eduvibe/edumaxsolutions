@@ -37,17 +37,23 @@ create table if not exists mcq_questions (
   lesson_number int null,
   author_id text not null,
   question_text text not null,
+  question_text_json jsonb null,
   question_image_url text null,
   option_a_text text not null,
+  option_a_text_json jsonb null,
   option_a_image_url text null,
   option_b_text text not null,
+  option_b_text_json jsonb null,
   option_b_image_url text null,
   option_c_text text not null,
+  option_c_text_json jsonb null,
   option_c_image_url text null,
   option_d_text text not null,
+  option_d_text_json jsonb null,
   option_d_image_url text null,
   correct_answer text not null,
   explanation text not null,
+  explanation_json jsonb null,
   date_created timestamptz not null default now()
 );
 
@@ -72,4 +78,3 @@ create table if not exists lesson_videos (
   video_url text not null,
   date_created timestamptz not null default now()
 );
-

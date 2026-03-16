@@ -5,8 +5,11 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { FormattedText } from "@/components/platform/FormattedText";
+import { RichTextRenderer } from "@/components/platform/RichTextRenderer";
 import type { McqOptionKey, McqQuestion } from "@/lib/platform/types";
 import { useMemo, useState } from "react";
+import Image from "next/image";
 
 type QuizState =
   | { status: "idle" }
@@ -122,8 +125,20 @@ export function QuizClient({
             return (
               <div key={q.id} className="rounded-3xl border border-black/10 bg-white/5 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-6">
                 <div className="text-base font-semibold tracking-tight">
-                  {idx + 1}. {q.questionText}
+                  <span className="mr-1">{idx + 1}.</span>
+                  {q.questionTextJson ? (
+                    <RichTextRenderer doc={q.questionTextJson} className="inline" />
+                  ) : (
+                    <FormattedText text={q.questionText} className="inline" />
+                  )}
                 </div>
+                {q.questionImageUrl ? (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white/10 dark:border-white/10 dark:bg-white/5">
+                    <div className="relative aspect-[16/9] w-full">
+                      <Image src={q.questionImageUrl} alt="" fill className="object-contain" sizes="(max-width: 768px) 100vw, 900px" />
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-4 space-y-4">
                   <RadioGroup
                     value={selected ?? ""}
@@ -132,11 +147,11 @@ export function QuizClient({
                     className="space-y-2"
                   >
                     {([
-                      ["A", q.optionAText] as const,
-                      ["B", q.optionBText] as const,
-                      ["C", q.optionCText] as const,
-                      ["D", q.optionDText] as const,
-                    ]).map(([key, text]) => {
+                      ["A", q.optionAText, q.optionATextJson, q.optionAImageUrl] as const,
+                      ["B", q.optionBText, q.optionBTextJson, q.optionBImageUrl] as const,
+                      ["C", q.optionCText, q.optionCTextJson, q.optionCImageUrl] as const,
+                      ["D", q.optionDText, q.optionDTextJson, q.optionDImageUrl] as const,
+                    ]).map(([key, text, textJson, imageUrl]) => {
                       const isCorrect = showReview && key === q.correctAnswer;
                       const isWrongSelected = showReview && selected === key && selected !== q.correctAnswer;
                       return (
@@ -151,7 +166,24 @@ export function QuizClient({
                           <RadioGroupItem id={`${q.id}_${key}`} value={key} />
                           <Label htmlFor={`${q.id}_${key}`} className="cursor-pointer flex-1">
                             <span className="font-medium mr-2">{key}.</span>
-                            {text}
+                            {textJson ? (
+                              <RichTextRenderer doc={textJson} className="inline" />
+                            ) : (
+                              <FormattedText text={text} className="inline" />
+                            )}
+                            {imageUrl ? (
+                              <div className="mt-2 overflow-hidden rounded-xl border border-black/10 bg-white/10 dark:border-white/10 dark:bg-white/5">
+                                <div className="relative aspect-[16/9] w-full">
+                                  <Image
+                                    src={imageUrl}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                    sizes="(max-width: 768px) 100vw, 700px"
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
                           </Label>
                         </div>
                       );
@@ -163,7 +195,11 @@ export function QuizClient({
                       <div>
                         Correct answer: <span className="font-semibold">{q.correctAnswer}</span>
                       </div>
-                      <div className="mt-2 whitespace-pre-wrap">{q.explanation}</div>
+                      {q.explanationJson ? (
+                        <RichTextRenderer doc={q.explanationJson} className="mt-2" />
+                      ) : (
+                        <FormattedText text={q.explanation} className="mt-2" />
+                      )}
                     </div>
                   ) : null}
                 </div>

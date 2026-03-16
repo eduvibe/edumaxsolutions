@@ -19,7 +19,14 @@ const serverEnvSchema = z.object({
 });
 
 export function getPlatformPublicEnv() {
-  const parsed = publicEnvSchema.safeParse(process.env);
+  const raw = {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    NEXT_PUBLIC_PLATFORM_MODE: process.env.NEXT_PUBLIC_PLATFORM_MODE,
+    NEXT_PUBLIC_RESOURCES_STATUS: process.env.NEXT_PUBLIC_RESOURCES_STATUS,
+  };
+  const parsed = publicEnvSchema.safeParse(raw);
   const env = parsed.success ? parsed.data : {};
 
   const platformMode = env.NEXT_PUBLIC_PLATFORM_MODE ?? "demo";
@@ -47,7 +54,12 @@ export function getPlatformPublicEnv() {
 }
 
 export function getPlatformServerEnv() {
-  const parsed = serverEnvSchema.safeParse(process.env);
+  const parsed = serverEnvSchema.safeParse({
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+    CLOUDINARY_UPLOAD_FOLDER: process.env.CLOUDINARY_UPLOAD_FOLDER,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
   const env = parsed.success ? parsed.data : {};
 
   const cloudinaryApiKey = env.CLOUDINARY_API_KEY ?? process.env["API Key"];

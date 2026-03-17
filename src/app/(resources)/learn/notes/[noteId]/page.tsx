@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { NoteViewTracker } from "@/components/platform/NoteViewTracker";
+import { StudentActionButton } from "@/components/platform/StudentActionButton";
+import { getPlatformRole } from "@/lib/platform/session";
 import { getNoteById, getTeacherById, listSubjects } from "@/lib/platform/store";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,6 +12,7 @@ type PageProps = {
 
 export default async function NotePage({ params }: PageProps) {
   const p = await params;
+  const role = await getPlatformRole();
   const note = await getNoteById(p.noteId);
   if (!note) notFound();
 
@@ -43,9 +46,15 @@ export default async function NotePage({ params }: PageProps) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button asChild className="rounded-full">
-          <Link href={`/api/notes/${note.id}/download`}>Download</Link>
-        </Button>
+        {role === "student" ? (
+          <StudentActionButton href={`/api/notes/${note.id}/download`} mode="download" className="rounded-full">
+            Download
+          </StudentActionButton>
+        ) : (
+          <Button asChild className="rounded-full">
+            <Link href={`/api/notes/${note.id}/download`}>Download</Link>
+          </Button>
+        )}
         <Button
           asChild
           variant="secondary"

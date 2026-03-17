@@ -118,6 +118,16 @@ export function LearnShell({
                     </div>
                   </div>
 
+                  {role === "student" ? (
+                    <Button
+                      asChild
+                      variant="secondary"
+                      className="rounded-full border-2 border-black bg-transparent px-4 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    >
+                      <Link href="/learn/account">Account</Link>
+                    </Button>
+                  ) : null}
+
                   <RoleToggle role={role} onRoleChange={setRole} />
 
                   <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">

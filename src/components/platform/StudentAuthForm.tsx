@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 type Mode = "signin" | "signup";
@@ -20,6 +20,7 @@ function isStrongPassword(pw: string) {
 export function StudentAuthForm() {
   const env = getPlatformPublicEnv();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -83,7 +84,12 @@ export function StudentAuthForm() {
 
       await setRoleStudentCookie();
       toast({ title: mode === "signin" ? "Signed in" : "Account created" });
-      router.push("/learn/subjects?section=primary");
+      const returnTo = searchParams.get("returnTo") ?? "";
+      if (returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.startsWith("/\\")) {
+        router.push(returnTo);
+      } else {
+        router.push("/learn/subjects?section=primary");
+      }
       router.refresh();
     } catch (err) {
       toast({ title: "Auth failed", description: err instanceof Error ? err.message : "Unknown error" });

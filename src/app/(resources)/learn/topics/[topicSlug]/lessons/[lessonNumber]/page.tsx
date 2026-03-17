@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { RichTextRenderer } from "@/components/platform/RichTextRenderer";
 import { getPlatformRole } from "@/lib/platform/session";
 import type { RichTextContent } from "@/lib/platform/types";
+import { StudentActionButton } from "@/components/platform/StudentActionButton";
+import { StudentActionLink } from "@/components/platform/StudentActionLink";
 import {
   getTopicResources,
   getTeacherById,
@@ -96,22 +98,46 @@ export default async function LessonPage({ params }: PageProps) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button asChild className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
-                <Link href={`/api/topics/${topic.slug}/lessons/${lessonNumber}/download`}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download lesson (.zip)
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="secondary"
-                className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-              >
-                <Link href={`/api/topics/${topic.slug}/download`}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download unit (.zip)
-                </Link>
-              </Button>
+              {role === "student" ? (
+                <>
+                  <StudentActionButton
+                    href={`/api/topics/${topic.slug}/lessons/${lessonNumber}/download`}
+                    mode="download"
+                    className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download lesson (.zip)
+                  </StudentActionButton>
+                  <StudentActionButton
+                    href={`/api/topics/${topic.slug}/download`}
+                    mode="download"
+                    variant="secondary"
+                    className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download unit (.zip)
+                  </StudentActionButton>
+                </>
+              ) : (
+                <>
+                  <Button asChild className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
+                    <Link href={`/api/topics/${topic.slug}/lessons/${lessonNumber}/download`}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download lesson (.zip)
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="secondary"
+                    className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                  >
+                    <Link href={`/api/topics/${topic.slug}/download`}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download unit (.zip)
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             <div className="space-y-4 pt-6">
@@ -228,10 +254,26 @@ export default async function LessonPage({ params }: PageProps) {
                   <ChevronLeft className="h-5 w-5 rotate-180" />
                 </a>
 
-                <Link
-                  href={`/learn/quiz/${topic.slug}?lesson=${lessonNumber}`}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white/10 px-4 py-4 text-black backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-                >
+                {role === "student" ? (
+                  <StudentActionLink
+                    href={`/learn/quiz/${topic.slug}?lesson=${lessonNumber}`}
+                    mode="navigate"
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white/10 px-4 py-4 text-black backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  >
+                    <div className="flex items-center gap-3">
+                      <HelpCircle className="h-5 w-5" />
+                      <div>
+                        <div className="text-sm font-extrabold">Quiz</div>
+                        <div className="text-xs text-black/60 dark:text-white/60">{questions.length} questions</div>
+                      </div>
+                    </div>
+                    <ChevronLeft className="h-5 w-5 rotate-180" />
+                  </StudentActionLink>
+                ) : (
+                  <Link
+                    href={`/learn/quiz/${topic.slug}?lesson=${lessonNumber}`}
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white/10 px-4 py-4 text-black backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  >
                   <div className="flex items-center gap-3">
                     <HelpCircle className="h-5 w-5" />
                     <div>
@@ -240,7 +282,8 @@ export default async function LessonPage({ params }: PageProps) {
                     </div>
                   </div>
                   <ChevronLeft className="h-5 w-5 rotate-180" />
-                </Link>
+                  </Link>
+                )}
 
                 <a
                   href="#videos"

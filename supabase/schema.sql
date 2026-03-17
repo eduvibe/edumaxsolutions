@@ -30,6 +30,56 @@ create table if not exists notes (
   published boolean not null default true
 );
 
+create table if not exists public.user_roles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  role text not null default 'student',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint user_roles_role_check check (role in ('student', 'teacher', 'admin'))
+);
+
+create table if not exists topic_notes (
+  id uuid primary key default gen_random_uuid(),
+  subject_slug text not null,
+  topic_slug text not null,
+  lesson_number int not null,
+  content text not null default '',
+  last_updated timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (topic_slug, lesson_number)
+);
+
+create table if not exists note_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  note_id uuid not null references public.topic_notes(id) on delete cascade,
+  proposed_content text not null,
+  suggested_by text not null,
+  change_summary text not null,
+  status text not null default 'pending',
+  created_at timestamptz not null default now(),
+  constraint note_suggestions_status_check check (status in ('pending', 'approved', 'rejected'))
+);
+
+create table if not exists suggestion_votes (
+  id uuid primary key default gen_random_uuid(),
+  suggestion_id uuid not null references public.note_suggestions(id) on delete cascade,
+  teacher_id text not null,
+  vote_type text not null,
+  created_at timestamptz not null default now(),
+  unique (suggestion_id, teacher_id),
+  constraint suggestion_votes_type_check check (vote_type in ('approve', 'reject'))
+);
+
+create table if not exists note_revisions (
+  id uuid primary key default gen_random_uuid(),
+  note_id uuid not null references public.topic_notes(id) on delete cascade,
+  previous_content text not null,
+  updated_content text not null,
+  updated_by text not null,
+  change_summary text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists mcq_questions (
   id uuid primary key default gen_random_uuid(),
   subject_slug text not null,

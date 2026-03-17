@@ -1,7 +1,16 @@
 import { createTopic } from "@/lib/platform/store";
 import { NextRequest, NextResponse } from "next/server";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { requireTutor } from "@/app/api/_lib/supabaseAuth";
 
 export async function POST(req: NextRequest) {
+  const env = getPlatformPublicEnv();
+  if (env.platformMode === "supabase" && env.supabaseConfigured) {
+    const auth = await requireTutor(req);
+    if ("error" in auth) return auth.error;
+    return NextResponse.json({ error: "Curriculum topics are not writable yet in Supabase mode" }, { status: 501 });
+  }
+
   const body = (await req.json()) as {
     subjectSlug?: string;
     name?: string;

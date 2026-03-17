@@ -23,6 +23,18 @@ export const noteCreateSchema = z.object({
   published: z.boolean().default(true),
 });
 
+export const topicNoteSuggestionCreateSchema = z.object({
+  subjectSlug: z.string().min(1),
+  topicSlug: z.string().min(1),
+  lessonNumber: z.coerce.number().int().min(1),
+  proposedContent: z.string().min(10),
+  changeSummary: z.string().min(5).max(200),
+});
+
+export const suggestionVoteSchema = z.object({
+  voteType: z.enum(["approve", "reject"]),
+});
+
 export const mcqCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),

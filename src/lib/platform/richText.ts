@@ -17,7 +17,7 @@ export function sanitizeRichHtml(inputHtml: string): string {
   }
   const parser = new DOMParser();
   const doc = parser.parseFromString(inputHtml, "text/html");
-  const allowed = new Set(["P", "BR", "STRONG", "EM", "U", "DIV", "SPAN", "B", "I"]);
+  const allowed = new Set(["P", "BR", "STRONG", "EM", "U", "DIV", "SPAN", "B", "I", "IMG"]);
   const root = doc.body;
   if (!root) {
     return `<p>${escapeHtml(inputHtml)}</p>`;
@@ -38,8 +38,20 @@ export function sanitizeRichHtml(inputHtml: string): string {
         unwrap(el);
         return;
       }
-      for (const attr of Array.from(el.attributes)) {
-        el.removeAttribute(attr.name);
+      if (tag === "IMG") {
+        for (const attr of Array.from(el.attributes)) {
+          const n = attr.name.toLowerCase();
+          if (n !== "src" && n !== "alt") el.removeAttribute(attr.name);
+        }
+        const src = el.getAttribute("src") ?? "";
+        if (!/^https:\/\/res\.cloudinary\.com\//i.test(src)) {
+          unwrap(el);
+          return;
+        }
+      } else {
+        for (const attr of Array.from(el.attributes)) {
+          el.removeAttribute(attr.name);
+        }
       }
     }
     for (const child of Array.from(node.childNodes)) clean(child);

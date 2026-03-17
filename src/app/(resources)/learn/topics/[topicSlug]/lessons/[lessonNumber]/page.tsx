@@ -1,13 +1,16 @@
 import { Button } from "@/components/ui/button";
+import { RichTextRenderer } from "@/components/platform/RichTextRenderer";
 import { getPlatformRole } from "@/lib/platform/session";
+import type { RichTextContent } from "@/lib/platform/types";
 import {
   getTopicResources,
   getTeacherById,
   listLessonsByTopicSlug,
-  listNotesByTopicAndLesson,
   listQuestionsByTopicAndLesson,
   listVideosByTopicAndLesson,
 } from "@/lib/platform/store";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { getSupabaseServerClient } from "@/lib/platform/supabase";
 import { ChevronLeft, Download, FileText, HelpCircle, PlayCircle, Video } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,6 +18,8 @@ import { notFound } from "next/navigation";
 type PageProps = {
   params: Promise<{ topicSlug: string; lessonNumber: string }> | { topicSlug: string; lessonNumber: string };
 };
+
+export const revalidate = 3600;
 
 export default async function LessonPage({ params }: PageProps) {
   const p = await params;
@@ -30,11 +35,24 @@ export default async function LessonPage({ params }: PageProps) {
   const lesson = lessons.find((l) => l.lessonNumber === lessonNumber);
   if (!lesson) notFound();
 
-  const [notes, questions, videos] = await Promise.all([
-    listNotesByTopicAndLesson(topic.slug, lessonNumber),
+  const [questions, videos] = await Promise.all([
     listQuestionsByTopicAndLesson(topic.slug, lessonNumber),
     listVideosByTopicAndLesson(topic.slug, lessonNumber),
   ]);
+
+  let officialNoteHtml = "";
+  const env = getPlatformPublicEnv();
+  if (env.platformMode === "supabase" && env.supabaseConfigured) {
+    const supabase = getSupabaseServerClient();
+    const { data } = await supabase
+      .from("topic_notes")
+      .select("content")
+      .eq("topic_slug", topic.slug)
+      .eq("lesson_number", lessonNumber)
+      .maybeSingle();
+    const row = data as { content?: string } | null;
+    officialNoteHtml = row?.content ?? "";
+  }
 
   return (
     <div className="bg-[#e7eefc] dark:bg-[#0b0f14]">
@@ -98,35 +116,16 @@ export default async function LessonPage({ params }: PageProps) {
 
             <div className="space-y-4 pt-6">
               <div id="notes" className="text-xl font-extrabold tracking-tight text-black dark:text-white">Notes</div>
-              {notes.length === 0 ? (
+              {officialNoteHtml.trim().length === 0 ? (
                 <div className="rounded-2xl border border-black/10 bg-white/10 p-6 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">
-                  No notes for this lesson yet.
+                  No official note for this lesson yet.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {notes.map((n) => {
-                    const author = getTeacherById(n.authorId);
-                    return (
-                      <Link
-                        key={n.id}
-                        href={`/learn/notes/${n.id}`}
-                        className="block rounded-2xl border border-black/10 bg-white/10 p-5 backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-                      >
-                        <div className="flex items-start justify-between gap-6">
-                          <div className="min-w-0">
-                            <div className="truncate text-base font-extrabold tracking-tight text-black dark:text-white">{n.title}</div>
-                            <div className="mt-1 text-sm text-black/70 dark:text-white/70">
-                              {author?.name ?? "Tutor"} • {new Date(n.dateCreated).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="inline-flex items-center gap-2 text-sm font-semibold text-black/80 dark:text-white/80">
-                            <span>Open</span>
-                            <ChevronLeft className="h-4 w-4 rotate-180" />
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                <div className="rounded-2xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+                  <RichTextRenderer
+                    doc={{ type: "html", html: officialNoteHtml } as unknown as RichTextContent}
+                    className="prose prose-sm max-w-none dark:prose-invert"
+                  />
                 </div>
               )}
             </div>
@@ -171,11 +170,11 @@ export default async function LessonPage({ params }: PageProps) {
                 <div className="rounded-2xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
                   <div className="text-sm font-semibold text-black/80 dark:text-white/80">Tutor tools</div>
                   <div className="mt-2 text-sm text-black/70 dark:text-white/70">
-                    Add new notes, quizzes and resources for this sub-topic.
+                    Improve the official note, add quizzes and upload resources for this sub-topic.
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button asChild className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
-                      <Link href="/learn/teacher/create-note">Add note</Link>
+                      <Link href={`/learn/teacher/topic-notes/${topic.slug}/lessons/${lessonNumber}`}>Suggest note edit</Link>
                     </Button>
                     <Button
                       asChild
@@ -223,7 +222,7 @@ export default async function LessonPage({ params }: PageProps) {
                     <FileText className="h-5 w-5" />
                     <div>
                       <div className="text-sm font-extrabold">Mission</div>
-                      <div className="text-xs text-black/60 dark:text-white/60">{notes.length} notes</div>
+                      <div className="text-xs text-black/60 dark:text-white/60">{officialNoteHtml.trim().length ? "1 note" : "0 notes"}</div>
                     </div>
                   </div>
                   <ChevronLeft className="h-5 w-5 rotate-180" />

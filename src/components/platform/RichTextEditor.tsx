@@ -11,11 +11,13 @@ export function RichTextEditor({
   onChange,
   placeholder,
   minHeightClassName,
+  disabled,
 }: {
   value: RichTextContent;
   onChange: (next: { json: RichTextContent; text: string }) => void;
   placeholder?: string;
   minHeightClassName?: string;
+  disabled?: boolean;
 }) {
   const html = useMemo(() => richDocToHtml(value), [value]);
   const editableRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +41,7 @@ export function RichTextEditor({
   }
 
   function exec(cmd: "bold" | "italic" | "underline") {
+    if (disabled) return;
     if (typeof document === "undefined") return;
     document.execCommand(cmd);
     emitChange({ sanitize: false });
@@ -55,6 +58,7 @@ export function RichTextEditor({
             className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
             onClick={() => exec("bold")}
             onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
           >
             <Bold className="h-4 w-4" />
           </Button>
@@ -64,6 +68,7 @@ export function RichTextEditor({
             className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
             onClick={() => exec("italic")}
             onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
           >
             <Italic className="h-4 w-4" />
           </Button>
@@ -73,6 +78,7 @@ export function RichTextEditor({
             className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
             onClick={() => exec("underline")}
             onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
           >
             <Underline className="h-4 w-4" />
           </Button>
@@ -80,10 +86,14 @@ export function RichTextEditor({
       </div>
       <div
         ref={editableRef}
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
-        onInput={() => emitChange({ sanitize: false })}
-        onBlur={() => emitChange({ sanitize: true })}
+        onInput={() => {
+          if (!disabled) emitChange({ sanitize: false });
+        }}
+        onBlur={() => {
+          if (!disabled) emitChange({ sanitize: true });
+        }}
         className={[
           "rounded-xl border border-black/10 bg-white/65 shadow-sm px-3 py-2 text-sm text-black outline-none",
           "dark:border-white/10 dark:bg-white/5 dark:text-white",

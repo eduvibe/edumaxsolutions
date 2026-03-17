@@ -61,13 +61,22 @@ export function AdminCurriculumClient() {
 
   const [subjectName, setSubjectName] = useState("");
   const [subjectSlug, setSubjectSlug] = useState("");
+  const [subjectEditName, setSubjectEditName] = useState("");
 
   const [topicName, setTopicName] = useState("");
   const [topicSlug, setTopicSlug] = useState("");
   const [schoolSection, setSchoolSection] = useState<"primary" | "jss" | "sss">("primary");
   const [yearGroup, setYearGroup] = useState("");
+  const [topicEditName, setTopicEditName] = useState("");
+  const [topicEditSchoolSection, setTopicEditSchoolSection] = useState<"primary" | "jss" | "sss">("primary");
+  const [topicEditYearGroup, setTopicEditYearGroup] = useState("");
+  const [topicEditThread, setTopicEditThread] = useState("");
+  const [topicEditDescription, setTopicEditDescription] = useState("");
 
   const [lessonText, setLessonText] = useState("");
+  const [editingLessonNumber, setEditingLessonNumber] = useState<number | null>(null);
+  const [lessonEditTitle, setLessonEditTitle] = useState("");
+  const [lessonEditObjective, setLessonEditObjective] = useState("");
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPasted, setCsvPasted] = useState("");
@@ -156,6 +165,33 @@ export function AdminCurriculumClient() {
     void loadSubjects();
   }, [loadSubjects]);
 
+  const selectedSubject = useMemo(() => subjects.find((s) => s.slug === selectedSubjectSlug) ?? null, [subjects, selectedSubjectSlug]);
+  const selectedTopic = useMemo(() => topics.find((t) => t.slug === selectedTopicSlug) ?? null, [topics, selectedTopicSlug]);
+
+  useEffect(() => {
+    setSubjectEditName(selectedSubject?.name ?? "");
+  }, [selectedSubject?.name]);
+
+  useEffect(() => {
+    if (!selectedTopic) {
+      setTopicEditName("");
+      setTopicEditYearGroup("");
+      setTopicEditSchoolSection("primary");
+      setTopicEditThread("");
+      setTopicEditDescription("");
+      return;
+    }
+    setTopicEditName(selectedTopic.name ?? "");
+    setTopicEditYearGroup(selectedTopic.year_group ?? "");
+    setTopicEditThread(selectedTopic.thread ?? "");
+    setTopicEditDescription(selectedTopic.description ?? "");
+    if (selectedTopic.school_section === "primary" || selectedTopic.school_section === "jss" || selectedTopic.school_section === "sss") {
+      setTopicEditSchoolSection(selectedTopic.school_section);
+    } else {
+      setTopicEditSchoolSection("primary");
+    }
+  }, [selectedTopic]);
+
   useEffect(() => {
     void loadTopics();
   }, [loadTopics]);
@@ -186,6 +222,54 @@ export function AdminCurriculumClient() {
       setSelectedSubjectSlug(slug);
     } catch (e) {
       toast({ title: "Create failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateSelectedSubject() {
+    if (role !== "admin") {
+      toast({ title: "Admin only" });
+      return;
+    }
+    if (!selectedSubjectSlug) return;
+    const name = subjectEditName.trim();
+    if (!name) return;
+    setBusy(true);
+    try {
+      await authedFetchJson(`/api/curriculum/subjects/${encodeURIComponent(selectedSubjectSlug)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      toast({ title: "Subject updated" });
+      await loadSubjects();
+    } catch (e) {
+      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteSelectedSubject() {
+    if (role !== "admin") {
+      toast({ title: "Admin only" });
+      return;
+    }
+    if (!selectedSubjectSlug) return;
+    const ok = window.confirm("Delete this subject? This will also delete its topics and lessons.");
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await authedFetchJson(`/api/curriculum/subjects/${encodeURIComponent(selectedSubjectSlug)}`, { method: "DELETE" });
+      toast({ title: "Subject deleted" });
+      setSelectedSubjectSlug("");
+      setSelectedTopicSlug("");
+      await loadSubjects();
+      setTopics([]);
+      setLessons([]);
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
       setBusy(false);
     }
@@ -224,6 +308,53 @@ export function AdminCurriculumClient() {
     }
   }
 
+  async function updateSelectedTopic() {
+    if (!selectedTopicSlug) return;
+    if (!topicEditName.trim()) return;
+    setBusy(true);
+    try {
+      await authedFetchJson(`/api/curriculum/topics/${encodeURIComponent(selectedTopicSlug)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: topicEditName.trim(),
+          description: topicEditDescription.trim() ? topicEditDescription.trim() : null,
+          yearGroup: topicEditYearGroup.trim() ? topicEditYearGroup.trim() : null,
+          thread: topicEditThread.trim() ? topicEditThread.trim() : null,
+          schoolSection: topicEditSchoolSection,
+        }),
+      });
+      toast({ title: "Topic updated" });
+      await loadTopics();
+    } catch (e) {
+      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteSelectedTopic() {
+    if (role !== "admin") {
+      toast({ title: "Admin only" });
+      return;
+    }
+    if (!selectedTopicSlug) return;
+    const ok = window.confirm("Delete this topic? This will also delete its lessons.");
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await authedFetchJson(`/api/curriculum/topics/${encodeURIComponent(selectedTopicSlug)}`, { method: "DELETE" });
+      toast({ title: "Topic deleted" });
+      setSelectedTopicSlug("");
+      await loadTopics();
+      setLessons([]);
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addLessons() {
     if (!selectedTopicSlug) return;
     const lines = lessonText
@@ -252,6 +383,64 @@ export function AdminCurriculumClient() {
     }
   }
 
+  async function startEditLesson(lessonNumber: number) {
+    const l = lessons.find((x) => x.lesson_number === lessonNumber);
+    if (!l) return;
+    setEditingLessonNumber(lessonNumber);
+    setLessonEditTitle(l.title ?? "");
+    setLessonEditObjective(l.objective ?? "");
+  }
+
+  async function saveLessonEdits() {
+    if (!selectedTopicSlug) return;
+    if (!editingLessonNumber) return;
+    if (!lessonEditTitle.trim()) return;
+    setBusy(true);
+    try {
+      await authedFetchJson(
+        `/api/curriculum/topics/${encodeURIComponent(selectedTopicSlug)}/lessons/${encodeURIComponent(String(editingLessonNumber))}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: lessonEditTitle.trim(),
+            objective: lessonEditObjective.trim() ? lessonEditObjective.trim() : null,
+          }),
+        }
+      );
+      toast({ title: "Lesson updated" });
+      setEditingLessonNumber(null);
+      await loadLessons();
+    } catch (e) {
+      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteLesson(lessonNumber: number) {
+    if (role !== "admin") {
+      toast({ title: "Admin only", description: "Only admin can delete lessons." });
+      return;
+    }
+    if (!selectedTopicSlug) return;
+    const ok = window.confirm(`Delete lesson ${lessonNumber}?`);
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await authedFetchJson(`/api/curriculum/topics/${encodeURIComponent(selectedTopicSlug)}/lessons/${encodeURIComponent(String(lessonNumber))}`, {
+        method: "DELETE",
+      });
+      toast({ title: "Lesson deleted" });
+      if (editingLessonNumber === lessonNumber) setEditingLessonNumber(null);
+      await loadLessons();
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loadingRole) {
     return (
       <div className="rounded-3xl border border-black/10 bg-white/10 p-6 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">
@@ -268,7 +457,7 @@ export function AdminCurriculumClient() {
         {role === "admin" ? (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
             <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="Subject name" />
-            <Input value={subjectSlug} onChange={(e) => setSubjectSlug(e.target.value)} placeholder="Slug (optional)" />
+            <Input value={subjectSlug} onChange={(e) => setSubjectSlug(e.target.value)} placeholder="Short link (optional)" />
             <Button
               type="button"
               disabled={busy || !subjectName.trim()}
@@ -307,13 +496,36 @@ export function AdminCurriculumClient() {
             Refresh
           </Button>
         </div>
+
+        {selectedSubject ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
+            <Input value={subjectEditName} onChange={(e) => setSubjectEditName(e.target.value)} placeholder="Subject name" disabled={role !== "admin"} />
+            <Button
+              type="button"
+              disabled={busy || role !== "admin" || !subjectEditName.trim()}
+              className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+              onClick={() => void updateSelectedSubject()}
+            >
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy || role !== "admin"}
+              className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+              onClick={() => void deleteSelectedSubject()}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-3xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5 space-y-4">
         <div className="text-sm font-semibold text-black/80 dark:text-white/80">Topics</div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
           <Input value={topicName} onChange={(e) => setTopicName(e.target.value)} placeholder="Topic name" />
-          <Input value={topicSlug} onChange={(e) => setTopicSlug(e.target.value)} placeholder="Slug (optional)" />
+          <Input value={topicSlug} onChange={(e) => setTopicSlug(e.target.value)} placeholder="Short link (optional)" />
           <Select value={yearGroup} onValueChange={(v) => setYearGroup(v)}>
             <SelectTrigger>
               <SelectValue placeholder="Class level" />
@@ -373,10 +585,80 @@ export function AdminCurriculumClient() {
             Refresh
           </Button>
         </div>
+
+        {selectedTopic ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid gap-2">
+              <div className="text-sm font-semibold text-black/80 dark:text-white/80">Topic name</div>
+              <Input value={topicEditName} onChange={(e) => setTopicEditName(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-semibold text-black/80 dark:text-white/80">Thread (optional)</div>
+              <Input value={topicEditThread} onChange={(e) => setTopicEditThread(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-semibold text-black/80 dark:text-white/80">Section</div>
+              <Select
+                value={topicEditSchoolSection}
+                onValueChange={(v) => {
+                  if (v === "primary" || v === "jss" || v === "sss") setTopicEditSchoolSection(v);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Section" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primary">primary</SelectItem>
+                  <SelectItem value="jss">jss</SelectItem>
+                  <SelectItem value="sss">sss</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-semibold text-black/80 dark:text-white/80">Class level</div>
+              <Select value={topicEditYearGroup} onValueChange={(v) => setTopicEditYearGroup(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Optional</SelectItem>
+                  {yearGroupOptions(topicEditSchoolSection).map((y) => (
+                    <SelectItem key={y} value={y}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2 grid gap-2">
+              <div className="text-sm font-semibold text-black/80 dark:text-white/80">Description (optional)</div>
+              <Input value={topicEditDescription} onChange={(e) => setTopicEditDescription(e.target.value)} />
+            </div>
+            <div className="md:col-span-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                disabled={busy || !topicEditName.trim()}
+                className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                onClick={() => void updateSelectedTopic()}
+              >
+                Save topic
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy || role !== "admin"}
+                className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                onClick={() => void deleteSelectedTopic()}
+              >
+                Delete topic
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-3xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5 space-y-4">
-        <div className="text-sm font-semibold text-black/80 dark:text-white/80">Lessons (sub-topics)</div>
+        <div className="text-sm font-semibold text-black/80 dark:text-white/80">Sub-topics (lessons)</div>
 
         <textarea
           value={lessonText}
@@ -411,10 +693,69 @@ export function AdminCurriculumClient() {
           ) : (
             lessons.map((l) => (
               <div key={l.id} className="px-4 py-3">
-                <div className="text-sm font-semibold text-black dark:text-white">
-                  Lesson {l.lesson_number}: {l.title}
-                </div>
-                {l.objective ? <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">{l.objective}</div> : null}
+                {editingLessonNumber === l.lesson_number ? (
+                  <div className="grid gap-2">
+                    <Input value={lessonEditTitle} onChange={(e) => setLessonEditTitle(e.target.value)} placeholder="Lesson title" />
+                    <Input value={lessonEditObjective} onChange={(e) => setLessonEditObjective(e.target.value)} placeholder="Objective (optional)" />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        disabled={busy || !lessonEditTitle.trim()}
+                        className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                        onClick={() => void saveLessonEdits()}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={busy}
+                        className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                        onClick={() => setEditingLessonNumber(null)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={busy || role !== "admin"}
+                        className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                        onClick={() => void deleteLesson(l.lesson_number)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-semibold text-black dark:text-white">
+                        Lesson {l.lesson_number}: {l.title}
+                      </div>
+                      {l.objective ? <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">{l.objective}</div> : null}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={busy}
+                        className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                        onClick={() => void startEditLesson(l.lesson_number)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={busy || role !== "admin"}
+                        className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                        onClick={() => void deleteLesson(l.lesson_number)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -422,14 +763,25 @@ export function AdminCurriculumClient() {
       </div>
 
       <div className="rounded-3xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5 space-y-4">
-        <div className="text-sm font-semibold text-black/80 dark:text-white/80">Bulk import (CSV)</div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-black/80 dark:text-white/80">Upload curriculum</div>
+          <Button
+            asChild
+            variant="secondary"
+            className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+          >
+            <a href="/curriculum-upload-template.csv" download>
+              Download template
+            </a>
+          </Button>
+        </div>
         <div className="text-sm text-black/70 dark:text-white/70">
-          Columns: subject, subject_slug (optional), section (primary/jss/sss), year_group, topic, topic_slug (optional), lessons. Lessons use | as separator.
+          Upload a spreadsheet saved as CSV. Lessons use | as separator.
         </div>
 
         <div className="grid grid-cols-1 gap-3">
           <Input type="file" accept=".csv,text/csv" onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)} />
-          <div className="text-sm text-black/70 dark:text-white/70">Or paste CSV:</div>
+          <div className="text-sm text-black/70 dark:text-white/70">Or paste CSV content:</div>
           <textarea
             value={csvPasted}
             onChange={(e) => setCsvPasted(e.target.value)}
@@ -473,7 +825,7 @@ export function AdminCurriculumClient() {
               })();
             }}
           >
-            Import CSV
+            Upload
           </Button>
         </div>
       </div>

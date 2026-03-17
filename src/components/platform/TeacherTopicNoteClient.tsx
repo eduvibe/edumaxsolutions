@@ -54,6 +54,13 @@ export function TeacherTopicNoteClient({
   const [pendingSuggestions, setPendingSuggestions] = useState<SuggestionRow[]>([]);
   const [revisions, setRevisions] = useState<RevisionRow[]>([]);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const [lockState, setLockState] = useState<{
+    mine: boolean;
+    lockedBy: string | null;
+    lockedUntil: string | null;
+    lockedByEmail: string | null;
+    lockedByName: string | null;
+  }>({ mine: false, lockedBy: null, lockedUntil: null, lockedByEmail: null, lockedByName: null });
 
   const noteDoc = useMemo<RichTextContent>(() => ({ type: "html", html: note?.content ?? "" }), [note?.content]);
 
@@ -114,6 +121,70 @@ export function TeacherTopicNoteClient({
     if (activeTab === "history") void loadRevisions();
   }, [activeTab, loadPendingSuggestions, loadRevisions]);
 
+  const acquireLock = useCallback(async () => {
+    try {
+      const token = await getSupabaseAccessToken();
+      if (!token) throw new Error("Tutor session expired. Please sign in again.");
+      const res = await fetch("/api/topic-notes/lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ topicSlug, lessonNumber }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        acquired?: boolean;
+        mine?: boolean;
+        lockedBy?: string | null;
+        lockedUntil?: string | null;
+        lockedByEmail?: string | null;
+        lockedByName?: string | null;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? "Unable to start editing");
+      setLockState({
+        mine: Boolean(data.mine),
+        lockedBy: data.lockedBy ?? null,
+        lockedUntil: data.lockedUntil ?? null,
+        lockedByEmail: data.lockedByEmail ?? null,
+        lockedByName: data.lockedByName ?? null,
+      });
+    } catch (e) {
+      setLockState({ mine: false, lockedBy: null, lockedUntil: null, lockedByEmail: null, lockedByName: null });
+      toast({ title: "Edit lock failed", description: e instanceof Error ? e.message : "Unknown error" });
+    }
+  }, [lessonNumber, toast, topicSlug]);
+
+  const releaseLock = useCallback(async () => {
+    try {
+      const token = await getSupabaseAccessToken();
+      if (!token) return;
+      await fetch("/api/topic-notes/lock", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ topicSlug, lessonNumber }),
+      });
+    } catch {
+    }
+  }, [lessonNumber, topicSlug]);
+
+  useEffect(() => {
+    if (activeTab !== "suggest") {
+      if (lockState.mine) void releaseLock();
+      setLockState((s) => (s.mine ? { mine: false, lockedBy: null, lockedUntil: null, lockedByEmail: null, lockedByName: null } : s));
+      return;
+    }
+    void acquireLock();
+    const id = window.setInterval(() => {
+      void acquireLock();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [acquireLock, activeTab, lockState.mine, releaseLock]);
+
+  useEffect(() => {
+    return () => {
+      if (lockState.mine) void releaseLock();
+    };
+  }, [lockState.mine, releaseLock]);
+
   const uploadImage = useCallback(async (file: File) => {
     const token = await getSupabaseAccessToken();
     if (!token) throw new Error("Tutor session expired. Please sign in again.");
@@ -150,6 +221,10 @@ export function TeacherTopicNoteClient({
   }, [toast, uploadImage]);
 
   const submitSuggestion = useCallback(async () => {
+    if (!lockState.mine) {
+      toast({ title: "Editing locked", description: "Another tutor is currently editing this note. Try again later." });
+      return;
+    }
     if (!changeSummary.trim()) {
       toast({ title: "Add a change summary" });
       return;
@@ -179,13 +254,15 @@ export function TeacherTopicNoteClient({
       toast({ title: "Suggestion submitted" });
       setChangeSummary("");
       setActiveTab("review");
+      setLockState({ mine: false, lockedBy: null, lockedUntil: null, lockedByEmail: null, lockedByName: null });
+      await releaseLock();
       await loadPendingSuggestions();
     } catch (e) {
       toast({ title: "Submit failed", description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
       setSubmitting(false);
     }
-  }, [changeSummary, lessonNumber, loadPendingSuggestions, proposedDoc, subjectSlug, toast, topicSlug]);
+  }, [changeSummary, lessonNumber, loadPendingSuggestions, lockState.mine, proposedDoc, releaseLock, subjectSlug, toast, topicSlug]);
 
   return (
     <div className="space-y-6">
@@ -247,16 +324,28 @@ export function TeacherTopicNoteClient({
                   variant="secondary"
                   className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
                   onClick={() => imageInputRef.current?.click()}
+                  disabled={!lockState.mine}
                 >
                   Insert image
                 </Button>
               </div>
             </div>
 
+            {!lockState.mine ? (
+              <div className="rounded-xl border border-black/10 bg-white/10 p-4 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+                {lockState.lockedByName || lockState.lockedByEmail
+                  ? `Editing in progress by ${lockState.lockedByName ? lockState.lockedByName : ""}${
+                      lockState.lockedByName && lockState.lockedByEmail ? " • " : ""
+                    }${lockState.lockedByEmail ? lockState.lockedByEmail : ""}. Try again in a few minutes.`
+                  : "Another tutor is currently editing this note. Try again in a few minutes."}
+              </div>
+            ) : null}
+
             <RichTextEditor
               value={proposedDoc}
               placeholder="Edit the note…"
               minHeightClassName="min-h-[320px]"
+              disabled={!lockState.mine}
               onChange={({ json, text }) => {
                 setProposedDoc(json);
                 setProposedText(text);
@@ -278,7 +367,7 @@ export function TeacherTopicNoteClient({
               <Button
                 type="button"
                 className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-                disabled={submitting}
+                disabled={submitting || !lockState.mine}
                 onClick={() => void submitSuggestion()}
               >
                 {submitting ? "Submitting..." : "Submit suggestion"}

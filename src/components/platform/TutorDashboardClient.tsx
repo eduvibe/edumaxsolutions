@@ -207,13 +207,22 @@ export function TutorDashboardClient() {
               Sign out
             </Button>
             {userRole === "admin" ? (
-              <Button
-                asChild
-                variant="secondary"
-                className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-              >
-                <Link href="/learn/teacher/admin">Admin</Link>
-              </Button>
+              <>
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                >
+                  <Link href="/learn/teacher/admin/curriculum">Manage curriculum</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                >
+                  <Link href="/learn/teacher/admin">Admin</Link>
+                </Button>
+              </>
             ) : null}
           </div>
         </div>

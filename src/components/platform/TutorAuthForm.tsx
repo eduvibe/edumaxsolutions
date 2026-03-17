@@ -15,6 +15,7 @@ export function TutorAuthForm() {
   const { toast } = useToast();
   const supabase = useMemo(() => getSupabaseBrowserClientOrNull(), []);
 
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,6 +39,7 @@ export function TutorAuthForm() {
     }
     setBusy(true);
     try {
+      const n = fullName.trim();
       const e = email.trim().toLowerCase();
       if (!e) throw new Error("Email is required");
       if (!password) throw new Error("Password is required");
@@ -45,7 +47,7 @@ export function TutorAuthForm() {
       // Try sign-in; if fails, try sign-up then sign-in
       const signIn = await supabase.auth.signInWithPassword({ email: e, password });
       if (signIn.error) {
-        const signUp = await supabase.auth.signUp({ email: e, password });
+        const signUp = await supabase.auth.signUp({ email: e, password, options: n ? { data: { full_name: n } } : undefined });
         if (signUp.error) throw new Error(signUp.error.message);
         const sess = await supabase.auth.signInWithPassword({ email: e, password });
         if (sess.error) throw new Error(sess.error.message);
@@ -55,6 +57,10 @@ export function TutorAuthForm() {
       if (!sessionData.session) {
         toast({ title: "Sign in failed", description: "No session returned from Supabase." });
         return;
+      }
+
+      if (n) {
+        await supabase.auth.updateUser({ data: { full_name: n } }).catch(() => undefined);
       }
 
       // Ensure teacher role is set for self-registered tutors
@@ -74,6 +80,10 @@ export function TutorAuthForm() {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-2">
+        <div className="text-sm font-medium text-black/80 dark:text-white/80">Full name (recommended)</div>
+        <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Amina Yusuf" />
+      </div>
       <div className="grid gap-2">
         <div className="text-sm font-medium text-black/80 dark:text-white/80">Email</div>
         <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tutor@example.com" type="email" />

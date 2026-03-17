@@ -100,6 +100,16 @@ create table if not exists public.curriculum_lessons (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.topic_note_locks (
+  topic_slug text not null,
+  lesson_number int not null,
+  locked_by text not null,
+  locked_until timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (topic_slug, lesson_number)
+);
+
 create table if not exists topic_notes (
   id uuid primary key default gen_random_uuid(),
   subject_slug text not null,

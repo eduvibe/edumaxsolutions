@@ -59,6 +59,22 @@ export async function POST(req: Request) {
 
   const { subjectSlug, topicSlug, lessonNumber, proposedContent, changeSummary } = parsed.data;
 
+  const { data: lockRows, error: lockErr } = await supabase
+    .from("topic_note_locks")
+    .select("locked_by,locked_until")
+    .eq("topic_slug", topicSlug)
+    .eq("lesson_number", lessonNumber)
+    .maybeSingle();
+  if (lockErr) return NextResponse.json({ error: lockErr.message }, { status: 400 });
+  const lockedBy = (lockRows as { locked_by?: string } | null)?.locked_by ?? null;
+  const lockedUntil = (lockRows as { locked_until?: string } | null)?.locked_until ?? null;
+  if (!lockedBy || lockedBy !== user.id) {
+    return NextResponse.json({ error: "This note is being edited by another tutor. Try again later." }, { status: 409 });
+  }
+  if (lockedUntil && new Date(lockedUntil).getTime() <= Date.now()) {
+    return NextResponse.json({ error: "Edit session expired. Re-open Suggest edit to continue." }, { status: 409 });
+  }
+
   const { data: existing, error: existErr } = await supabase
     .from("topic_notes")
     .select("id")
@@ -97,4 +113,3 @@ export async function POST(req: Request) {
   if (error || !suggestion) return NextResponse.json({ error: error?.message ?? "Unable to submit suggestion" }, { status: 400 });
   return NextResponse.json({ ok: true, id: suggestion.id }, { status: 201 });
 }
-

@@ -23,6 +23,21 @@ type TopicRow = {
 };
 type LessonRow = { id: string; topic_id: string; lesson_number: number; title: string; objective: string | null };
 
+type SubjectSections = { primary: boolean; jss: boolean; sss: boolean };
+
+function keyStagesFromSections(s: SubjectSections): string[] {
+  const ks: string[] = [];
+  if (s.primary) ks.push("KS1", "KS2");
+  if (s.jss) ks.push("KS3");
+  if (s.sss) ks.push("KS4");
+  return Array.from(new Set(ks));
+}
+
+function sectionsFromKeyStages(keyStages: string[] | null | undefined): SubjectSections {
+  const ks = new Set(keyStages ?? []);
+  return { primary: ks.has("KS1") || ks.has("KS2"), jss: ks.has("KS3"), sss: ks.has("KS4") };
+}
+
 function slugify(input: string) {
   return input
     .trim()
@@ -62,6 +77,8 @@ export function AdminCurriculumClient() {
   const [subjectName, setSubjectName] = useState("");
   const [subjectSlug, setSubjectSlug] = useState("");
   const [subjectEditName, setSubjectEditName] = useState("");
+  const [subjectSections, setSubjectSections] = useState<SubjectSections>({ primary: true, jss: true, sss: true });
+  const [subjectEditSections, setSubjectEditSections] = useState<SubjectSections>({ primary: true, jss: true, sss: true });
 
   const [topicName, setTopicName] = useState("");
   const [topicSlug, setTopicSlug] = useState("");
@@ -170,7 +187,8 @@ export function AdminCurriculumClient() {
 
   useEffect(() => {
     setSubjectEditName(selectedSubject?.name ?? "");
-  }, [selectedSubject?.name]);
+    setSubjectEditSections(sectionsFromKeyStages(selectedSubject?.key_stages ?? null));
+  }, [selectedSubject]);
 
   useEffect(() => {
     if (!selectedTopic) {
@@ -208,12 +226,16 @@ export function AdminCurriculumClient() {
     const name = subjectName.trim();
     const slug = (subjectSlug.trim() || slugify(name)).trim();
     if (!name || !slug) return;
+    if (keyStagesFromSections(subjectSections).length === 0) {
+      toast({ title: "Select a section", description: "Choose where this subject should appear: Primary, JSS, and/or SSS." });
+      return;
+    }
     setBusy(true);
     try {
       await authedFetchJson("/api/curriculum/subjects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug, keyStages: [] }),
+        body: JSON.stringify({ name, slug, keyStages: keyStagesFromSections(subjectSections) }),
       });
       toast({ title: "Subject created" });
       setSubjectName("");
@@ -235,12 +257,16 @@ export function AdminCurriculumClient() {
     if (!selectedSubjectSlug) return;
     const name = subjectEditName.trim();
     if (!name) return;
+    if (keyStagesFromSections(subjectEditSections).length === 0) {
+      toast({ title: "Select a section", description: "Choose where this subject should appear: Primary, JSS, and/or SSS." });
+      return;
+    }
     setBusy(true);
     try {
       await authedFetchJson(`/api/curriculum/subjects/${encodeURIComponent(selectedSubjectSlug)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, keyStages: keyStagesFromSections(subjectEditSections) }),
       });
       toast({ title: "Subject updated" });
       await loadSubjects();
@@ -455,17 +481,38 @@ export function AdminCurriculumClient() {
         <div className="text-sm font-semibold text-black/80 dark:text-white/80">Subjects</div>
 
         {role === "admin" ? (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="Subject name" />
-            <Input value={subjectSlug} onChange={(e) => setSubjectSlug(e.target.value)} placeholder="Short link (optional)" />
-            <Button
-              type="button"
-              disabled={busy || !subjectName.trim()}
-              className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-              onClick={() => void createSubject()}
-            >
-              Create subject
-            </Button>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
+              <Input value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="Subject name" />
+              <Input value={subjectSlug} onChange={(e) => setSubjectSlug(e.target.value)} placeholder="Short link (optional)" />
+              <Button
+                type="button"
+                disabled={busy || !subjectName.trim()}
+                className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                onClick={() => void createSubject()}
+              >
+                Create subject
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-black/70 dark:text-white/70">
+              <div className="font-semibold text-black/80 dark:text-white/80">Show under:</div>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={subjectSections.primary}
+                  onChange={(e) => setSubjectSections((s) => ({ ...s, primary: e.target.checked }))}
+                />
+                Primary
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={subjectSections.jss} onChange={(e) => setSubjectSections((s) => ({ ...s, jss: e.target.checked }))} />
+                JSS
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={subjectSections.sss} onChange={(e) => setSubjectSections((s) => ({ ...s, sss: e.target.checked }))} />
+                SSS
+              </label>
+            </div>
           </div>
         ) : (
           <div className="text-sm text-black/70 dark:text-white/70">Only admin can create subjects.</div>
@@ -498,25 +545,57 @@ export function AdminCurriculumClient() {
         </div>
 
         {selectedSubject ? (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
-            <Input value={subjectEditName} onChange={(e) => setSubjectEditName(e.target.value)} placeholder="Subject name" disabled={role !== "admin"} />
-            <Button
-              type="button"
-              disabled={busy || role !== "admin" || !subjectEditName.trim()}
-              className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-              onClick={() => void updateSelectedSubject()}
-            >
-              Save
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busy || role !== "admin"}
-              className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-              onClick={() => void deleteSelectedSubject()}
-            >
-              Delete
-            </Button>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
+              <Input value={subjectEditName} onChange={(e) => setSubjectEditName(e.target.value)} placeholder="Subject name" disabled={role !== "admin"} />
+              <Button
+                type="button"
+                disabled={busy || role !== "admin" || !subjectEditName.trim()}
+                className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                onClick={() => void updateSelectedSubject()}
+              >
+                Save
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy || role !== "admin"}
+                className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                onClick={() => void deleteSelectedSubject()}
+              >
+                Delete
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-black/70 dark:text-white/70">
+              <div className="font-semibold text-black/80 dark:text-white/80">Show under:</div>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={subjectEditSections.primary}
+                  onChange={(e) => setSubjectEditSections((s) => ({ ...s, primary: e.target.checked }))}
+                  disabled={role !== "admin"}
+                />
+                Primary
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={subjectEditSections.jss}
+                  onChange={(e) => setSubjectEditSections((s) => ({ ...s, jss: e.target.checked }))}
+                  disabled={role !== "admin"}
+                />
+                JSS
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={subjectEditSections.sss}
+                  onChange={(e) => setSubjectEditSections((s) => ({ ...s, sss: e.target.checked }))}
+                  disabled={role !== "admin"}
+                />
+                SSS
+              </label>
+            </div>
           </div>
         ) : null}
       </div>

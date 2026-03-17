@@ -5,6 +5,7 @@ import { requireAdmin } from "@/app/api/_lib/supabaseAuth";
 
 const patchSchema = z.object({
   name: z.string().min(2).max(80).optional(),
+  keyStages: z.array(z.string().min(2).max(10)).optional(),
   isNew: z.boolean().nullable().optional(),
 });
 
@@ -25,6 +26,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ subjectSlug: 
 
   const update: Record<string, unknown> = {};
   if (typeof parsed.data.name === "string") update.name = parsed.data.name.trim();
+  if (Array.isArray(parsed.data.keyStages)) update.key_stages = parsed.data.keyStages;
   if ("isNew" in parsed.data) update.is_new = parsed.data.isNew ?? null;
   if (Object.keys(update).length === 0) return NextResponse.json({ ok: true }, { status: 200 });
 
@@ -48,4 +50,3 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ subjectSlug:
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true }, { status: 200 });
 }
-

@@ -1,5 +1,5 @@
 import { QuizClient } from "@/components/platform/QuizClient";
-import { getTopicBySlug } from "@/lib/platform/store";
+import { getCurriculumTopicBySlug } from "@/lib/platform/store";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, HelpCircle } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +13,7 @@ type PageProps = {
 export default async function QuizPage({ params, searchParams }: PageProps) {
   const p = await params;
   const sp = searchParams ? await searchParams : undefined;
-  const topic = getTopicBySlug(p.topicSlug);
+  const topic = await getCurriculumTopicBySlug(p.topicSlug);
   if (!topic) notFound();
   const lessonNumberRaw = sp?.lesson ?? "";
   const lessonNumber = lessonNumberRaw ? Number.parseInt(lessonNumberRaw, 10) : undefined;

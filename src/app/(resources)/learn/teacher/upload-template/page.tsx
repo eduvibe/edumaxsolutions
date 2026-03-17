@@ -1,6 +1,6 @@
 import { TeacherTemplateForm } from "@/components/platform/TeacherTemplateForm";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listAllTopics, listSubjects } from "@/lib/platform/store";
+import { listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -17,8 +17,8 @@ export default async function UploadTemplatePage({
   }
 
   const sp = searchParams ? await searchParams : undefined;
-  const subjects = listSubjects();
-  const topics = listAllTopics();
+  const subjects = await listCurriculumSubjects();
+  const topics = await listCurriculumTopics();
   const type = sp?.type;
   const initialResourceType =
     type === "worksheet" || type === "scheme" || type === "slides" ? type : undefined;

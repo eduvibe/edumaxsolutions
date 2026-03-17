@@ -30,11 +30,18 @@ export default function StudentAccountPage() {
           <div className="rounded-3xl border border-black/10 bg-white/10 p-6 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-8">
             <div className="space-y-1">
               <div className="text-lg font-extrabold tracking-tight text-black dark:text-white">Sign in / Sign up</div>
-              <div className="text-sm text-black/70 dark:text-white/70">Email + password. Phone number is optional.</div>
+              <div className="text-sm text-black/70 dark:text-white/70">Phone number + password. Email is optional.</div>
             </div>
 
             <div className="mt-6 grid gap-4">
               <StudentAuthForm />
+              <div className="text-sm text-black/70 dark:text-white/70">
+                Forgot your password?{" "}
+                <Link href="/learn/account/recover" className="font-semibold hover:underline underline-offset-4">
+                  Reset it here
+                </Link>
+                .
+              </div>
 
               {!env.supabaseConfigured ? (
                 <div className="rounded-xl border border-black/10 bg-white/10 p-4 text-sm text-black/70 backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-white/70">
@@ -48,4 +55,3 @@ export default function StudentAccountPage() {
     </div>
   );
 }
-

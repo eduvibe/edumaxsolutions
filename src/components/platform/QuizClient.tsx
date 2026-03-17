@@ -10,7 +10,7 @@ import { RichTextRenderer } from "@/components/platform/RichTextRenderer";
 import type { McqOptionKey, McqQuestion } from "@/lib/platform/types";
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
+import { getSupabaseBrowserClientOrNull } from "@/lib/platform/supabaseBrowser";
 import { useRouter } from "next/navigation";
 
 type QuizState =
@@ -45,14 +45,16 @@ export function QuizClient({
     setQuiz({ status: "loading" });
     setAnswers({});
     try {
-      const supabase = getSupabaseBrowserClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        toast({ title: "Sign in required", description: "Sign in to start a quiz and save progress." });
-        const returnTo = `${window.location.pathname}${window.location.search}`;
-        router.push(`/learn/account?returnTo=${encodeURIComponent(returnTo)}`);
-        setQuiz({ status: "idle" });
-        return;
+      const supabase = getSupabaseBrowserClientOrNull();
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          toast({ title: "Sign in required", description: "Sign in to start a quiz and save progress." });
+          const returnTo = `${window.location.pathname}${window.location.search}`;
+          router.push(`/learn/account?returnTo=${encodeURIComponent(returnTo)}`);
+          setQuiz({ status: "idle" });
+          return;
+        }
       }
 
       const url = new URL(`/api/questions/quiz`, window.location.origin);

@@ -1,20 +1,16 @@
-import { TeacherMcqForm } from "@/components/platform/TeacherMcqForm";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { AdminCurriculumClient } from "@/components/platform/AdminCurriculumClient";
 
 export const metadata = {
-  title: "Create MCQ",
+  title: "Curriculum",
 };
 
-export default async function CreateQuestionPage() {
+export default async function AdminCurriculumPage() {
   if ((await getPlatformRole()) !== "teacher") {
     redirect("/learn/teacher/login");
   }
-
-  const subjects = await listCurriculumSubjects();
-  const topics = await listCurriculumTopics();
 
   return (
     <div className="bg-[#f3edf6] dark:bg-[#0b0f14]">
@@ -25,16 +21,21 @@ export default async function CreateQuestionPage() {
               Dashboard
             </Link>
             <span className="text-black/40 dark:text-white/40">•</span>
-            <span>Create MCQ</span>
+            <Link href="/learn/teacher/admin" className="hover:underline underline-offset-4">
+              Admin
+            </Link>
+            <span className="text-black/40 dark:text-white/40">•</span>
+            <span>Curriculum</span>
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-black dark:text-white">Create MCQ</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-black dark:text-white">Curriculum</h1>
           <p className="max-w-2xl text-sm text-black/70 dark:text-white/70">
-            Add exam-style questions, optional images, and clear explanations.
+            Create subjects and add topics and lessons. Admin can create subjects; teachers can add topics and lessons.
           </p>
         </header>
 
-        <TeacherMcqForm subjects={subjects} topics={topics} />
+        <AdminCurriculumClient />
       </div>
     </div>
   );
 }
+

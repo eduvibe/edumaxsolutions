@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
+import { getSupabaseBrowserClientOrNull } from "@/lib/platform/supabaseBrowser";
 import { BookOpen, FileText, GraduationCap, LayoutGrid, NotebookPen, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +13,7 @@ type RecentSuggestionRow = { id: string; change_summary: string; created_at?: st
 type Role = "student" | "teacher" | "admin";
 
 export function TutorDashboardClient() {
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => getSupabaseBrowserClientOrNull(), []);
   const router = useRouter();
   const { toast } = useToast();
   const [email, setEmail] = useState<string | null>(null);
@@ -34,6 +34,11 @@ export function TutorDashboardClient() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      if (!supabase) {
+        toast({ title: "Supabase not configured", description: "Missing Supabase environment variables in this deployment." });
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user ?? null;
@@ -115,7 +120,7 @@ export function TutorDashboardClient() {
   }, [router, supabase, toast]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!supabase || !userId) return;
     const channel = supabase
       .channel("topic_notes_notifications")
       .on(
@@ -149,7 +154,7 @@ export function TutorDashboardClient() {
   }, [supabase, toast, userId]);
 
   async function signOut() {
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     await fetch("/api/session/role", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

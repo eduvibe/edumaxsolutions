@@ -15,6 +15,16 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   return cached;
 }
 
+export function getSupabaseBrowserClientOrNull(): SupabaseClient | null {
+  try {
+    const env = getPlatformPublicEnv();
+    if (!env.supabase.url || !env.supabase.anonKey) return null;
+    return getSupabaseBrowserClient();
+  } catch {
+    return null;
+  }
+}
+
 export async function getSupabaseAccessToken(): Promise<string | null> {
   const supabase = getSupabaseBrowserClient();
   const { data } = await supabase.auth.getSession();

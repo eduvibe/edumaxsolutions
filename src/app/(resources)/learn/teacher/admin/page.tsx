@@ -25,6 +25,11 @@ export default async function AdminPage() {
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-black dark:text-white">Admin</h1>
           <p className="max-w-2xl text-sm text-black/70 dark:text-white/70">Manage user roles. Admin access required.</p>
+          <div className="text-sm font-semibold">
+            <Link href="/learn/teacher/admin/curriculum" className="hover:underline underline-offset-4 text-black/80 dark:text-white/80">
+              Manage curriculum →
+            </Link>
+          </div>
         </header>
 
         <AdminRoleManagerClient />

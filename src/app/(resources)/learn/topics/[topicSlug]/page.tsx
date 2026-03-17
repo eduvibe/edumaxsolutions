@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { getPlatformRole } from "@/lib/platform/session";
-import { getTopicResources, listLessonsByTopicSlug, listVideosByTopicSlug } from "@/lib/platform/store";
+import { getTopicResources, listCurriculumLessonsByTopicSlug, listVideosByTopicSlug } from "@/lib/platform/store";
 import { ArrowRight, Bookmark, ChevronLeft, Download, FileText, Film, HelpCircle, Monitor, Share2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -16,7 +16,7 @@ export default async function TopicPage({ params }: PageProps) {
   if (!resources) notFound();
 
   const { subject, topic, notes, questions, templates } = resources;
-  const lessons = listLessonsByTopicSlug(topic.slug);
+  const lessons = await listCurriculumLessonsByTopicSlug(topic.slug);
   const allVideos = role === "teacher" ? await listVideosByTopicSlug(topic.slug) : [];
   const section =
     topic.schoolSection === "primary" || topic.schoolSection === "jss" || topic.schoolSection === "sss"

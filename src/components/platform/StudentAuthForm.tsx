@@ -4,11 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
-import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
+import { getSupabaseBrowserClientOrNull } from "@/lib/platform/supabaseBrowser";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 type Mode = "signin" | "signup";
+
+function normalizePhoneToDigits(input: string) {
+  return input.replace(/[^\d]/g, "");
+}
+
+function phoneToPseudoEmail(phoneDigits: string) {
+  return `student_${phoneDigits}@students.edumax.local`;
+}
 
 function isStrongPassword(pw: string) {
   if (pw.length < 8) return false;
@@ -22,11 +30,11 @@ export function StudentAuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => getSupabaseBrowserClientOrNull(), []);
 
   const [mode, setMode] = useState<Mode>("signin");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -39,7 +47,7 @@ export function StudentAuthForm() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     await setRoleStudentCookie();
     toast({ title: "Signed out" });
     router.refresh();
@@ -50,22 +58,32 @@ export function StudentAuthForm() {
       toast({ title: "Supabase not configured", description: "Add Supabase environment variables to enable login." });
       return;
     }
+    if (!supabase) {
+      toast({ title: "Supabase not configured", description: "Missing Supabase environment variables in this deployment." });
+      return;
+    }
     setBusy(true);
     try {
-      const e = email.trim().toLowerCase();
-      if (!e) throw new Error("Email is required");
+      const phoneDigits = normalizePhoneToDigits(phone);
+      if (!phoneDigits) throw new Error("Phone number is required");
+      if (phoneDigits.length < 10 || phoneDigits.length > 15) throw new Error("Enter a valid phone number");
       if (!password) throw new Error("Password is required");
       if (!isStrongPassword(password)) throw new Error("Password must be at least 8 characters and include letters and numbers");
+      const e = phoneToPseudoEmail(phoneDigits);
 
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email: e, password });
         if (error) throw new Error(error.message);
       } else {
+        const rec = recoveryEmail.trim().toLowerCase();
         const { error } = await supabase.auth.signUp({
           email: e,
           password,
           options: {
-            data: phone.trim() ? { phone: phone.trim() } : undefined,
+            data: {
+              phone: phone.trim(),
+              recoveryEmail: rec ? rec : undefined,
+            },
           },
         });
         if (error) throw new Error(error.message);
@@ -101,13 +119,15 @@ export function StudentAuthForm() {
   return (
     <div className="space-y-4">
       <div className="grid gap-2">
-        <div className="text-sm font-medium text-black/80 dark:text-white/80">Email</div>
-        <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="student@example.com" type="email" />
-      </div>
-      <div className="grid gap-2">
-        <div className="text-sm font-medium text-black/80 dark:text-white/80">Phone (optional)</div>
+        <div className="text-sm font-medium text-black/80 dark:text-white/80">Phone</div>
         <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234..." />
       </div>
+      {mode === "signup" ? (
+        <div className="grid gap-2">
+          <div className="text-sm font-medium text-black/80 dark:text-white/80">Email (optional)</div>
+          <Input value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} placeholder="Optional recovery email" type="email" />
+        </div>
+      ) : null}
       <div className="grid gap-2">
         <div className="text-sm font-medium text-black/80 dark:text-white/80">Password</div>
         <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" type="password" />

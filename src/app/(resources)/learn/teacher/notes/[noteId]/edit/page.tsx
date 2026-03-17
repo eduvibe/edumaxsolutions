@@ -1,6 +1,6 @@
 import { TeacherNoteEditClient } from "@/components/platform/TeacherNoteEditClient";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listAllTopics, listSubjects } from "@/lib/platform/store";
+import { listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -14,8 +14,8 @@ export default async function EditNotePage({ params }: { params: Promise<{ noteI
   }
 
   const { noteId } = await params;
-  const subjects = listSubjects();
-  const topics = listAllTopics();
+  const subjects = await listCurriculumSubjects();
+  const topics = await listCurriculumTopics();
 
   return (
     <div className="bg-[#f3edf6] dark:bg-[#0b0f14]">
@@ -37,4 +37,3 @@ export default async function EditNotePage({ params }: { params: Promise<{ noteI
     </div>
   );
 }
-

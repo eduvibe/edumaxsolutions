@@ -42,6 +42,140 @@ function isSupabaseEnabled() {
 
 type DbRow = Record<string, unknown>;
 
+type CurriculumCache = {
+  loadedAt: number;
+  subjects: Subject[];
+  topics: Topic[];
+  lessons: Lesson[];
+};
+
+function getCurriculumCache(): CurriculumCache | null {
+  const g = globalThis as unknown as { __edumax_curriculum_cache?: CurriculumCache };
+  return g.__edumax_curriculum_cache ?? null;
+}
+
+function setCurriculumCache(cache: CurriculumCache) {
+  const g = globalThis as unknown as { __edumax_curriculum_cache?: CurriculumCache };
+  g.__edumax_curriculum_cache = cache;
+}
+
+function mapCurriculumSubjectRow(row: DbRow): Subject {
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    name: String(pick(row, ["name"]) ?? ""),
+    slug: String(pick(row, ["slug"]) ?? ""),
+    keyStages: (pick(row, ["key_stages"]) as string[] | null | undefined) ?? null,
+    isNew: (pick(row, ["is_new"]) as boolean | null | undefined) ?? null,
+  };
+}
+
+function mapCurriculumTopicRow(row: DbRow): Topic {
+  const schoolSectionRaw = String(pick(row, ["school_section"]) ?? "");
+  const schoolSection: Topic["schoolSection"] =
+    schoolSectionRaw === "primary" || schoolSectionRaw === "jss" || schoolSectionRaw === "sss" ? schoolSectionRaw : null;
+
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    subjectId: String(pick(row, ["subject_id"]) ?? ""),
+    name: String(pick(row, ["name"]) ?? ""),
+    slug: String(pick(row, ["slug"]) ?? ""),
+    description: (pick(row, ["description"]) as string | null | undefined) ?? null,
+    yearGroup: (pick(row, ["year_group"]) as string | null | undefined) ?? null,
+    thread: (pick(row, ["thread"]) as string | null | undefined) ?? null,
+    lessonCount: (pick(row, ["lesson_count"]) as number | null | undefined) ?? null,
+    schoolSection,
+  };
+}
+
+function mapCurriculumLessonRow(row: DbRow): Lesson {
+  return {
+    id: String(pick(row, ["id"]) ?? ""),
+    topicId: String(pick(row, ["topic_id"]) ?? ""),
+    lessonNumber: Number(pick(row, ["lesson_number"]) ?? 0),
+    title: String(pick(row, ["title"]) ?? ""),
+    objective: (pick(row, ["objective"]) as string | null | undefined) ?? null,
+  };
+}
+
+async function loadCurriculumFromDb(): Promise<{ subjects: Subject[]; topics: Topic[]; lessons: Lesson[] }> {
+  const supabase = getSupabaseServerClient();
+  const [subjectsRes, topicsRes, lessonsRes] = await Promise.all([
+    supabase.from("curriculum_subjects").select("id,name,slug,key_stages,is_new").order("name", { ascending: true }),
+    supabase
+      .from("curriculum_topics")
+      .select("id,subject_id,name,slug,description,year_group,year_order,thread,school_section,lesson_count")
+      .order("year_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase.from("curriculum_lessons").select("id,topic_id,lesson_number,title,objective").order("lesson_number", { ascending: true }),
+  ]);
+
+  const subjects = (subjectsRes.data ?? []).map(mapCurriculumSubjectRow);
+  const topics = (topicsRes.data ?? []).map(mapCurriculumTopicRow);
+  const lessons = (lessonsRes.data ?? []).map(mapCurriculumLessonRow);
+  return { subjects, topics, lessons };
+}
+
+async function getCurriculum() {
+  if (!isSupabaseEnabled()) {
+    const store = getGlobalStore();
+    return { subjects: store.subjects, topics: store.topics, lessons: store.lessons };
+  }
+
+  const cached = getCurriculumCache();
+  const ttlMs = 30_000;
+  if (cached && Date.now() - cached.loadedAt < ttlMs) {
+    return { subjects: cached.subjects, topics: cached.topics, lessons: cached.lessons };
+  }
+
+  const loaded = await loadCurriculumFromDb();
+  setCurriculumCache({ loadedAt: Date.now(), ...loaded });
+  return loaded;
+}
+
+export async function listCurriculumSubjects(): Promise<Subject[]> {
+  return (await getCurriculum()).subjects;
+}
+
+export async function listCurriculumTopics(): Promise<Topic[]> {
+  return (await getCurriculum()).topics;
+}
+
+export async function listCurriculumLessons(): Promise<Lesson[]> {
+  return (await getCurriculum()).lessons;
+}
+
+export async function getCurriculumSubjectBySlug(subjectSlug: string): Promise<Subject | undefined> {
+  return (await getCurriculum()).subjects.find((s) => s.slug === subjectSlug);
+}
+
+export async function getCurriculumTopicBySlug(topicSlug: string): Promise<Topic | undefined> {
+  return (await getCurriculum()).topics.find((t) => t.slug === topicSlug);
+}
+
+export async function listCurriculumTopicsBySubjectSlug(subjectSlug: string): Promise<Topic[]> {
+  const subj = await getCurriculumSubjectBySlug(subjectSlug);
+  if (!subj) return [];
+  return (await getCurriculum()).topics.filter((t) => t.subjectId === subj.id);
+}
+
+export async function listCurriculumTopicsBySubjectAndSection(subjectSlug: string, section: "primary" | "jss" | "sss"): Promise<Topic[]> {
+  return (await listCurriculumTopicsBySubjectSlug(subjectSlug)).filter((t) => (t.schoolSection ?? null) === section);
+}
+
+export async function listCurriculumLessonsByTopicSlug(topicSlug: string): Promise<Lesson[]> {
+  const topic = await getCurriculumTopicBySlug(topicSlug);
+  if (!topic) return [];
+  const lessons = (await getCurriculum()).lessons.filter((l) => l.topicId === topic.id);
+  return [...lessons].sort((a, b) => a.lessonNumber - b.lessonNumber);
+}
+
+export async function getCurriculumSubjectStatsBySlugAndSection(subjectSlug: string, section: "primary" | "jss" | "sss"): Promise<{ units: number; lessons: number }> {
+  const topics = await listCurriculumTopicsBySubjectAndSection(subjectSlug, section);
+  const topicIds = new Set(topics.map((t) => t.id));
+  const lessons = (await getCurriculum()).lessons.filter((l) => topicIds.has(l.topicId)).length;
+  return { units: topics.length, lessons };
+}
+
 function pick(row: DbRow, keys: string[]) {
   for (const k of keys) {
     const v = row[k];
@@ -873,13 +1007,11 @@ export function getTeacherById(teacherId: string): TeacherPublicProfile | undefi
 }
 
 export async function listNotesByTopicSlug(topicSlug: string): Promise<Note[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) {
     return getGlobalStore().notes.filter((n) => n.topicId === topic.id && n.published);
   }
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("notes")
@@ -888,7 +1020,7 @@ export async function listNotesByTopicSlug(topicSlug: string): Promise<Note[]> {
     .eq("published", true)
     .order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapNoteRowToNote(row, subject.id, topic.id));
+  return data.map((row) => mapNoteRowToNote(row, topic.subjectId, topic.id));
 }
 
 export async function listRecentNotes(limit: number): Promise<Note[]> {
@@ -907,14 +1039,14 @@ export async function listRecentNotes(limit: number): Promise<Note[]> {
     .order("date_created", { ascending: false })
     .limit(Math.max(0, limit));
   if (error || !data) return [];
+  const topics = await listCurriculumTopics();
+  const bySlug = new Map(topics.map((t) => [t.slug, t]));
   return data
     .map((row) => {
       const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
-      const topic = getTopicBySlug(topicSlug);
+      const topic = bySlug.get(topicSlug);
       if (!topic) return null;
-      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-      if (!subject) return null;
-      return mapNoteRowToNote(row, subject.id, topic.id);
+      return mapNoteRowToNote(row, topic.subjectId, topic.id);
     })
     .filter((n): n is Note => Boolean(n));
 }
@@ -924,28 +1056,26 @@ export async function listAllNotes(): Promise<Note[]> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("notes").select("*").order("date_created", { ascending: false });
   if (error || !data) return [];
+  const topics = await listCurriculumTopics();
+  const bySlug = new Map(topics.map((t) => [t.slug, t]));
   return data
     .map((row) => {
       const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
-      const topic = getTopicBySlug(topicSlug);
+      const topic = bySlug.get(topicSlug);
       if (!topic) return null;
-      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-      if (!subject) return null;
-      return mapNoteRowToNote(row, subject.id, topic.id);
+      return mapNoteRowToNote(row, topic.subjectId, topic.id);
     })
     .filter((n): n is Note => Boolean(n));
 }
 
 export async function listNotesByTopicAndLesson(topicSlug: string, lessonNumber: number): Promise<Note[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) {
     return getGlobalStore().notes.filter(
       (n) => n.topicId === topic.id && n.published && (n.lessonNumber ?? null) === lessonNumber
     );
   }
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("notes")
@@ -955,7 +1085,7 @@ export async function listNotesByTopicAndLesson(topicSlug: string, lessonNumber:
     .eq("published", true)
     .order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapNoteRowToNote(row, subject.id, topic.id));
+  return data.map((row) => mapNoteRowToNote(row, topic.subjectId, topic.id));
 }
 
 export async function getNoteById(noteId: string): Promise<Note | undefined> {
@@ -966,11 +1096,9 @@ export async function getNoteById(noteId: string): Promise<Note | undefined> {
   const { data, error } = await supabase.from("notes").select("*").eq("id", noteId).maybeSingle();
   if (error || !data) return undefined;
   const topicSlug = String(data.topic_slug ?? data.topicSlug ?? "");
-  const topic = getTopicBySlug(topicSlug);
+  const topic = await getCurriculumTopicBySlug(topicSlug);
   if (!topic) return undefined;
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return undefined;
-  return mapNoteRowToNote(data, subject.id, topic.id);
+  return mapNoteRowToNote(data, topic.subjectId, topic.id);
 }
 
 export async function incrementNoteViews(noteId: string): Promise<Note | undefined> {
@@ -1026,11 +1154,9 @@ export async function createNote(input: {
 }
 
 export async function listQuestionsByTopicSlug(topicSlug: string): Promise<McqQuestion[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) return getGlobalStore().questions.filter((q) => q.topicId === topic.id);
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("mcq_questions")
@@ -1038,17 +1164,15 @@ export async function listQuestionsByTopicSlug(topicSlug: string): Promise<McqQu
     .eq("topic_slug", topic.slug)
     .order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapMcqRowToQuestion(row, subject.id, topic.id));
+  return data.map((row) => mapMcqRowToQuestion(row, topic.subjectId, topic.id));
 }
 
 export async function listQuestionsByTopicAndLesson(topicSlug: string, lessonNumber: number): Promise<McqQuestion[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) {
     return getGlobalStore().questions.filter((q) => q.topicId === topic.id && (q.lessonNumber ?? null) === lessonNumber);
   }
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("mcq_questions")
@@ -1057,17 +1181,15 @@ export async function listQuestionsByTopicAndLesson(topicSlug: string, lessonNum
     .eq("lesson_number", lessonNumber)
     .order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapMcqRowToQuestion(row, subject.id, topic.id));
+  return data.map((row) => mapMcqRowToQuestion(row, topic.subjectId, topic.id));
 }
 
 export async function listVideosByTopicAndLesson(topicSlug: string, lessonNumber: number): Promise<LessonVideo[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) {
     return getGlobalStore().videos.filter((v) => v.topicId === topic.id && v.lessonNumber === lessonNumber);
   }
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("lesson_videos")
@@ -1076,17 +1198,15 @@ export async function listVideosByTopicAndLesson(topicSlug: string, lessonNumber
     .eq("lesson_number", lessonNumber)
     .order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapVideoRowToVideo(row, subject.id, topic.id));
+  return data.map((row) => mapVideoRowToVideo(row, topic.subjectId, topic.id));
 }
 
 export async function listVideosByTopicSlug(topicSlug: string): Promise<LessonVideo[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) {
     return getGlobalStore().videos.filter((v) => v.topicId === topic.id);
   }
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("lesson_videos")
@@ -1094,7 +1214,7 @@ export async function listVideosByTopicSlug(topicSlug: string): Promise<LessonVi
     .eq("topic_slug", topic.slug)
     .order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapVideoRowToVideo(row, subject.id, topic.id));
+  return data.map((row) => mapVideoRowToVideo(row, topic.subjectId, topic.id));
 }
 
 export async function listAllQuestions(): Promise<McqQuestion[]> {
@@ -1102,14 +1222,14 @@ export async function listAllQuestions(): Promise<McqQuestion[]> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("mcq_questions").select("*").order("date_created", { ascending: false });
   if (error || !data) return [];
+  const topics = await listCurriculumTopics();
+  const bySlug = new Map(topics.map((t) => [t.slug, t]));
   return data
     .map((row) => {
       const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
-      const topic = getTopicBySlug(topicSlug);
+      const topic = bySlug.get(topicSlug);
       if (!topic) return null;
-      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-      if (!subject) return null;
-      return mapMcqRowToQuestion(row, subject.id, topic.id);
+      return mapMcqRowToQuestion(row, topic.subjectId, topic.id);
     })
     .filter((q): q is McqQuestion => Boolean(q));
 }
@@ -1164,11 +1284,9 @@ export async function getQuestionById(questionId: string): Promise<McqQuestion |
     const { data, error } = await supabase.from("mcq_questions").select("*").eq("id", questionId).single();
     if (error || !data) return null;
     const topicSlug = String(pick(data as DbRow, ["topic_slug", "topicSlug"]) ?? "");
-    const topic = getTopicBySlug(topicSlug);
+    const topic = await getCurriculumTopicBySlug(topicSlug);
     if (!topic) return null;
-    const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-    if (!subject) return null;
-    return mapMcqRowToQuestion(data as DbRow, subject.id, topic.id);
+    return mapMcqRowToQuestion(data as DbRow, topic.subjectId, topic.id);
   }
   return getGlobalStore().questions.find((q) => q.id === questionId) ?? null;
 }
@@ -1220,15 +1338,13 @@ export async function getRandomQuestions(topicSlug: string, limit: number, lesso
 }
 
 export async function listEssaysByTopicSlug(topicSlug: string): Promise<EssayQuestion[]> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return [];
   if (!isSupabaseEnabled()) return getGlobalStore().essays.filter((e) => e.topicId === topic.id);
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-  if (!subject) return [];
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("essay_questions").select("*").eq("topic_slug", topic.slug).order("date_created", { ascending: false });
   if (error || !data) return [];
-  return data.map((row) => mapEssayRowToEssay(row, subject.id, topic.id));
+  return data.map((row) => mapEssayRowToEssay(row, topic.subjectId, topic.id));
 }
 
 export async function listAllEssays(): Promise<EssayQuestion[]> {
@@ -1236,14 +1352,14 @@ export async function listAllEssays(): Promise<EssayQuestion[]> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("essay_questions").select("*").order("date_created", { ascending: false });
   if (error || !data) return [];
+  const topics = await listCurriculumTopics();
+  const bySlug = new Map(topics.map((t) => [t.slug, t]));
   return data
     .map((row) => {
       const topicSlug = String(row.topic_slug ?? row.topicSlug ?? "");
-      const topic = getTopicBySlug(topicSlug);
+      const topic = bySlug.get(topicSlug);
       if (!topic) return null;
-      const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
-      if (!subject) return null;
-      return mapEssayRowToEssay(row, subject.id, topic.id);
+      return mapEssayRowToEssay(row, topic.subjectId, topic.id);
     })
     .filter((e): e is EssayQuestion => Boolean(e));
 }
@@ -1349,9 +1465,11 @@ export async function createTemplate(input: {
 }
 
 export async function getTopicResources(topicSlug: string): Promise<TopicResources | undefined> {
-  const topic = getTopicBySlug(topicSlug);
+  const topic = isSupabaseEnabled() ? await getCurriculumTopicBySlug(topicSlug) : getTopicBySlug(topicSlug);
   if (!topic) return undefined;
-  const subject = getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
+  const subject = isSupabaseEnabled()
+    ? await (async () => (await listCurriculumSubjects()).find((s) => s.id === topic.subjectId))()
+    : getGlobalStore().subjects.find((s) => s.id === topic.subjectId);
   if (!subject) return undefined;
   if (!isSupabaseEnabled()) {
     return {

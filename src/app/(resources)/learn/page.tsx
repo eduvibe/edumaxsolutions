@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import {
-  listAllTopics,
+  listCurriculumTopics,
   listRecentNotes,
-  listSubjects,
-  listTopicsBySubjectSlug,
+  listCurriculumSubjects,
+  listCurriculumTopicsBySubjectSlug,
 } from "@/lib/platform/store";
 import Link from "next/link";
 
@@ -20,7 +20,7 @@ type PageProps = {
 export default async function LearnPage({ searchParams }: PageProps) {
   const sp = searchParams ? await searchParams : undefined;
   const env = getPlatformPublicEnv();
-  const subjects = listSubjects();
+  const subjects = await listCurriculumSubjects();
   const q = sp?.q?.trim() ?? "";
   const qLower = q.toLowerCase();
   const preview = sp?.preview === "1" || sp?.preview === "true";
@@ -54,13 +54,14 @@ export default async function LearnPage({ searchParams }: PageProps) {
     );
   }
 
-  const topicCounts = Object.fromEntries(subjects.map((s) => [s.slug, listTopicsBySubjectSlug(s.slug).length]));
+  const topicCountEntries = await Promise.all(subjects.map(async (s) => [s.slug, (await listCurriculumTopicsBySubjectSlug(s.slug)).length]));
+  const topicCounts = Object.fromEntries(topicCountEntries);
 
   const matchingSubjects = q
     ? subjects.filter((s) => s.name.toLowerCase().includes(qLower) || s.slug.toLowerCase().includes(qLower))
     : [];
   const matchingTopics = q
-    ? listAllTopics().filter((t) => t.name.toLowerCase().includes(qLower) || t.slug.toLowerCase().includes(qLower))
+    ? (await listCurriculumTopics()).filter((t) => t.name.toLowerCase().includes(qLower) || t.slug.toLowerCase().includes(qLower))
     : [];
   const recent = q ? await listRecentNotes(50) : [];
   const matchingNotes = q

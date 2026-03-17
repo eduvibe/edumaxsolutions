@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
+import { getSupabaseBrowserClientOrNull } from "@/lib/platform/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -26,18 +26,20 @@ export function StudentActionButton({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => getSupabaseBrowserClientOrNull(), []);
   const [busy, setBusy] = useState(false);
 
   async function onClick() {
     setBusy(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const hasSession = Boolean(data.session);
-      if (!hasSession) {
-        const returnTo = isSafeInternalPath(href) ? href : "/learn/subjects?section=primary";
-        router.push(`/learn/account?returnTo=${encodeURIComponent(returnTo)}`);
-        return;
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        const hasSession = Boolean(data.session);
+        if (!hasSession) {
+          const returnTo = isSafeInternalPath(href) ? href : "/learn/subjects?section=primary";
+          router.push(`/learn/account?returnTo=${encodeURIComponent(returnTo)}`);
+          return;
+        }
       }
       if (mode === "download") {
         window.location.href = href;
@@ -55,4 +57,3 @@ export function StudentActionButton({
     </Button>
   );
 }
-

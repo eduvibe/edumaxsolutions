@@ -6,8 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+function slugify(input: string) {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 export function CreateTopicDialog({
   subjectSlug,
@@ -27,6 +38,12 @@ export function CreateTopicDialog({
   const [lessonCount, setLessonCount] = useState("");
   const [schoolSection, setSchoolSection] = useState<"primary" | "jss" | "sss">(defaultSchoolSection);
 
+  function yearGroupOptions(section: "primary" | "jss" | "sss") {
+    if (section === "primary") return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"];
+    if (section === "jss") return ["Year 7", "Year 8", "Year 9"];
+    return ["Year 10", "Year 11", "Year 12"];
+  }
+
   async function submit() {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -35,12 +52,15 @@ export function CreateTopicDialog({
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/topics", {
+      const token = await getSupabaseAccessToken();
+      if (!token) throw new Error("Sign in required");
+      const res = await fetch("/api/curriculum/topics", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           subjectSlug,
           name: trimmed,
+          slug: slugify(trimmed),
           description: description.trim() || null,
           yearGroup: yearGroup.trim() || null,
           thread: thread.trim() || null,
@@ -103,7 +123,18 @@ export function CreateTopicDialog({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Year group</Label>
-              <Input value={yearGroup} onChange={(e) => setYearGroup(e.target.value)} placeholder="e.g. Year 8" />
+              <select
+                value={yearGroup}
+                onChange={(e) => setYearGroup(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Optional</option>
+                {yearGroupOptions(schoolSection).map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-2">
               <Label>Lessons</Label>

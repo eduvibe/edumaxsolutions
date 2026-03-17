@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
-import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
+import { getSupabaseBrowserClientOrNull } from "@/lib/platform/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -13,7 +13,7 @@ export function TutorAuthForm() {
   const env = getPlatformPublicEnv();
   const router = useRouter();
   const { toast } = useToast();
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => getSupabaseBrowserClientOrNull(), []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +30,10 @@ export function TutorAuthForm() {
   async function onSubmit() {
     if (!env.supabaseConfigured) {
       toast({ title: "Supabase not configured", description: "Add Supabase environment variables to enable login." });
+      return;
+    }
+    if (!supabase) {
+      toast({ title: "Supabase not configured", description: "Missing Supabase environment variables in this deployment." });
       return;
     }
     setBusy(true);

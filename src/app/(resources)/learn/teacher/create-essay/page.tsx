@@ -1,6 +1,6 @@
 import { TeacherEssayForm } from "@/components/platform/TeacherEssayForm";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listAllTopics, listSubjects } from "@/lib/platform/store";
+import { listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -12,8 +12,8 @@ export default async function CreateEssayPage() {
     redirect("/learn/teacher/login");
   }
 
-  const subjects = listSubjects();
-  const topics = listAllTopics();
+  const subjects = await listCurriculumSubjects();
+  const topics = await listCurriculumTopics();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">

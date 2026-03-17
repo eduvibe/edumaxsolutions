@@ -1,25 +1,29 @@
 "use client";
 
-import type { Subject, Topic } from "@/lib/platform/types";
+import type { Lesson, Subject, Topic } from "@/lib/platform/types";
 import { useMemo, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
 import { useRouter } from "next/navigation";
 
-export function TeacherTopicNotePicker({ subjects, topics }: { subjects: Subject[]; topics: Topic[] }) {
+export function TeacherTopicNotePicker({ subjects, topics, lessons }: { subjects: Subject[]; topics: Topic[]; lessons: Lesson[] }) {
   const router = useRouter();
   const [subjectSlug, setSubjectSlug] = useState(subjects[0]?.slug ?? "");
   const [topicSlug, setTopicSlug] = useState("");
   const [lessonNumber, setLessonNumber] = useState<number | null>(null);
 
-  const topicOptions = useMemo(() => topics.filter((t) => t.subjectId === subjects.find((s) => s.slug === subjectSlug)?.id), [topics, subjects, subjectSlug]);
+  const selectedSubjectId = useMemo(() => subjects.find((s) => s.slug === subjectSlug)?.id ?? null, [subjects, subjectSlug]);
+  const topicOptions = useMemo(() => topics.filter((t) => t.subjectId === selectedSubjectId), [topics, selectedSubjectId]);
+  const selectedTopic = useMemo(() => topics.find((t) => t.slug === topicSlug) ?? null, [topics, topicSlug]);
 
   const lessonOptions = useMemo(() => {
-    if (!topicSlug) return [];
-    const defs = curriculumLessonsByTopicSlug[topicSlug] ?? [];
-    return defs.map((d, idx) => ({ number: idx + 1, title: d.title }));
-  }, [topicSlug]);
+    if (!selectedTopic) return [];
+    const defs = lessons
+      .filter((l) => l.topicId === selectedTopic.id)
+      .slice()
+      .sort((a, b) => a.lessonNumber - b.lessonNumber);
+    return defs.map((d) => ({ number: d.lessonNumber, title: d.title }));
+  }, [lessons, selectedTopic]);
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -104,4 +108,3 @@ export function TeacherTopicNotePicker({ subjects, topics }: { subjects: Subject
     </div>
   );
 }
-

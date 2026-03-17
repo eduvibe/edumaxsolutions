@@ -1,6 +1,6 @@
 import { TeacherTopicNoteClient } from "@/components/platform/TeacherTopicNoteClient";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listAllTopics, listSubjects } from "@/lib/platform/store";
+import { getCurriculumTopicBySlug, listCurriculumSubjects } from "@/lib/platform/store";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -21,10 +21,9 @@ export default async function TeacherTopicNotePage({
   const lessonNumber = Number.parseInt(p.lessonNumber, 10);
   if (!Number.isFinite(lessonNumber) || lessonNumber <= 0) notFound();
 
-  const topics = listAllTopics();
-  const topic = topics.find((t) => t.slug === p.topicSlug);
+  const topic = await getCurriculumTopicBySlug(p.topicSlug);
   if (!topic) notFound();
-  const subjects = listSubjects();
+  const subjects = await listCurriculumSubjects();
   const subject = subjects.find((s) => s.id === topic.subjectId);
   if (!subject) notFound();
 
@@ -56,4 +55,3 @@ export default async function TeacherTopicNotePage({
     </div>
   );
 }
-

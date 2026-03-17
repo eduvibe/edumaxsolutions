@@ -7,7 +7,7 @@ import { StudentActionLink } from "@/components/platform/StudentActionLink";
 import {
   getTopicResources,
   getTeacherById,
-  listLessonsByTopicSlug,
+  listCurriculumLessonsByTopicSlug,
   listQuestionsByTopicAndLesson,
   listVideosByTopicAndLesson,
 } from "@/lib/platform/store";
@@ -33,7 +33,7 @@ export default async function LessonPage({ params }: PageProps) {
   if (!resources) notFound();
 
   const { subject, topic } = resources;
-  const lessons = listLessonsByTopicSlug(topic.slug);
+  const lessons = await listCurriculumLessonsByTopicSlug(topic.slug);
   const lesson = lessons.find((l) => l.lessonNumber === lessonNumber);
   if (!lesson) notFound();
 

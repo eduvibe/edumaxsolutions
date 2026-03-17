@@ -1,5 +1,5 @@
 import { getPlatformRole } from "@/lib/platform/session";
-import { listAllTopics, listSubjects } from "@/lib/platform/store";
+import { listCurriculumLessons, listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
 import { redirect } from "next/navigation";
 import { TeacherTopicNotePicker } from "@/components/platform/TeacherTopicNotePicker";
 
@@ -12,8 +12,9 @@ export default async function TeacherTopicNotesPage() {
     redirect("/learn/teacher/login");
   }
 
-  const subjects = listSubjects();
-  const topics = listAllTopics();
+  const subjects = await listCurriculumSubjects();
+  const topics = await listCurriculumTopics();
+  const lessons = await listCurriculumLessons();
 
   return (
     <div className="bg-[#f3edf6] dark:bg-[#0b0f14]">
@@ -24,10 +25,9 @@ export default async function TeacherTopicNotesPage() {
         </header>
 
         <div className="rounded-3xl border border-black/10 bg-transparent p-6 dark:border-white/10 md:p-8">
-          <TeacherTopicNotePicker subjects={subjects} topics={topics} />
+          <TeacherTopicNotePicker subjects={subjects} topics={topics} lessons={lessons} />
         </div>
       </div>
     </div>
   );
 }
-

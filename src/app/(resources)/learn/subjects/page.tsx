@@ -1,5 +1,5 @@
 import { SubjectBrowser } from "@/components/platform/SubjectBrowser";
-import { getSubjectStatsBySlugAndSection, listSubjects } from "@/lib/platform/store";
+import { getCurriculumSubjectStatsBySlugAndSection, listCurriculumSubjects } from "@/lib/platform/store";
 
 export const metadata = {
   title: "Subjects",
@@ -11,17 +11,18 @@ type PageProps = {
 
 export default async function SubjectsPage({ searchParams }: PageProps) {
   const sp = searchParams ? await searchParams : undefined;
-  const subjects = listSubjects();
-  const stats = Object.fromEntries(
-    subjects.map((s) => [
+  const subjects = await listCurriculumSubjects();
+  const statsEntries = await Promise.all(
+    subjects.map(async (s) => [
       s.slug,
       {
-        primary: getSubjectStatsBySlugAndSection(s.slug, "primary"),
-        jss: getSubjectStatsBySlugAndSection(s.slug, "jss"),
-        sss: getSubjectStatsBySlugAndSection(s.slug, "sss"),
+        primary: await getCurriculumSubjectStatsBySlugAndSection(s.slug, "primary"),
+        jss: await getCurriculumSubjectStatsBySlugAndSection(s.slug, "jss"),
+        sss: await getCurriculumSubjectStatsBySlugAndSection(s.slug, "sss"),
       },
     ])
   );
+  const stats = Object.fromEntries(statsEntries);
   const initialSection =
     sp?.section === "primary" || sp?.section === "jss" || sp?.section === "sss"
       ? sp.section

@@ -49,6 +49,57 @@ create table if not exists public.teacher_applications (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.student_identities (
+  user_id uuid primary key,
+  phone_digits text not null unique,
+  recovery_email text null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.student_password_resets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  token_hash text not null,
+  expires_at timestamptz not null,
+  used_at timestamptz null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.curriculum_subjects (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  key_stages text[] not null default '{}',
+  is_new boolean null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.curriculum_topics (
+  id uuid primary key default gen_random_uuid(),
+  subject_id uuid not null,
+  name text not null,
+  slug text not null unique,
+  description text null,
+  year_group text null,
+  year_order int null,
+  thread text null,
+  school_section text null,
+  lesson_count int null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.curriculum_lessons (
+  id uuid primary key default gen_random_uuid(),
+  topic_id uuid not null,
+  lesson_number int not null,
+  title text not null,
+  objective text null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists topic_notes (
   id uuid primary key default gen_random_uuid(),
   subject_slug text not null,

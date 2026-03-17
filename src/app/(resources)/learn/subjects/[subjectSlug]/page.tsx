@@ -2,10 +2,10 @@ import { CreateTopicDialog } from "@/components/platform/CreateTopicDialog";
 import { Button } from "@/components/ui/button";
 import { getPlatformRole } from "@/lib/platform/session";
 import {
-  getSubjectBySlug,
-  getTopicLessonCount,
-  listTopicsBySubjectAndSection,
-  listTopicsBySubjectSlug,
+  getCurriculumSubjectBySlug,
+  listCurriculumLessonsByTopicSlug,
+  listCurriculumTopicsBySubjectAndSection,
+  listCurriculumTopicsBySubjectSlug,
 } from "@/lib/platform/store";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Bookmark, ChevronLeft } from "lucide-react";
@@ -25,13 +25,13 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
     sp?.section === "primary" || sp?.section === "jss" || sp?.section === "sss"
       ? sp.section
       : undefined;
-  const subject = getSubjectBySlug(p.subjectSlug);
+  const subject = await getCurriculumSubjectBySlug(p.subjectSlug);
   if (!subject) {
     redirect(`/learn/subjects${section ? `?section=${section}` : ""}`);
   }
   const allTopics = section
-    ? listTopicsBySubjectAndSection(subject.slug, section)
-    : listTopicsBySubjectSlug(subject.slug);
+    ? await listCurriculumTopicsBySubjectAndSection(subject.slug, section)
+    : await listCurriculumTopicsBySubjectSlug(subject.slug);
 
   const years = Array.from(new Set(allTopics.map((t) => t.yearGroup).filter(Boolean))) as string[];
   const threads = Array.from(new Set(allTopics.map((t) => t.thread).filter(Boolean))) as string[];
@@ -43,6 +43,9 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
     const threadOk = threadFilter === "All" ? true : t.thread === threadFilter;
     return yearOk && threadOk;
   });
+
+  const lessonCountEntries = await Promise.all(topics.map(async (t) => [t.slug, (await listCurriculumLessonsByTopicSlug(t.slug)).length] as const));
+  const lessonCounts = Object.fromEntries(lessonCountEntries);
 
   const sectionLabel = section === "primary" ? "Primary" : section === "jss" ? "Junior Secondary" : section === "sss" ? "Senior Secondary" : "All sections";
 
@@ -81,7 +84,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
             <div className="mt-5 overflow-hidden rounded-2xl border border-black/10 bg-white/10 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
               <div className="divide-y divide-black/10 dark:divide-white/10">
                 {topics.map((t, idx) => {
-                  const lessons = getTopicLessonCount(t.slug);
+                  const lessons = lessonCounts[t.slug] ?? 0;
                   return (
                     <Link
                       key={t.id}
@@ -190,7 +193,7 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
                       </div>
                     ) : (
                       topics.map((t, idx) => {
-                        const lessons = getTopicLessonCount(t.slug);
+                        const lessons = lessonCounts[t.slug] ?? 0;
                         return (
                           <div
                             key={t.id}

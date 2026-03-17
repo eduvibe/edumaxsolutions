@@ -9,6 +9,12 @@ function normalizeHeader(h: string) {
   return h.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
+function keyStagesFromSection(section: "primary" | "jss" | "sss"): string[] {
+  if (section === "primary") return ["KS1", "KS2"];
+  if (section === "jss") return ["KS3"];
+  return ["KS4"];
+}
+
 function parseCsv(text: string): CsvRow[] {
   const rows: string[][] = [];
   let current: string[] = [];
@@ -158,33 +164,97 @@ export async function POST(req: Request) {
 
   if (normalizedRows.length === 0) return NextResponse.json({ error: "No valid rows", details: errors }, { status: 400 });
 
-  const subjectsBySlug = new Map<string, { name: string; slug: string }>();
+  const subjectAgg = new Map<string, { name: string; slug: string; keyStages: Set<string> }>();
   for (const r of normalizedRows) {
     const slug = (r.subject_slug?.trim() || slugify(r.subject)).trim();
-    subjectsBySlug.set(slug, { name: r.subject.trim(), slug });
+    const existing = subjectAgg.get(slug);
+    if (!existing) {
+      subjectAgg.set(slug, { name: r.subject.trim(), slug, keyStages: new Set(keyStagesFromSection(r.section)) });
+    } else {
+      keyStagesFromSection(r.section).forEach((k) => existing.keyStages.add(k));
+      if (!existing.name && r.subject.trim()) existing.name = r.subject.trim();
+    }
   }
 
-  const subjectsToUpsert = Array.from(subjectsBySlug.values()).map((s) => ({ name: s.name, slug: s.slug, key_stages: [], is_new: null }));
+  const subjectSlugs = Array.from(subjectAgg.keys());
+  if (subjectSlugs.length > 0) {
+    const existingSubjectsRes = await supabase.from("curriculum_subjects").select("slug,key_stages").in("slug", subjectSlugs);
+    if (existingSubjectsRes.error) return NextResponse.json({ error: existingSubjectsRes.error.message }, { status: 400 });
+    for (const raw of existingSubjectsRes.data ?? []) {
+      const s = raw as Record<string, unknown>;
+      const slug = typeof s.slug === "string" ? s.slug : "";
+      if (!slug) continue;
+      const agg = subjectAgg.get(slug);
+      if (!agg) continue;
+      const ks = Array.isArray(s.key_stages) ? (s.key_stages as unknown[]).filter((x): x is string => typeof x === "string") : [];
+      ks.forEach((k) => agg.keyStages.add(k));
+    }
+  }
+
+  const subjectsToUpsert = Array.from(subjectAgg.values()).map((s) => ({
+    name: s.name,
+    slug: s.slug,
+    key_stages: Array.from(s.keyStages),
+    is_new: null,
+  }));
   const upSubj = await supabase.from("curriculum_subjects").upsert(subjectsToUpsert, { onConflict: "slug" }).select("id,slug");
   if (upSubj.error) return NextResponse.json({ error: upSubj.error.message }, { status: 400 });
   const subjectIdBySlug = new Map((upSubj.data ?? []).map((s) => [s.slug as string, s.id as string]));
 
-  const topicsToUpsert: Array<Record<string, unknown>> = [];
+  const topicAgg = new Map<
+    string,
+    {
+      topicSlug: string;
+      topicName: string;
+      subjectSlug: string;
+      section: "primary" | "jss" | "sss";
+      yearGroup: string | null;
+      lessons: string[];
+    }
+  >();
+
   for (const r of normalizedRows) {
     const subjectSlug = (r.subject_slug?.trim() || slugify(r.subject)).trim();
-    const subjectId = subjectIdBySlug.get(subjectSlug);
-    if (!subjectId) continue;
-    const tSlug = (r.topic_slug?.trim() || slugify(r.topic)).trim();
+    const topicSlug = (r.topic_slug?.trim() || slugify(r.topic)).trim();
     const yearGroup = r.year_group?.trim() ? r.year_group.trim() : null;
+    const lessons = (r.lessons ?? "")
+      .split("|")
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+    const existing = topicAgg.get(topicSlug);
+    if (!existing) {
+      topicAgg.set(topicSlug, {
+        topicSlug,
+        topicName: r.topic.trim(),
+        subjectSlug,
+        section: r.section,
+        yearGroup,
+        lessons: [...lessons],
+      });
+    } else {
+      if (!existing.topicName && r.topic.trim()) existing.topicName = r.topic.trim();
+      if (!existing.yearGroup && yearGroup) existing.yearGroup = yearGroup;
+      if (!existing.section && r.section) existing.section = r.section;
+      for (const t of lessons) {
+        if (!existing.lessons.includes(t)) existing.lessons.push(t);
+      }
+    }
+  }
+
+  const topicsToUpsert: Array<Record<string, unknown>> = [];
+  for (const t of topicAgg.values()) {
+    const subjectId = subjectIdBySlug.get(t.subjectSlug);
+    if (!subjectId) continue;
     topicsToUpsert.push({
       subject_id: subjectId,
-      name: r.topic.trim(),
-      slug: tSlug,
+      name: t.topicName,
+      slug: t.topicSlug,
       description: null,
-      year_group: yearGroup,
-      year_order: deriveYearOrder(yearGroup),
+      year_group: t.yearGroup,
+      year_order: deriveYearOrder(t.yearGroup),
       thread: null,
-      school_section: r.section,
+      school_section: t.section,
       lesson_count: null,
     });
   }
@@ -194,15 +264,10 @@ export async function POST(req: Request) {
   const topicIdBySlug = new Map((upTopics.data ?? []).map((t) => [t.slug as string, t.id as string]));
 
   const lessonRows: Array<Record<string, unknown>> = [];
-  for (const r of normalizedRows) {
-    const tSlug = (r.topic_slug?.trim() || slugify(r.topic)).trim();
-    const topicId = topicIdBySlug.get(tSlug);
+  for (const t of topicAgg.values()) {
+    const topicId = topicIdBySlug.get(t.topicSlug);
     if (!topicId) continue;
-    const lessons = (r.lessons ?? "")
-      .split("|")
-      .map((x) => x.trim())
-      .filter(Boolean);
-    lessons.forEach((title, idx) => {
+    t.lessons.forEach((title, idx) => {
       lessonRows.push({ topic_id: topicId, lesson_number: idx + 1, title, objective: null });
     });
   }
@@ -223,4 +288,3 @@ export async function POST(req: Request) {
     { status: 200 }
   );
 }
-

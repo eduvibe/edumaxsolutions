@@ -695,12 +695,15 @@ export function AdminCurriculumClient() {
             </div>
             <div className="grid gap-2">
               <div className="text-sm font-semibold text-black/80 dark:text-white/80">Class level</div>
-              <Select value={topicEditYearGroup} onValueChange={(v) => setTopicEditYearGroup(v)}>
+              <Select
+                value={topicEditYearGroup ? topicEditYearGroup : "__none__"}
+                onValueChange={(v) => setTopicEditYearGroup(v === "__none__" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Optional" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Optional</SelectItem>
+                  <SelectItem value="__none__">Optional</SelectItem>
                   {yearGroupOptions(topicEditSchoolSection).map((y) => (
                     <SelectItem key={y} value={y}>
                       {y}

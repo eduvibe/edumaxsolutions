@@ -1,6 +1,7 @@
 import { getPlatformRole } from "@/lib/platform/session";
 import { redirect } from "next/navigation";
 import { AdminRoleManagerClient } from "@/components/platform/AdminRoleManagerClient";
+import { AdminTeacherApplicationsClient } from "@/components/platform/AdminTeacherApplicationsClient";
 import Link from "next/link";
 
 export const metadata = {
@@ -28,8 +29,8 @@ export default async function AdminPage() {
         </header>
 
         <AdminRoleManagerClient />
+        <AdminTeacherApplicationsClient />
       </div>
     </div>
   );
 }
-

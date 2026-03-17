@@ -92,7 +92,11 @@ export function LearnShell({
                         Templates
                       </Link>
                     </>
-                  ) : null}
+                  ) : (
+                    <Link href="/learn/account" className="hover:underline underline-offset-4">
+                      Account
+                    </Link>
+                  )}
                   <Link href="/" className="hover:underline underline-offset-4">
                     About us
                   </Link>

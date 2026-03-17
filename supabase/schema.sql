@@ -38,6 +38,17 @@ create table if not exists public.user_roles (
   constraint user_roles_role_check check (role in ('student', 'teacher', 'admin'))
 );
 
+create table if not exists public.teacher_applications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  email text not null,
+  phone text not null,
+  school text not null,
+  location text not null,
+  status text not null default 'pending',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists topic_notes (
   id uuid primary key default gen_random_uuid(),
   subject_slug text not null,

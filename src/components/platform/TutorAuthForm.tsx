@@ -7,6 +7,7 @@ import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { getSupabaseBrowserClient } from "@/lib/platform/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 export function TutorAuthForm() {
   const env = getPlatformPublicEnv();
@@ -14,7 +15,6 @@ export function TutorAuthForm() {
   const { toast } = useToast();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,27 +38,27 @@ export function TutorAuthForm() {
       if (!e) throw new Error("Email is required");
       if (!password) throw new Error("Password is required");
 
-      if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email: e, password });
-        if (error) throw new Error(error.message);
-      } else {
-        const { error } = await supabase.auth.signUp({ email: e, password });
-        if (error) throw new Error(error.message);
+      // Try sign-in; if fails, try sign-up then sign-in
+      const signIn = await supabase.auth.signInWithPassword({ email: e, password });
+      if (signIn.error) {
+        const signUp = await supabase.auth.signUp({ email: e, password });
+        if (signUp.error) throw new Error(signUp.error.message);
+        const sess = await supabase.auth.signInWithPassword({ email: e, password });
+        if (sess.error) throw new Error(sess.error.message);
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
-        toast({
-          title: "Account created",
-          description:
-            "Email confirmation is enabled in Supabase, so you’re not signed in yet. Disable Confirm email in Supabase Auth settings, then sign in.",
-        });
-        setMode("signin");
+        toast({ title: "Sign in failed", description: "No session returned from Supabase." });
         return;
       }
 
+      // Ensure teacher role is set for self-registered tutors
+      const token = sessionData.session.access_token;
+      await fetch("/api/session/register-teacher", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+
       await setRoleTeacherCookie();
-      toast({ title: mode === "signin" ? "Signed in" : "Account created" });
+      toast({ title: "Signed in" });
       router.push("/learn/teacher/dashboard");
       router.refresh();
     } catch (err) {
@@ -86,15 +86,10 @@ export function TutorAuthForm() {
           className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
           onClick={() => void onSubmit()}
         >
-          {busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Create account"}
+          {busy ? "Please wait..." : "Sign in"}
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
-          onClick={() => setMode((m) => (m === "signin" ? "signup" : "signin"))}
-        >
-          {mode === "signin" ? "Create a tutor account" : "I already have an account"}
+        <Button asChild type="button" variant="secondary" className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10">
+          <Link href="/learn/teacher/apply">Apply to become a tutor</Link>
         </Button>
       </div>
     </div>

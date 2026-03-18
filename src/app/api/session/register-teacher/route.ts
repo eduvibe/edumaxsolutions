@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/platform/supabase";
 import { requireUser } from "@/app/api/_lib/supabaseAuth";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
+import { z } from "zod";
+
+const schema = z.object({ code: z.string().min(1) });
 
 export async function POST(req: Request) {
   const env = getPlatformPublicEnv();
@@ -12,6 +15,20 @@ export async function POST(req: Request) {
   const auth = await requireUser(req);
   if ("error" in auth) return auth.error;
   const { user } = auth;
+
+  const inviteCode = process.env.TEACHER_INVITE_CODE?.trim();
+  if (!inviteCode) {
+    return NextResponse.json({ error: "Teacher registration is disabled" }, { status: 501 });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as unknown;
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  if (parsed.data.code.trim() !== inviteCode) {
+    return NextResponse.json({ error: "Invalid invite code" }, { status: 403 });
+  }
 
   // Service role client to bypass RLS for role assignment
   const srv = getSupabaseServerClient();

@@ -1,6 +1,7 @@
 import { platformRoleCookieName, type PlatformRole } from "@/lib/platform/session";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireTutor } from "@/app/api/_lib/supabaseAuth";
 
 const roleSchema = z.object({
   role: z.enum(["student", "teacher"]),
@@ -14,6 +15,10 @@ export async function POST(req: Request) {
   }
 
   const role: PlatformRole = parsed.data.role;
+  if (role === "teacher") {
+    const auth = await requireTutor(req);
+    if ("error" in auth) return auth.error;
+  }
   const res = NextResponse.json({ ok: true, role });
   res.cookies.set(platformRoleCookieName, role, {
     httpOnly: true,
@@ -24,4 +29,3 @@ export async function POST(req: Request) {
   });
   return res;
 }
-

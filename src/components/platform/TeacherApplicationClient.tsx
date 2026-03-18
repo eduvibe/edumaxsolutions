@@ -22,6 +22,7 @@ export function TeacherApplicationClient() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
   const [location, setLocation] = useState("");
@@ -39,10 +40,10 @@ export function TeacherApplicationClient() {
     };
   }, [supabase]);
 
-  async function setRoleTeacherCookie() {
+  async function setRoleTeacherCookie(token: string) {
     await fetch("/api/session/role", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role: "teacher" }),
     });
   }
@@ -89,9 +90,26 @@ export function TeacherApplicationClient() {
     const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
     if (!res.ok) throw new Error(data.error ?? "Unable to submit application");
 
-    toast({ title: "Application submitted", description: "An admin will review your request." });
-    await setRoleTeacherCookie();
-    router.push("/learn/teacher/login");
+    toast({ title: "Application submitted", description: "An admin will review your request before approval." });
+    router.refresh();
+  }
+
+  async function redeemInvite() {
+    const code = inviteCode.trim();
+    if (!code) throw new Error("Invite code is required");
+    const token = await getSupabaseAccessToken();
+    if (!token) throw new Error("Please sign in first");
+    const res = await fetch("/api/teacher-invites/redeem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Unable to redeem invite");
+
+    await setRoleTeacherCookie(token);
+    toast({ title: "Tutor access activated" });
+    router.push("/learn/teacher/dashboard");
     router.refresh();
   }
 
@@ -114,6 +132,25 @@ export function TeacherApplicationClient() {
     }
   }
 
+  async function onRedeemInvite() {
+    if (!env.supabaseConfigured) {
+      toast({ title: "Supabase not configured", description: "Add Supabase environment variables to enable login." });
+      return;
+    }
+    setBusy(true);
+    try {
+      if (!sessionEmail) {
+        const ok = await auth();
+        if (!ok) return;
+      }
+      await redeemInvite();
+    } catch (e) {
+      toast({ title: "Invite failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {!sessionEmail ? (
@@ -126,13 +163,17 @@ export function TeacherApplicationClient() {
             <div className="text-sm font-medium text-black/80 dark:text-white/80">Password</div>
             <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" type="password" />
           </div>
+          <div className="grid gap-2">
+            <div className="text-sm font-medium text-black/80 dark:text-white/80">Tutor invite code (optional)</div>
+            <Input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Provided by EduMax" />
+          </div>
           <Button
             type="button"
             disabled={busy || !env.supabaseConfigured}
             className="w-full rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-            onClick={() => void onSubmit()}
+            onClick={() => (inviteCode.trim() ? void onRedeemInvite() : void onSubmit())}
           >
-            {busy ? "Please wait..." : mode === "signin" ? "Sign in + continue" : "Create account + continue"}
+            {busy ? "Please wait..." : inviteCode.trim() ? "Sign in + activate tutor access" : mode === "signin" ? "Sign in + continue" : "Create account + continue"}
           </Button>
           <Button
             type="button"
@@ -148,6 +189,17 @@ export function TeacherApplicationClient() {
           Signed in as <span className="font-semibold text-black dark:text-white">{sessionEmail}</span>
         </div>
       )}
+
+      {inviteCode.trim() ? (
+        <Button
+          type="button"
+          disabled={busy || !env.supabaseConfigured}
+          className="w-full rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+          onClick={() => void onRedeemInvite()}
+        >
+          {busy ? "Activating..." : "Activate tutor access with invite code"}
+        </Button>
+      ) : null}
 
       <div className="grid gap-2">
         <div className="text-sm font-medium text-black/80 dark:text-white/80">Phone</div>
@@ -173,4 +225,3 @@ export function TeacherApplicationClient() {
     </div>
   );
 }
-

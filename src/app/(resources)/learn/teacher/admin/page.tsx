@@ -29,6 +29,14 @@ export default async function AdminPage() {
             <Link href="/learn/teacher/admin/curriculum" className="hover:underline underline-offset-4 text-black/80 dark:text-white/80">
               Manage curriculum →
             </Link>
+            <span className="px-2 text-black/40 dark:text-white/40">•</span>
+            <Link href="/learn/teacher/admin/invites" className="hover:underline underline-offset-4 text-black/80 dark:text-white/80">
+              Tutor invites →
+            </Link>
+            <span className="px-2 text-black/40 dark:text-white/40">•</span>
+            <Link href="/learn/teacher/admin/users" className="hover:underline underline-offset-4 text-black/80 dark:text-white/80">
+              Users →
+            </Link>
           </div>
         </header>
 

@@ -18,14 +18,19 @@ export function TutorAuthForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function setRoleTeacherCookie() {
-    await fetch("/api/session/role", {
+  async function setRoleTeacherCookie(token: string) {
+    const res = await fetch("/api/session/role", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role: "teacher" }),
     });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(data.error ?? "Tutor access required");
+    }
   }
 
   async function onSubmit() {
@@ -63,11 +68,21 @@ export function TutorAuthForm() {
         await supabase.auth.updateUser({ data: { full_name: n } }).catch(() => undefined);
       }
 
-      // Ensure teacher role is set for self-registered tutors
       const token = sessionData.session.access_token;
-      await fetch("/api/session/register-teacher", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+      const code = inviteCode.trim();
+      if (code) {
+        const regRes = await fetch("/api/teacher-invites/redeem", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ code }),
+        });
+        if (!regRes.ok) {
+          const regData = (await regRes.json().catch(() => ({}))) as { error?: string };
+          throw new Error(regData.error ?? "Unable to activate tutor role");
+        }
+      }
 
-      await setRoleTeacherCookie();
+      await setRoleTeacherCookie(token);
       toast({ title: "Signed in" });
       router.push("/learn/teacher/dashboard");
       router.refresh();
@@ -91,6 +106,10 @@ export function TutorAuthForm() {
       <div className="grid gap-2">
         <div className="text-sm font-medium text-black/80 dark:text-white/80">Password</div>
         <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" type="password" />
+      </div>
+      <div className="grid gap-2">
+        <div className="text-sm font-medium text-black/80 dark:text-white/80">Tutor invite code</div>
+        <Input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Provided by EduMax" />
       </div>
 
       <div className="flex flex-col gap-2">

@@ -1,13 +1,14 @@
-import { TeacherEssayForm } from "@/components/platform/TeacherEssayForm";
+import { TeacherNoteForm } from "@/components/platform/TeacherNoteForm";
 import { getPlatformRole } from "@/lib/platform/session";
 import { listCurriculumLessons, listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Create Essay Question",
+  title: "Create Note",
 };
 
-export default async function CreateEssayPage({
+export default async function CreateTeacherNotePage({
   searchParams,
 }: {
   searchParams?: Promise<{ subjectSlug?: string; topicSlug?: string; lessonNumber?: string }> | { subjectSlug?: string; topicSlug?: string; lessonNumber?: string };
@@ -20,6 +21,7 @@ export default async function CreateEssayPage({
   const subjects = await listCurriculumSubjects();
   const topics = await listCurriculumTopics();
   const lessons = await listCurriculumLessons();
+
   const subjectSlug = sp?.subjectSlug && subjects.some((s) => s.slug === sp.subjectSlug) ? sp.subjectSlug : undefined;
   const topicSlug = sp?.topicSlug && topics.some((t) => t.slug === sp.topicSlug) ? sp.topicSlug : undefined;
   const derivedSubjectSlug = topicSlug
@@ -40,13 +42,19 @@ export default async function CreateEssayPage({
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Create essay question</h1>
-        <p className="text-sm text-black/70 dark:text-white/70">Publish prompts for students to practice writing.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight">Create note</h1>
+          <Link href="/learn/teacher/dashboard" className="text-sm font-semibold text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white">
+            Back to dashboard
+          </Link>
+        </div>
+        <p className="text-sm text-black/70 dark:text-white/70">Create a note for an entire topic or a specific sub-topic.</p>
       </header>
 
       <div className="rounded-3xl border border-black/10 bg-transparent p-6 dark:border-white/10 md:p-8">
-        <TeacherEssayForm subjects={subjects} topics={topics} lessons={lessons} initialValues={initialValues} />
+        <TeacherNoteForm subjects={subjects} topics={topics} lessons={lessons} initialValues={initialValues} />
       </div>
     </div>
   );
 }
+

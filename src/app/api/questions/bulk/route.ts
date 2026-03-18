@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         id: crypto.randomUUID(),
         subject_slug: q.subjectSlug,
         topic_slug: q.topicSlug,
-        lesson_number: q.lessonNumber,
+        lesson_number: q.lessonNumber ?? null,
         author_id: user.id,
         question_text: q.questionText,
         question_text_json: q.questionTextJson ?? null,

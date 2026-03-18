@@ -9,12 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { noteCreateSchema } from "@/lib/schemas";
-import type { Subject, Topic } from "@/lib/platform/types";
+import type { Lesson, Subject, Topic } from "@/lib/platform/types";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
-import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import Image from "next/image";
 
@@ -23,12 +22,14 @@ type FormValues = z.infer<typeof noteCreateSchema>;
 export function TeacherNoteForm({
   subjects,
   topics,
+  lessons,
   mode = "create",
   noteId,
   initialValues,
 }: {
   subjects: Subject[];
   topics: Topic[];
+  lessons: Lesson[];
   mode?: "create" | "edit";
   noteId?: string;
   initialValues?: Partial<FormValues>;
@@ -44,7 +45,7 @@ export function TeacherNoteForm({
     defaultValues: {
       subjectSlug: subjects[0]?.slug ?? "",
       topicSlug: "",
-      lessonNumber: 1,
+      lessonNumber: null,
       title: "",
       content: "",
       featuredImageUrl: "",
@@ -61,11 +62,30 @@ export function TeacherNoteForm({
     return topics.filter((t) => t.subjectId === subject.id);
   }, [selectedSubjectSlug, subjects, topics]);
 
+  const selectedTopic = useMemo(() => topics.find((t) => t.slug === selectedTopicSlug) ?? null, [selectedTopicSlug, topics]);
+
   const lessonOptions = useMemo(() => {
-    const defs = selectedTopicSlug ? curriculumLessonsByTopicSlug[selectedTopicSlug] : undefined;
-    if (!defs || defs.length === 0) return [];
-    return defs.map((d, idx) => ({ number: idx + 1, title: d.title }));
-  }, [selectedTopicSlug]);
+    if (!selectedTopic) return [];
+    return lessons
+      .filter((l) => l.topicId === selectedTopic.id)
+      .slice()
+      .sort((a, b) => a.lessonNumber - b.lessonNumber)
+      .map((l) => ({ number: l.lessonNumber, title: l.title }));
+  }, [lessons, selectedTopic]);
+
+  useEffect(() => {
+    if (!selectedTopicSlug) return;
+    const current = form.getValues("lessonNumber");
+    if (current === null) return;
+    if (typeof current === "number" && lessonOptions.some((l) => l.number === current)) return;
+    form.setValue("lessonNumber", null);
+  }, [form, lessonOptions, selectedTopicSlug]);
+
+  function topicLabel(t: Topic) {
+    const sec = (t.schoolSection ?? "").toUpperCase();
+    const parts = [sec || null, t.yearGroup ?? null, t.name].filter(Boolean);
+    return parts.join(" • ");
+  }
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -177,7 +197,7 @@ export function TeacherNoteForm({
                     <SelectContent>
                       {topicOptions.map((t) => (
                         <SelectItem key={t.id} value={t.slug}>
-                          {t.name}
+                          {topicLabel(t)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -195,16 +215,17 @@ export function TeacherNoteForm({
               <FormItem>
                 <FormLabel>Sub-topic</FormLabel>
                 <Select
-                  onValueChange={(v) => field.onChange(Number(v))}
-                  value={field.value ? String(field.value) : ""}
-                  disabled={lessonOptions.length === 0}
+                  onValueChange={(v) => field.onChange(v === "__topic__" ? null : Number(v))}
+                  value={field.value === null || typeof field.value !== "number" ? "__topic__" : String(field.value)}
+                  disabled={!selectedTopicSlug}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder={lessonOptions.length ? "Select sub-topic" : "No sub-topics for topic"} />
+                      <SelectValue placeholder={selectedTopicSlug ? "Select sub-topic" : "Select a topic first"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                    <SelectItem value="__topic__">Entire topic (all sub-topics)</SelectItem>
                     {lessonOptions.map((l) => (
                       <SelectItem key={l.number} value={String(l.number)}>
                         {l.title}
@@ -313,7 +334,7 @@ export function TeacherNoteForm({
             )}
           />
 
-          <Button type="submit" disabled={submitting || !form.getValues("topicSlug") || !form.getValues("lessonNumber")}>
+          <Button type="submit" disabled={submitting || !form.getValues("topicSlug")}>
             {submitting ? "Saving..." : mode === "edit" ? "Save changes" : "Publish note"}
           </Button>
         </form>

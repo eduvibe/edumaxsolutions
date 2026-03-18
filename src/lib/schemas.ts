@@ -16,7 +16,15 @@ export const inquirySchema = z.object({
 export const noteCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),
-  lessonNumber: z.coerce.number().int().min(1),
+  lessonNumber: z.preprocess(
+    (v) => {
+      if (v === undefined || v === null) return null;
+      if (typeof v === "string" && v.trim() === "") return null;
+      if (typeof v === "string") return Number(v);
+      return v;
+    },
+    z.number().int().min(1).nullable()
+  ),
   title: z.string().min(3),
   content: z.string().min(20),
   featuredImageUrl: z.string().url().optional().or(z.literal("")),
@@ -38,7 +46,15 @@ export const suggestionVoteSchema = z.object({
 export const mcqCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),
-  lessonNumber: z.coerce.number().int().min(1),
+  lessonNumber: z.preprocess(
+    (v) => {
+      if (v === undefined || v === null) return null;
+      if (typeof v === "string" && v.trim() === "") return null;
+      if (typeof v === "string") return Number(v);
+      return v;
+    },
+    z.number().int().min(1).nullable()
+  ),
   questionText: z.string().min(10),
   questionTextJson: z.record(z.unknown()).optional(),
   questionImageUrl: z.string().url().optional().or(z.literal("")),
@@ -62,7 +78,15 @@ export const mcqCreateSchema = z.object({
 export const essayCreateSchema = z.object({
   subjectSlug: z.string().min(1),
   topicSlug: z.string().min(1),
-  lessonNumber: z.coerce.number().int().min(1),
+  lessonNumber: z.preprocess(
+    (v) => {
+      if (v === undefined || v === null) return null;
+      if (typeof v === "string" && v.trim() === "") return null;
+      if (typeof v === "string") return Number(v);
+      return v;
+    },
+    z.number().int().min(1).nullable()
+  ),
   questionText: z.string().min(10),
   referenceAnswer: z.string().optional().or(z.literal("")),
 });

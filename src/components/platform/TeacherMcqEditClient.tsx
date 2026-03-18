@@ -1,6 +1,6 @@
 "use client";
 
-import type { Subject, Topic } from "@/lib/platform/types";
+import type { Lesson, Subject, Topic } from "@/lib/platform/types";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useMemo, useState } from "react";
@@ -39,10 +39,12 @@ export function TeacherMcqEditClient({
   questionId,
   subjects,
   topics,
+  lessons,
 }: {
   questionId: string;
   subjects: Subject[];
   topics: Topic[];
+  lessons: Lesson[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -83,7 +85,7 @@ export function TeacherMcqEditClient({
     return {
       subjectSlug: question.subjectSlug,
       topicSlug: question.topicSlug,
-      lessonNumber: question.lessonNumber ?? 1,
+      lessonNumber: question.lessonNumber ?? null,
       questionText: question.questionText,
       questionTextJson: ensureJson(question.questionTextJson ?? undefined, question.questionText),
       questionImageUrl: question.questionImageUrl ?? "",
@@ -125,8 +127,7 @@ export function TeacherMcqEditClient({
         </Button>
       </div>
 
-      <TeacherMcqForm subjects={subjects} topics={topics} mode="edit" questionId={questionId} initialValues={initialValues} />
+      <TeacherMcqForm subjects={subjects} topics={topics} lessons={lessons} mode="edit" questionId={questionId} initialValues={initialValues} />
     </div>
   );
 }
-

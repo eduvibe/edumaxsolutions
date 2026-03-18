@@ -1,8 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { richDocToHtml, sanitizeRichHtml } from "@/lib/platform/richText";
 import type { RichTextContent } from "@/lib/platform/types";
+import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import { Bold, Italic, Underline } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 
@@ -19,6 +22,8 @@ export function RichTextEditor({
   minHeightClassName?: string;
   disabled?: boolean;
 }) {
+  const env = getPlatformPublicEnv();
+  const { toast } = useToast();
   const html = useMemo(() => richDocToHtml(value), [value]);
   const editableRef = useRef<HTMLDivElement | null>(null);
 
@@ -45,6 +50,22 @@ export function RichTextEditor({
     if (typeof document === "undefined") return;
     document.execCommand(cmd);
     emitChange({ sanitize: false });
+  }
+
+  async function uploadClipboardImage(file: File) {
+    if (!env.cloudinaryConfigured) {
+      throw new Error("Image paste is disabled until Cloudinary is configured.");
+    }
+    const token = await getSupabaseAccessToken();
+    if (!token) throw new Error("Tutor session expired. Please sign in again.");
+    const form = new FormData();
+    form.set("file", file);
+    form.set("folder", "edumax/rich-text");
+    const res = await fetch("/api/cloudinary/upload", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Upload failed");
+    if (!data.url) throw new Error("Upload failed");
+    return data.url;
   }
 
   return (
@@ -93,6 +114,25 @@ export function RichTextEditor({
         }}
         onBlur={() => {
           if (!disabled) emitChange({ sanitize: true });
+        }}
+        onPaste={(e) => {
+          if (disabled) return;
+          const items = Array.from(e.clipboardData?.items ?? []);
+          const img = items.find((it) => it.kind === "file" && /^image\//i.test(it.type));
+          const file = img?.getAsFile();
+          if (!file) return;
+          e.preventDefault();
+          void (async () => {
+            try {
+              const url = await uploadClipboardImage(file);
+              if (typeof document !== "undefined") {
+                document.execCommand("insertImage", false, url);
+                emitChange({ sanitize: true });
+              }
+            } catch (err) {
+              toast({ title: "Paste failed", description: err instanceof Error ? err.message : "Unknown error" });
+            }
+          })();
         }}
         className={[
           "rounded-xl border border-black/10 bg-white/65 shadow-sm px-3 py-2 text-sm text-black outline-none",

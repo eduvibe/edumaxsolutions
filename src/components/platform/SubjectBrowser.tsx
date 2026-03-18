@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type SchoolSection = "primary" | "jss" | "sss";
@@ -61,16 +62,26 @@ export function SubjectBrowser({
   subjects,
   stats,
   initialSection,
+  yearGroups,
+  initialYearGroup,
 }: {
   subjects: Subject[];
   stats: Record<string, Record<SchoolSection, { units: number; lessons: number }>>;
   initialSection?: SchoolSection;
+  yearGroups?: string[];
+  initialYearGroup?: string;
 }) {
+  const router = useRouter();
   const [section, setSection] = useState<SchoolSection>(initialSection ?? "primary");
+  const [yearGroup, setYearGroup] = useState(initialYearGroup ?? "__all__");
 
   useEffect(() => {
     if (initialSection) setSection(initialSection);
   }, [initialSection]);
+
+  useEffect(() => {
+    setYearGroup(initialYearGroup ?? "__all__");
+  }, [initialYearGroup]);
 
   const filtered = useMemo(() => {
     const allowed = sectionKeyStages(section);
@@ -100,6 +111,32 @@ export function SubjectBrowser({
           ))}
         </div>
 
+        {yearGroups && yearGroups.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="text-sm font-semibold text-black/80 dark:text-white/80">Select class level</div>
+            <select
+              value={yearGroup}
+              onChange={(e) => {
+                const v = e.target.value;
+                setYearGroup(v);
+                if (v === "__all__") {
+                  router.push(`/learn/subjects?section=${section}`);
+                } else {
+                  router.push(`/learn/subjects?section=${section}&year=${encodeURIComponent(v)}`);
+                }
+              }}
+              className="h-10 rounded-md border-2 border-black bg-white px-3 text-sm font-semibold text-black dark:border-white dark:bg-black dark:text-white"
+            >
+              <option value="__all__">All classes</option>
+              {yearGroups.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
         <div className="mt-10">
           <h1 className="text-4xl font-extrabold tracking-tight text-black dark:text-white">
             {sectionLabels[section]} subjects
@@ -116,7 +153,7 @@ export function SubjectBrowser({
             return (
               <Link
                 key={s.id}
-                href={`/learn/subjects/${s.slug}?section=${section}`}
+                href={`/learn/subjects/${s.slug}?section=${section}${yearGroup !== "__all__" ? `&year=${encodeURIComponent(yearGroup)}` : ""}`}
                 className="group rounded-xl border border-black/15 bg-white/20 p-6 backdrop-blur-md transition-colors hover:bg-white/30 dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10"
               >
                 <div className="flex items-start justify-between">

@@ -13,7 +13,7 @@ import {
 } from "@/lib/platform/store";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { getSupabaseServerClient } from "@/lib/platform/supabase";
-import { ChevronLeft, Download, FileText, HelpCircle, PlayCircle, Video } from "lucide-react";
+import { ChevronLeft, Download, FileText, HelpCircle, PlayCircle, Plus, Video } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -207,7 +207,39 @@ export default async function LessonPage({ params }: PageProps) {
                       variant="secondary"
                       className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
                     >
-                      <Link href="/learn/teacher/create-question">Add quiz</Link>
+                      <Link
+                        href={`/learn/teacher/create-question?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                          topic.slug
+                        )}&lessonNumber=${encodeURIComponent(String(lessonNumber))}`}
+                      >
+                        Add quiz
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="secondary"
+                      className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    >
+                      <Link
+                        href={`/learn/teacher/create-essay?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                          topic.slug
+                        )}&lessonNumber=${encodeURIComponent(String(lessonNumber))}`}
+                      >
+                        Add essay
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="secondary"
+                      className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    >
+                      <Link
+                        href={`/learn/teacher/notes/create?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                          topic.slug
+                        )}&lessonNumber=${encodeURIComponent(String(lessonNumber))}`}
+                      >
+                        Add note
+                      </Link>
                     </Button>
                     <Button
                       asChild
@@ -270,19 +302,30 @@ export default async function LessonPage({ params }: PageProps) {
                     <ChevronLeft className="h-5 w-5 rotate-180" />
                   </StudentActionLink>
                 ) : (
-                  <Link
-                    href={`/learn/quiz/${topic.slug}?lesson=${lessonNumber}`}
-                    className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white/10 px-4 py-4 text-black backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
-                  >
-                  <div className="flex items-center gap-3">
-                    <HelpCircle className="h-5 w-5" />
-                    <div>
-                      <div className="text-sm font-extrabold">Quiz</div>
-                      <div className="text-xs text-black/60 dark:text-white/60">{questions.length} questions</div>
-                    </div>
+                  <div className="flex items-stretch gap-2">
+                    <Link
+                      href={`/learn/quiz/${topic.slug}?lesson=${lessonNumber}`}
+                      className="flex flex-1 items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white/10 px-4 py-4 text-black backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                    >
+                      <div className="flex items-center gap-3">
+                        <HelpCircle className="h-5 w-5" />
+                        <div>
+                          <div className="text-sm font-extrabold">Quiz</div>
+                          <div className="text-xs text-black/60 dark:text-white/60">{questions.length} questions</div>
+                        </div>
+                      </div>
+                      <ChevronLeft className="h-5 w-5 rotate-180" />
+                    </Link>
+                    <Link
+                      href={`/learn/teacher/create-question?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                        topic.slug
+                      )}&lessonNumber=${encodeURIComponent(String(lessonNumber))}`}
+                      className="flex w-14 items-center justify-center rounded-2xl border border-black/10 bg-white/10 text-black backdrop-blur-md transition-colors hover:bg-white/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                      aria-label="Add quiz"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </Link>
                   </div>
-                  <ChevronLeft className="h-5 w-5 rotate-180" />
-                  </Link>
                 )}
 
                 <a

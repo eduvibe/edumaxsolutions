@@ -1,6 +1,6 @@
 import { TeacherNoteEditClient } from "@/components/platform/TeacherNoteEditClient";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
+import { listCurriculumLessons, listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -16,6 +16,7 @@ export default async function EditNotePage({ params }: { params: Promise<{ noteI
   const { noteId } = await params;
   const subjects = await listCurriculumSubjects();
   const topics = await listCurriculumTopics();
+  const lessons = await listCurriculumLessons();
 
   return (
     <div className="bg-[#f3edf6] dark:bg-[#0b0f14]">
@@ -32,7 +33,7 @@ export default async function EditNotePage({ params }: { params: Promise<{ noteI
           <p className="max-w-2xl text-sm text-black/70 dark:text-white/70">Update title, content and featured image.</p>
         </header>
 
-        <TeacherNoteEditClient noteId={noteId} subjects={subjects} topics={topics} />
+        <TeacherNoteEditClient noteId={noteId} subjects={subjects} topics={topics} lessons={lessons} />
       </div>
     </div>
   );

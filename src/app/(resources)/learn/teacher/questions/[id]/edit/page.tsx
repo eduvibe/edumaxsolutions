@@ -1,6 +1,6 @@
 import { TeacherMcqEditClient } from "@/components/platform/TeacherMcqEditClient";
 import { getPlatformRole } from "@/lib/platform/session";
-import { listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
+import { listCurriculumLessons, listCurriculumSubjects, listCurriculumTopics } from "@/lib/platform/store";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -16,6 +16,7 @@ export default async function EditMcqPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const subjects = await listCurriculumSubjects();
   const topics = await listCurriculumTopics();
+  const lessons = await listCurriculumLessons();
 
   return (
     <div className="bg-[#f3edf6] dark:bg-[#0b0f14]">
@@ -32,7 +33,7 @@ export default async function EditMcqPage({ params }: { params: Promise<{ id: st
           <p className="max-w-2xl text-sm text-black/70 dark:text-white/70">Update question text, answers, images and formatting.</p>
         </header>
 
-        <TeacherMcqEditClient questionId={id} subjects={subjects} topics={topics} />
+        <TeacherMcqEditClient questionId={id} subjects={subjects} topics={topics} lessons={lessons} />
       </div>
     </div>
   );

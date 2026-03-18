@@ -304,7 +304,9 @@ export function AdminCurriculumClient() {
   async function createTopic() {
     if (!selectedSubjectSlug) return;
     const name = topicName.trim();
-    const slug = (topicSlug.trim() || slugify(name)).trim();
+    const yg = yearGroup.trim();
+    const autoSlug = slugify([name, schoolSection, yg].filter(Boolean).join(" "));
+    const slug = (topicSlug.trim() || autoSlug).trim();
     if (!name || !slug) return;
     setBusy(true);
     try {
@@ -316,7 +318,7 @@ export function AdminCurriculumClient() {
           name,
           slug,
           description: null,
-          yearGroup: yearGroup.trim() || null,
+          yearGroup: yg || null,
           thread: null,
           schoolSection,
           lessonCount: null,

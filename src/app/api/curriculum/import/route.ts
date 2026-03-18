@@ -215,7 +215,8 @@ export async function POST(req: Request) {
 
   for (const r of normalizedRows) {
     const subjectSlug = (r.subject_slug?.trim() || slugify(r.subject)).trim();
-    const topicSlug = (r.topic_slug?.trim() || slugify(r.topic)).trim();
+    const autoTopicSlug = slugify([r.topic, r.section, (r.year_group ?? "").trim()].filter(Boolean).join(" "));
+    const topicSlug = (r.topic_slug?.trim() || autoTopicSlug).trim();
     const yearGroup = r.year_group?.trim() ? r.year_group.trim() : null;
     const lessons = (r.lessons ?? "")
       .split("|")
@@ -233,9 +234,20 @@ export async function POST(req: Request) {
         lessons: [...lessons],
       });
     } else {
+      if (existing.subjectSlug !== subjectSlug) {
+        errors.push({ row: 0, error: `Topic short link "${topicSlug}" is used under multiple subjects. Provide a unique topic_slug per subject.` });
+        continue;
+      }
+      if (existing.section !== r.section) {
+        errors.push({ row: 0, error: `Topic short link "${topicSlug}" is used under multiple sections. Provide a unique topic_slug per section.` });
+        continue;
+      }
+      if (existing.yearGroup && yearGroup && existing.yearGroup !== yearGroup) {
+        errors.push({ row: 0, error: `Topic short link "${topicSlug}" has conflicting year_group values. Provide a unique topic_slug per year group.` });
+        continue;
+      }
       if (!existing.topicName && r.topic.trim()) existing.topicName = r.topic.trim();
       if (!existing.yearGroup && yearGroup) existing.yearGroup = yearGroup;
-      if (!existing.section && r.section) existing.section = r.section;
       for (const t of lessons) {
         if (!existing.lessons.includes(t)) existing.lessons.push(t);
       }

@@ -60,7 +60,7 @@ export function CreateTopicDialog({
         body: JSON.stringify({
           subjectSlug,
           name: trimmed,
-          slug: slugify(trimmed),
+          slug: slugify([trimmed, schoolSection, yearGroup.trim()].filter(Boolean).join(" ")),
           description: description.trim() || null,
           yearGroup: yearGroup.trim() || null,
           thread: thread.trim() || null,

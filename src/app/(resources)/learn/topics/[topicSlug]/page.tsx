@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { getPlatformRole } from "@/lib/platform/session";
 import { getTopicResources, listCurriculumLessonsByTopicSlug, listVideosByTopicSlug } from "@/lib/platform/store";
-import { ArrowRight, Bookmark, ChevronLeft, Download, FileText, Film, HelpCircle, Monitor, Share2 } from "lucide-react";
+import { ArrowRight, Bookmark, ChevronLeft, Download, FileText, Film, HelpCircle, Monitor, Plus, Share2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -151,9 +151,27 @@ export default async function TopicPage({ params }: PageProps) {
               <Bookmark className="mr-2 h-4 w-4" />
               Save
             </Button>
-            <Button asChild variant="secondary" className="rounded-md border-2 border-black bg-white text-black hover:bg-black/5 dark:border-white dark:bg-black dark:text-white dark:hover:bg-white/10">
-              <Link href={`/learn/quiz/${topic.slug}`}>Take test</Link>
-            </Button>
+            <div className="flex items-stretch gap-2">
+              <Button
+                asChild
+                variant="secondary"
+                className="rounded-md border-2 border-black bg-white text-black hover:bg-black/5 dark:border-white dark:bg-black dark:text-white dark:hover:bg-white/10"
+              >
+                <Link href={`/learn/quiz/${topic.slug}`}>Take test</Link>
+              </Button>
+              <Button
+                asChild
+                variant="secondary"
+                className="rounded-md border-2 border-black bg-white px-3 text-black hover:bg-black/5 dark:border-white dark:bg-black dark:text-white dark:hover:bg-white/10"
+              >
+                <Link
+                  href={`/learn/teacher/create-question?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(topic.slug)}`}
+                  aria-label="Add quiz"
+                >
+                  <Plus className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -245,6 +263,48 @@ export default async function TopicPage({ params }: PageProps) {
                           </Button>
                           <Button asChild className="rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
                             <Link href={`/learn/quiz/${topic.slug}?lesson=${lesson.lessonNumber}`}>Take test</Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="secondary"
+                            className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                          >
+                            <Link
+                              href={`/learn/teacher/create-question?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                                topic.slug
+                              )}&lessonNumber=${encodeURIComponent(String(lesson.lessonNumber))}`}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add quiz
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="secondary"
+                            className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                          >
+                            <Link
+                              href={`/learn/teacher/create-essay?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                                topic.slug
+                              )}&lessonNumber=${encodeURIComponent(String(lesson.lessonNumber))}`}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add essay
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="secondary"
+                            className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                          >
+                            <Link
+                              href={`/learn/teacher/notes/create?subjectSlug=${encodeURIComponent(subject.slug)}&topicSlug=${encodeURIComponent(
+                                topic.slug
+                              )}&lessonNumber=${encodeURIComponent(String(lesson.lessonNumber))}`}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add note
+                            </Link>
                           </Button>
                         </div>
                       </div>

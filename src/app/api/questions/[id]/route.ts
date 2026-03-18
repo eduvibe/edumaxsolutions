@@ -56,7 +56,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       id: q.id,
       subjectSlug: "",
       topicSlug: "",
-      lessonNumber: q.lessonNumber ?? 1,
+      lessonNumber: q.lessonNumber ?? null,
       questionText: q.questionText,
       questionTextJson: q.questionTextJson ?? null,
       questionImageUrl: q.questionImageUrl ?? "",
@@ -100,7 +100,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         .update({
           subject_slug: input.subjectSlug,
           topic_slug: input.topicSlug,
-          lesson_number: input.lessonNumber,
+          lesson_number: input.lessonNumber ?? null,
           question_text: input.questionText,
           question_text_json: input.questionTextJson ?? null,
           question_image_url: input.questionImageUrl ? input.questionImageUrl : null,
@@ -134,4 +134,3 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -318,7 +318,27 @@ export default async function SubjectPage({ params, searchParams }: PageProps) {
                       variant="secondary"
                       className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
                     >
-                      <Link href="/learn/teacher/create-question">Create quiz</Link>
+                      <Link href={`/learn/teacher/create-question?subjectSlug=${encodeURIComponent(subject.slug)}`}>
+                        Create quiz
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="secondary"
+                      className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    >
+                      <Link href={`/learn/teacher/create-essay?subjectSlug=${encodeURIComponent(subject.slug)}`}>
+                        Create essay
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="secondary"
+                      className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    >
+                      <Link href={`/learn/teacher/notes/create?subjectSlug=${encodeURIComponent(subject.slug)}`}>
+                        Create note
+                      </Link>
                     </Button>
                   </div>
                 </div>

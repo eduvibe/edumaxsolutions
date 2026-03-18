@@ -1,6 +1,6 @@
 "use client";
 
-import type { Subject, Topic } from "@/lib/platform/types";
+import type { Lesson, Subject, Topic } from "@/lib/platform/types";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useMemo, useState } from "react";
@@ -24,10 +24,12 @@ export function TeacherNoteEditClient({
   noteId,
   subjects,
   topics,
+  lessons,
 }: {
   noteId: string;
   subjects: Subject[];
   topics: Topic[];
+  lessons: Lesson[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -93,8 +95,7 @@ export function TeacherNoteEditClient({
         </Button>
       </div>
 
-      <TeacherNoteForm subjects={subjects} topics={topics} mode="edit" noteId={noteId} initialValues={initialValues} />
+      <TeacherNoteForm subjects={subjects} topics={topics} lessons={lessons} mode="edit" noteId={noteId} initialValues={initialValues} />
     </div>
   );
 }
-

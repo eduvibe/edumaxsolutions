@@ -9,11 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { mcqCreateSchema } from "@/lib/schemas";
-import type { Subject, Topic } from "@/lib/platform/types";
+import type { Lesson, Subject, Topic } from "@/lib/platform/types";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { curriculumLessonsByTopicSlug } from "@/lib/platform/curriculum";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import Image from "next/image";
@@ -48,12 +47,14 @@ type BulkMcqDraft = {
 export function TeacherMcqForm({
   subjects,
   topics,
+  lessons,
   mode = "create",
   questionId,
   initialValues,
 }: {
   subjects: Subject[];
   topics: Topic[];
+  lessons: Lesson[];
   mode?: "create" | "edit";
   questionId?: string;
   initialValues?: Partial<FormValues>;
@@ -69,13 +70,15 @@ export function TeacherMcqForm({
   const [aikenErrors, setAikenErrors] = useState<string[]>([]);
   const [bulkDrafts, setBulkDrafts] = useState<BulkMcqDraft[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [section, setSection] = useState<"primary" | "jss" | "sss">("jss");
+  const [yearGroupFilter, setYearGroupFilter] = useState("__all__");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(mcqCreateSchema),
     defaultValues: {
       subjectSlug: subjects[0]?.slug ?? "",
       topicSlug: "",
-      lessonNumber: 1,
+      lessonNumber: null,
       questionText: "",
       questionTextJson: plainTextToRichDoc(""),
       questionImageUrl: "",
@@ -100,23 +103,99 @@ export function TeacherMcqForm({
 
   const selectedSubjectSlug = form.watch("subjectSlug");
   const selectedTopicSlug = form.watch("topicSlug");
+
+  useEffect(() => {
+    if (!initialValues?.topicSlug) return;
+    const t = topics.find((x) => x.slug === initialValues.topicSlug);
+    if (!t) return;
+    if (t.schoolSection === "primary" || t.schoolSection === "jss" || t.schoolSection === "sss") setSection(t.schoolSection);
+    if (t.yearGroup) setYearGroupFilter(t.yearGroup);
+  }, [initialValues?.topicSlug, topics]);
+
+  const didInitSectionReset = useRef(false);
+  useEffect(() => {
+    if (!didInitSectionReset.current) {
+      didInitSectionReset.current = true;
+      return;
+    }
+    setYearGroupFilter("__all__");
+    form.setValue("topicSlug", "");
+    form.setValue("lessonNumber", null);
+  }, [form, section]);
+  function sectionKeyStages(s: "primary" | "jss" | "sss") {
+    if (s === "primary") return ["KS1", "KS2"];
+    if (s === "jss") return ["KS3"];
+    return ["KS4"];
+  }
+
+  const subjectOptions = useMemo(() => {
+    const allowed = new Set(sectionKeyStages(section));
+    return subjects.filter((s) => (s.keyStages ?? []).some((k) => allowed.has(k)));
+  }, [section, subjects]);
+
+  useEffect(() => {
+    const current = form.getValues("subjectSlug");
+    if (current && subjectOptions.some((s) => s.slug === current)) return;
+    form.setValue("subjectSlug", subjectOptions[0]?.slug ?? "");
+  }, [form, subjectOptions]);
+
+  const didInitSubjectReset = useRef(false);
+  useEffect(() => {
+    if (!didInitSubjectReset.current) {
+      didInitSubjectReset.current = true;
+      return;
+    }
+    form.setValue("topicSlug", "");
+    form.setValue("lessonNumber", null);
+  }, [form, selectedSubjectSlug]);
+
   const topicOptions = useMemo(() => {
     const subject = subjects.find((s) => s.slug === selectedSubjectSlug);
     if (!subject) return [];
-    return topics.filter((t) => t.subjectId === subject.id);
-  }, [selectedSubjectSlug, subjects, topics]);
+    return topics.filter((t) => t.subjectId === subject.id && (t.schoolSection ?? null) === section);
+  }, [section, selectedSubjectSlug, subjects, topics]);
+
+  const yearGroupOptions = useMemo(() => {
+    if (section === "primary") return ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6"];
+    if (section === "jss") return ["Year 7", "Year 8", "Year 9"];
+    return ["Year 10", "Year 11", "Year 12"];
+  }, [section]);
+
+  const filteredTopicOptions = useMemo(() => {
+    if (yearGroupFilter === "__all__") return topicOptions;
+    return topicOptions.filter((t) => (t.yearGroup ?? "") === yearGroupFilter);
+  }, [topicOptions, yearGroupFilter]);
+
+  const selectedTopic = useMemo(() => topics.find((t) => t.slug === selectedTopicSlug) ?? null, [selectedTopicSlug, topics]);
 
   const lessonOptions = useMemo(() => {
-    const defs = selectedTopicSlug ? curriculumLessonsByTopicSlug[selectedTopicSlug] : undefined;
-    if (!defs || defs.length === 0) return [];
-    return defs.map((d, idx) => ({ number: idx + 1, title: d.title }));
-  }, [selectedTopicSlug]);
+    if (!selectedTopic) return [];
+    return lessons
+      .filter((l) => l.topicId === selectedTopic.id)
+      .slice()
+      .sort((a, b) => a.lessonNumber - b.lessonNumber)
+      .map((l) => ({ number: l.lessonNumber, title: l.title }));
+  }, [lessons, selectedTopic]);
+
+  useEffect(() => {
+    if (!selectedTopicSlug) return;
+    const current = form.getValues("lessonNumber");
+    if (current === null) return;
+    if (typeof current === "number" && lessonOptions.some((l) => l.number === current)) return;
+    form.setValue("lessonNumber", null);
+  }, [form, lessonOptions, selectedTopicSlug]);
+
+  function topicLabel(t: Topic) {
+    const sec = (t.schoolSection ?? "").toUpperCase();
+    const parts = [sec || null, t.yearGroup ?? null, t.name].filter(Boolean);
+    return parts.join(" • ");
+  }
 
   const bulkInvalidCount = useMemo(() => {
     const subjectSlug = form.getValues("subjectSlug");
     const topicSlug = form.getValues("topicSlug");
     const lessonNumber = form.getValues("lessonNumber");
-    if (!subjectSlug || !topicSlug || !lessonNumber) return bulkDrafts.length;
+    if (!subjectSlug || !topicSlug) return bulkDrafts.length;
     return bulkDrafts.reduce((acc, d) => {
       const parsed = mcqCreateSchema.safeParse({
         subjectSlug,
@@ -266,9 +345,8 @@ export function TeacherMcqForm({
 
   function parseAikenIntoDrafts() {
     const topicSlug = form.getValues("topicSlug");
-    const lessonNumber = form.getValues("lessonNumber");
-    if (!topicSlug || !lessonNumber) {
-      toast({ title: "Select a topic and sub-topic first" });
+    if (!topicSlug) {
+      toast({ title: "Select a topic first" });
       return;
     }
     const parsed = parseAiken(aikenText);
@@ -305,8 +383,8 @@ export function TeacherMcqForm({
     const subjectSlug = form.getValues("subjectSlug");
     const topicSlug = form.getValues("topicSlug");
     const lessonNumber = form.getValues("lessonNumber");
-    if (!subjectSlug || !topicSlug || !lessonNumber) {
-      toast({ title: "Select a subject, topic and sub-topic" });
+    if (!subjectSlug || !topicSlug) {
+      toast({ title: "Select a subject and topic" });
       return;
     }
     if (bulkDrafts.length === 0) {
@@ -387,21 +465,55 @@ export function TeacherMcqForm({
 
         <div className="rounded-3xl border border-black/10 bg-white/10 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:p-6">
           <div className="text-sm font-semibold text-black/80 dark:text-white/80">Curriculum</div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-5">
+            <FormItem>
+              <FormLabel>Section</FormLabel>
+              <Select value={section} onValueChange={(v) => (v === "primary" || v === "jss" || v === "sss" ? setSection(v) : null)}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="jss">JSS</SelectItem>
+                  <SelectItem value="sss">SSS</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+
+            <FormItem>
+              <FormLabel>Class level</FormLabel>
+              <Select value={yearGroupFilter} onValueChange={(v) => setYearGroupFilter(v)} disabled={yearGroupOptions.length === 0}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All classes" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__all__">All classes</SelectItem>
+                  {yearGroupOptions.map((y) => (
+                    <SelectItem key={y} value={y}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormItem>
             <FormField
               control={form.control}
               name="subjectSlug"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Subject</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={subjectOptions.length === 0}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select subject" />
+                        <SelectValue placeholder={subjectOptions.length ? "Select subject" : "No subjects for section"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {subjects.map((s) => (
+                      {subjectOptions.map((s) => (
                         <SelectItem key={s.id} value={s.slug}>
                           {s.name}
                         </SelectItem>
@@ -419,16 +531,16 @@ export function TeacherMcqForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Topic</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={topicOptions.length === 0}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={filteredTopicOptions.length === 0}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={topicOptions.length ? "Select topic" : "No topics for subject"} />
+                        <SelectValue placeholder={filteredTopicOptions.length ? "Select topic" : "No topics for subject"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {topicOptions.map((t) => (
+                      {filteredTopicOptions.map((t) => (
                         <SelectItem key={t.id} value={t.slug}>
-                          {t.name}
+                          {topicLabel(t)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -445,16 +557,17 @@ export function TeacherMcqForm({
                 <FormItem>
                   <FormLabel>Sub-topic</FormLabel>
                   <Select
-                    onValueChange={(v) => field.onChange(Number(v))}
-                    value={field.value ? String(field.value) : ""}
-                    disabled={lessonOptions.length === 0}
+                    onValueChange={(v) => field.onChange(v === "__topic__" ? null : Number(v))}
+                    value={field.value === null || typeof field.value !== "number" ? "__topic__" : String(field.value)}
+                    disabled={!selectedTopicSlug}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={lessonOptions.length ? "Select sub-topic" : "No sub-topics for topic"} />
+                        <SelectValue placeholder={selectedTopicSlug ? "Select sub-topic" : "Select a topic first"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="__topic__">Entire topic (all sub-topics)</SelectItem>
                       {lessonOptions.map((l) => (
                         <SelectItem key={l.number} value={String(l.number)}>
                           {l.title}
@@ -765,7 +878,7 @@ export function TeacherMcqForm({
                 />
               </div>
 
-              <Button type="submit" disabled={submitting || !form.getValues("topicSlug") || !form.getValues("lessonNumber")}>
+              <Button type="submit" disabled={submitting || !form.getValues("topicSlug")}>
                 {submitting ? "Saving..." : isEdit ? "Save changes" : "Save question"}
               </Button>
             </form>

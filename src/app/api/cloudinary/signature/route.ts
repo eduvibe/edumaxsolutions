@@ -1,8 +1,12 @@
 import { getPlatformServerEnv } from "@/lib/platform/env";
 import { NextResponse } from "next/server";
+import { requireTutor } from "@/app/api/_lib/supabaseAuth";
 import crypto from "crypto";
 
 export async function POST(req: Request) {
+  const auth = await requireTutor(req);
+  if ("error" in auth) return auth.error;
+
   const env = getPlatformServerEnv();
   if (!env.cloudinarySigningConfigured || !env.cloudinary.apiSecret || !env.cloudinary.apiKey) {
     return NextResponse.json(
@@ -15,7 +19,9 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json().catch(() => ({}))) as { folder?: string };
-  const folder = body.folder?.trim() || env.cloudinary.uploadFolder;
+  const requestedFolder = body.folder?.trim() || env.cloudinary.uploadFolder;
+  const allowedFolders = new Set(["edumax/templates/previews", "edumax/templates/files"]);
+  const folder = allowedFolders.has(requestedFolder) ? requestedFolder : env.cloudinary.uploadFolder;
   const timestamp = Math.floor(Date.now() / 1000);
 
   const paramsToSign = `folder=${folder}&timestamp=${timestamp}${env.cloudinary.apiSecret}`;
@@ -29,4 +35,3 @@ export async function POST(req: Request) {
     signature,
   });
 }
-

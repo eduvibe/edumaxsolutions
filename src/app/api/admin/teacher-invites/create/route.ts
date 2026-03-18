@@ -51,6 +51,8 @@ export async function POST(req: Request) {
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  let emailSent: boolean | null = null;
+  let emailError: string | null = null;
   if (email) {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
@@ -62,9 +64,10 @@ export async function POST(req: Request) {
         ${expiresAt ? `<p>This code expires on: <strong>${new Date(expiresAt).toLocaleString()}</strong></p>` : ""}
       </div>
     `;
-    await sendEmail(email, "Your EduMax Tutor Invite Code", html);
+    const result = await sendEmail(email, "Your EduMax Tutor Invite Code", html);
+    emailSent = result.success;
+    emailError = result.success ? null : (result.error ?? "Email delivery failed");
   }
 
-  return NextResponse.json({ ok: true, code }, { status: 201 });
+  return NextResponse.json({ ok: true, code, emailSent, emailError }, { status: 201 });
 }
-

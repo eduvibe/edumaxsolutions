@@ -46,7 +46,13 @@ export async function POST(req: Request) {
     },
     { onConflict: "user_id" }
   );
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    const msg =
+      error.message.includes("schema cache") && error.message.includes("teacher_applications")
+        ? "Teacher applications table is not deployed in Supabase. Run supabase/teacher_applications.sql (and roles_admin.sql), then refresh Supabase API schema cache."
+        : error.message;
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
@@ -71,4 +77,3 @@ export async function GET(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ applications: data ?? [] }, { status: 200 });
 }
-

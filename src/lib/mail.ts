@@ -12,6 +12,9 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
+    if (!process.env.SMTP_PASS) {
+      throw new Error("SMTP_PASS is not configured");
+    }
     const info = await transporter.sendMail({
       from: `"EduMax Solutions" <${process.env.SMTP_USER || 'info@edumaxsolutions.com.ng'}>`, // sender address
       to, // list of receivers
@@ -22,6 +25,7 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Error sending email: ", error);
-    return { success: false, error };
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: message };
   }
 };

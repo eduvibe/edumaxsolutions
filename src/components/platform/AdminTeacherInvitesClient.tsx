@@ -57,13 +57,17 @@ export function AdminTeacherInvitesClient() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: emailValue || undefined, expiresInDays: expiresDays }),
       });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string; emailSent?: boolean | null; emailError?: string | null; error?: string };
       if (!res.ok || !data.code) {
         throw new Error(data.error ?? "Unable to create invite");
       }
 
       setGeneratedCode(data.code);
-      toast({ title: emailValue ? "Invite created and sent" : "Invite created" });
+      if (emailValue && data.emailSent === false) {
+        toast({ title: "Invite created (email failed)", description: data.emailError ?? "Copy and send the code manually." });
+      } else {
+        toast({ title: emailValue ? "Invite created and sent" : "Invite created" });
+      }
     } catch (e) {
       toast({ title: "Failed", description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -133,4 +137,3 @@ export function AdminTeacherInvitesClient() {
     </div>
   );
 }
-

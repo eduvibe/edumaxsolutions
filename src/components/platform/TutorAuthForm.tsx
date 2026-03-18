@@ -82,6 +82,18 @@ export function TutorAuthForm() {
         }
       }
 
+      const { data: roleRow } = await supabase.from("user_roles").select("role").eq("user_id", sessionData.session.user.id).maybeSingle();
+      const dbRole = String((roleRow as { role?: string } | null)?.role ?? "student");
+      if (dbRole !== "teacher" && dbRole !== "admin") {
+        toast({
+          title: "Tutor access required",
+          description: "Enter your tutor invite code, or apply to become a tutor.",
+        });
+        router.push("/learn/teacher/apply");
+        router.refresh();
+        return;
+      }
+
       await setRoleTeacherCookie(token);
       toast({ title: "Signed in" });
       router.push("/learn/teacher/dashboard");

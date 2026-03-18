@@ -163,10 +163,6 @@ export function TeacherApplicationClient() {
             <div className="text-sm font-medium text-black/80 dark:text-white/80">Password</div>
             <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" type="password" />
           </div>
-          <div className="grid gap-2">
-            <div className="text-sm font-medium text-black/80 dark:text-white/80">Tutor invite code (optional)</div>
-            <Input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Provided by EduMax" />
-          </div>
           <Button
             type="button"
             disabled={busy || !env.supabaseConfigured}
@@ -190,16 +186,22 @@ export function TeacherApplicationClient() {
         </div>
       )}
 
-      {inviteCode.trim() ? (
-        <Button
-          type="button"
-          disabled={busy || !env.supabaseConfigured}
-          className="w-full rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-          onClick={() => void onRedeemInvite()}
-        >
-          {busy ? "Activating..." : "Activate tutor access with invite code"}
-        </Button>
-      ) : null}
+      <div className="grid gap-2">
+        <div className="text-sm font-medium text-black/80 dark:text-white/80">Tutor invite code (optional)</div>
+        <Input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Provided by EduMax" />
+        <div className="text-xs text-black/60 dark:text-white/60">
+          If you have an invite code, paste it and activate tutor access. Otherwise submit an application for review.
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        disabled={busy || !env.supabaseConfigured || !inviteCode.trim()}
+        className="w-full rounded-md bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+        onClick={() => void onRedeemInvite()}
+      >
+        {busy ? "Activating..." : "Activate tutor access"}
+      </Button>
 
       <div className="grid gap-2">
         <div className="text-sm font-medium text-black/80 dark:text-white/80">Phone</div>

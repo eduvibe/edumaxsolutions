@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const fileUrl = parsed.data.fileUrl?.trim();
     if (!fileUrl) {
       return NextResponse.json(
-        { error: "fileUrl is required (use a hosted URL until storage is configured)" },
+        { error: "File is required (upload a file or paste a hosted URL)" },
         { status: 400 }
       );
     }

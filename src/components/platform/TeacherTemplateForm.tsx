@@ -31,7 +31,9 @@ export function TeacherTemplateForm({
   const { toast } = useToast();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [fileUploading, setFileUploading] = useState(false);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<FormValues>({
@@ -125,6 +127,60 @@ export function TeacherTemplateForm({
     }
   }
 
+  async function uploadTemplateFile(file: File) {
+    if (!env.cloudinaryConfigured) {
+      toast({ title: "Cloudinary not configured", description: "Add Cloudinary environment variables to enable uploads." });
+      return;
+    }
+
+    setFileUploading(true);
+    try {
+      const sigRes = await fetch("/api/cloudinary/signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: "edumax/templates/files" }),
+      });
+      const sigData = (await sigRes.json().catch(() => ({}))) as {
+        cloudName?: string;
+        apiKey?: string;
+        timestamp?: number;
+        folder?: string;
+        signature?: string;
+        error?: string;
+        hint?: string;
+      };
+      if (!sigRes.ok || !sigData.cloudName || !sigData.apiKey || !sigData.timestamp || !sigData.folder || !sigData.signature) {
+        throw new Error(sigData.hint ?? sigData.error ?? "Unable to prepare upload");
+      }
+
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("api_key", sigData.apiKey);
+      formData.set("timestamp", String(sigData.timestamp));
+      formData.set("folder", sigData.folder);
+      formData.set("signature", sigData.signature);
+
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(sigData.cloudName)}/raw/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = (await uploadRes.json().catch(() => ({}))) as { secure_url?: string; url?: string; error?: { message?: string } };
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error?.message ?? "Upload failed");
+      }
+      const url = uploadData.secure_url ?? uploadData.url;
+      if (!url) throw new Error("Cloudinary did not return a URL");
+
+      form.setValue("fileUrl", url, { shouldDirty: true, shouldValidate: true });
+      toast({ title: "File uploaded" });
+    } catch (e) {
+      toast({ title: "File upload failed", description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setFileUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <div className="space-y-4">
       {!env.cloudinaryConfigured ? (
@@ -192,14 +248,14 @@ export function TeacherTemplateForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Topic (optional)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={(v) => field.onChange(v === "__all__" ? "" : v)} value={field.value ? field.value : "__all__"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="All topics" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">All topics</SelectItem>
+                    <SelectItem value="__all__">All topics</SelectItem>
                     {topics
                       .filter((t) => t.subjectId === subjects.find((s) => s.slug === form.getValues("subjectSlug"))?.id)
                       .map((t) => (
@@ -248,6 +304,28 @@ export function TeacherTemplateForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>File URL</FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".ppt,.pptx,.pdf,.doc,.docx,.zip,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,application/zip"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      void uploadTemplateFile(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!env.cloudinaryConfigured || fileUploading}
+                    className="rounded-md border-2 border-black bg-transparent text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {fileUploading ? "Uploading..." : "Upload file"}
+                  </Button>
+                </div>
                 <FormControl>
                   <Input placeholder="https://.../file.pptx" {...field} />
                 </FormControl>

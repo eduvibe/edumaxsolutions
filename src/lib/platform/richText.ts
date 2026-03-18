@@ -17,7 +17,7 @@ export function sanitizeRichHtml(inputHtml: string): string {
   }
   const parser = new DOMParser();
   const doc = parser.parseFromString(inputHtml, "text/html");
-  const allowed = new Set(["P", "BR", "STRONG", "EM", "U", "DIV", "SPAN", "B", "I", "IMG"]);
+  const allowed = new Set(["P", "BR", "STRONG", "EM", "U", "DIV", "SPAN", "B", "I", "IMG", "A", "UL", "OL", "LI", "H2", "H3"]);
   const root = doc.body;
   if (!root) {
     return `<p>${escapeHtml(inputHtml)}</p>`;
@@ -48,6 +48,19 @@ export function sanitizeRichHtml(inputHtml: string): string {
           unwrap(el);
           return;
         }
+      } else if (tag === "A") {
+        const href = (el.getAttribute("href") ?? "").trim();
+        for (const attr of Array.from(el.attributes)) {
+          const n = attr.name.toLowerCase();
+          if (n !== "href") el.removeAttribute(attr.name);
+        }
+        if (!/^https?:\/\//i.test(href)) {
+          unwrap(el);
+          return;
+        }
+        el.setAttribute("href", href);
+        el.setAttribute("target", "_blank");
+        el.setAttribute("rel", "noreferrer noopener");
       } else {
         for (const attr of Array.from(el.attributes)) {
           el.removeAttribute(attr.name);

@@ -6,16 +6,17 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { noteCreateSchema } from "@/lib/schemas";
-import type { Lesson, Subject, Topic } from "@/lib/platform/types";
+import type { Lesson, RichTextContent, Subject, Topic } from "@/lib/platform/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import Image from "next/image";
+import { RichTextEditor } from "@/components/platform/RichTextEditor";
+import { plainTextToRichDoc, richDocToHtml } from "@/lib/platform/richText";
 
 type FormValues = z.infer<typeof noteCreateSchema>;
 
@@ -56,6 +57,7 @@ export function TeacherNoteForm({
 
   const selectedSubjectSlug = form.watch("subjectSlug");
   const selectedTopicSlug = form.watch("topicSlug");
+  const selectedLessonNumber = form.watch("lessonNumber");
   const topicOptions = useMemo(() => {
     const subject = subjects.find((s) => s.slug === selectedSubjectSlug);
     if (!subject) return [];
@@ -72,6 +74,35 @@ export function TeacherNoteForm({
       .sort((a, b) => a.lessonNumber - b.lessonNumber)
       .map((l) => ({ number: l.lessonNumber, title: l.title }));
   }, [lessons, selectedTopic]);
+
+  const selectedLesson = useMemo(() => {
+    if (!selectedTopic || typeof selectedLessonNumber !== "number") return null;
+    return lessons.find((l) => l.topicId === selectedTopic.id && l.lessonNumber === selectedLessonNumber) ?? null;
+  }, [lessons, selectedLessonNumber, selectedTopic]);
+
+  function isProbablyHtml(input: string) {
+    return /<(p|div|h2|h3|ul|ol|li|img|a)\b/i.test(input);
+  }
+
+  function noteTemplateHtml() {
+    const topicName = selectedTopic?.name ?? "Topic";
+    const lessonTitle = selectedLesson?.title ?? "Sub-topic";
+    return [
+      `<h2>Lesson outcome</h2>`,
+      `<p>${selectedLesson?.objective ? selectedLesson.objective : `By the end of this lesson, you should understand the key ideas in ${topicName}.`}</p>`,
+      `<h2>Introduction</h2>`,
+      `<p>Write a short introduction to ${lessonTitle}.</p>`,
+      `<h2>Key points</h2>`,
+      `<ul><li></li><li></li><li></li></ul>`,
+      `<h2>Examples</h2>`,
+      `<ol><li></li><li></li></ol>`,
+      `<h2>Evaluation</h2>`,
+      `<p>Answer the following questions:</p>`,
+      `<ol><li></li><li></li><li></li></ol>`,
+      `<h2>Further study / References</h2>`,
+      `<ul><li><a href="https://">Add a link</a></li></ul>`,
+    ].join("");
+  }
 
   useEffect(() => {
     if (!selectedTopicSlug) return;
@@ -238,6 +269,13 @@ export function TeacherNoteForm({
             )}
           />
 
+          {selectedLesson?.objective ? (
+            <div className="md:col-span-2 rounded-2xl border border-black/10 bg-white/30 p-4 text-sm text-black/80 dark:border-white/10 dark:bg-white/5 dark:text-white/80">
+              <div className="text-xs font-semibold text-black/60 dark:text-white/60">Lesson outcome</div>
+              <div className="mt-2">{selectedLesson.objective}</div>
+            </div>
+          ) : null}
+
           <FormField
             control={form.control}
             name="title"
@@ -257,9 +295,28 @@ export function TeacherNoteForm({
             name="content"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Content</FormLabel>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <FormLabel>Content</FormLabel>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-9 rounded-md border-2 border-black bg-transparent px-3 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+                    onClick={() => {
+                      const html = noteTemplateHtml();
+                      field.onChange(html);
+                    }}
+                    disabled={!form.getValues("topicSlug")}
+                  >
+                    Insert lesson template
+                  </Button>
+                </div>
                 <FormControl>
-                  <Textarea placeholder="Write your note content..." className="min-h-[220px]" {...field} />
+                  <RichTextEditor
+                    value={(isProbablyHtml(field.value) ? ({ type: "html", html: field.value } as RichTextContent) : plainTextToRichDoc(field.value)) as RichTextContent}
+                    placeholder="Write your note content (format text, add images, insert links)..."
+                    minHeightClassName="min-h-[320px]"
+                    onChange={(next) => field.onChange(richDocToHtml(next.json))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

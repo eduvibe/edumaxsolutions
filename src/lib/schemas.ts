@@ -26,7 +26,10 @@ export const noteCreateSchema = z.object({
     z.number().int().min(1).nullable()
   ),
   title: z.string().min(3),
-  content: z.string().min(20),
+  content: z
+    .string()
+    .min(1)
+    .refine((v) => v.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().length >= 20, "Content must be at least 20 characters"),
   featuredImageUrl: z.string().url().optional().or(z.literal("")),
   published: z.boolean().default(true),
 });

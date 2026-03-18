@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { NoteViewTracker } from "@/components/platform/NoteViewTracker";
 import { StudentActionButton } from "@/components/platform/StudentActionButton";
+import { RichTextRenderer } from "@/components/platform/RichTextRenderer";
 import { getPlatformRole } from "@/lib/platform/session";
 import { getNoteById, getTeacherById, listSubjects } from "@/lib/platform/store";
+import { plainTextToRichDoc } from "@/lib/platform/richText";
+import type { RichTextContent } from "@/lib/platform/types";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -18,6 +21,8 @@ export default async function NotePage({ params }: PageProps) {
 
   const author = getTeacherById(note.authorId);
   const subject = listSubjects().find((s) => s.id === note.subjectId);
+  const isProbablyHtml = /<(p|div|h2|h3|ul|ol|li|img|a)\b/i.test(note.content);
+  const doc = (isProbablyHtml ? ({ type: "html", html: note.content } as RichTextContent) : plainTextToRichDoc(note.content)) as RichTextContent;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
@@ -42,7 +47,7 @@ export default async function NotePage({ params }: PageProps) {
       </header>
 
       <div className="rounded-3xl border border-black/10 bg-white/30 p-6 leading-relaxed text-black/90 dark:border-white/10 dark:bg-white/5 dark:text-white/90 md:p-8">
-        <div className="whitespace-pre-wrap">{note.content}</div>
+        <RichTextRenderer doc={doc} />
       </div>
 
       <div className="flex flex-wrap gap-3">

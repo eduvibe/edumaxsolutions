@@ -6,7 +6,7 @@ import { getPlatformPublicEnv } from "@/lib/platform/env";
 import { richDocToHtml, sanitizeRichHtml } from "@/lib/platform/richText";
 import type { RichTextContent } from "@/lib/platform/types";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
-import { Bold, Italic, Underline } from "lucide-react";
+import { Bold, Heading2, Image as ImageIcon, Italic, Link2, List, ListOrdered, Underline } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 
 export function RichTextEditor({
@@ -26,6 +26,7 @@ export function RichTextEditor({
   const { toast } = useToast();
   const html = useMemo(() => richDocToHtml(value), [value]);
   const editableRef = useRef<HTMLDivElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const el = editableRef.current;
@@ -52,6 +53,13 @@ export function RichTextEditor({
     emitChange({ sanitize: false });
   }
 
+  function exec2(cmd: string, value?: string) {
+    if (disabled) return;
+    if (typeof document === "undefined") return;
+    document.execCommand(cmd, false, value);
+    emitChange({ sanitize: false });
+  }
+
   async function uploadClipboardImage(file: File) {
     if (!env.cloudinaryConfigured) {
       throw new Error("Image paste is disabled until Cloudinary is configured.");
@@ -66,6 +74,18 @@ export function RichTextEditor({
     if (!res.ok) throw new Error(data.error ?? "Upload failed");
     if (!data.url) throw new Error("Upload failed");
     return data.url;
+  }
+
+  async function onPickImage(file: File) {
+    try {
+      const url = await uploadClipboardImage(file);
+      if (typeof document !== "undefined") {
+        document.execCommand("insertImage", false, url);
+        emitChange({ sanitize: true });
+      }
+    } catch (err) {
+      toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Unknown error" });
+    }
   }
 
   return (
@@ -102,6 +122,73 @@ export function RichTextEditor({
             disabled={disabled}
           >
             <Underline className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+            onClick={() => exec2("formatBlock", "h2")}
+            onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
+          >
+            <Heading2 className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+            onClick={() => exec2("insertUnorderedList")}
+            onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+            onClick={() => exec2("insertOrderedList")}
+            onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
+          >
+            <ListOrdered className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+            onClick={() => {
+              if (disabled) return;
+              const href = prompt("Paste a link (https://...)");
+              if (!href) return;
+              exec2("createLink", href.trim());
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled}
+          >
+            <Link2 className="h-4 w-4" />
+          </Button>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              void onPickImage(file);
+              if (imageInputRef.current) imageInputRef.current.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-8 rounded-md border-2 border-black bg-transparent px-2 text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+            onClick={() => imageInputRef.current?.click()}
+            onMouseDown={(e) => e.preventDefault()}
+            disabled={disabled || !env.cloudinaryConfigured}
+          >
+            <ImageIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>

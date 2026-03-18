@@ -81,9 +81,12 @@ export function TeacherTemplateForm({
 
     setThumbnailUploading(true);
     try {
+      const token = await getSupabaseAccessToken();
+      if (!token) throw new Error("Tutor session expired. Please sign in again.");
       const sigRes = await fetch("/api/cloudinary/signature", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ folder: "edumax/templates/previews" }),
       });
       const sigData = (await sigRes.json().catch(() => ({}))) as {
@@ -135,9 +138,11 @@ export function TeacherTemplateForm({
 
     setFileUploading(true);
     try {
+      const token = await getSupabaseAccessToken();
+      if (!token) throw new Error("Tutor session expired. Please sign in again.");
       const sigRes = await fetch("/api/cloudinary/signature", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ folder: "edumax/templates/files" }),
       });
       const sigData = (await sigRes.json().catch(() => ({}))) as {

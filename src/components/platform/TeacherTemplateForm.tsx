@@ -85,7 +85,6 @@ export function TeacherTemplateForm({
       if (!token) throw new Error("Tutor session expired. Please sign in again.");
       const sigRes = await fetch("/api/cloudinary/signature", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ folder: "edumax/templates/previews" }),
       });

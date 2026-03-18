@@ -25,7 +25,8 @@ export async function POST(req: Request) {
     const form = await req.formData();
     const file = form.get("file");
     const folderRaw = form.get("folder");
-    const folder = typeof folderRaw === "string" && folderRaw.trim() ? folderRaw.trim() : env.cloudinary.uploadFolder;
+    const requestedFolder = typeof folderRaw === "string" && folderRaw.trim() ? folderRaw.trim() : env.cloudinary.uploadFolder;
+    const folder = requestedFolder.startsWith("edumax/") ? requestedFolder : env.cloudinary.uploadFolder;
     if (!(file instanceof Blob)) return NextResponse.json({ error: "Missing file" }, { status: 400 });
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -54,4 +55,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

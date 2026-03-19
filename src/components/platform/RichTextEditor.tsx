@@ -7,7 +7,13 @@ import { richDocToHtml, sanitizeRichHtml } from "@/lib/platform/richText";
 import type { RichTextContent } from "@/lib/platform/types";
 import { getSupabaseAccessToken } from "@/lib/platform/supabaseBrowser";
 import { Bold, Heading2, Image as ImageIcon, Italic, Link2, List, ListOrdered, Underline } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { MutableRefObject } from "react";
+
+export type RichTextEditorHandle = {
+  focus: () => void;
+  insertHtml: (html: string) => void;
+};
 
 export function RichTextEditor({
   value,
@@ -15,12 +21,14 @@ export function RichTextEditor({
   placeholder,
   minHeightClassName,
   disabled,
+  actionsRef,
 }: {
   value: RichTextContent;
   onChange: (next: { json: RichTextContent; text: string }) => void;
   placeholder?: string;
   minHeightClassName?: string;
   disabled?: boolean;
+  actionsRef?: MutableRefObject<RichTextEditorHandle | null>;
 }) {
   const env = getPlatformPublicEnv();
   const { toast } = useToast();
@@ -36,7 +44,7 @@ export function RichTextEditor({
     }
   }, [html]);
 
-  function emitChange({ sanitize }: { sanitize: boolean }) {
+  const emitChange = useCallback(({ sanitize }: { sanitize: boolean }) => {
     const el = editableRef.current;
     if (!el) return;
     const rawHtml = el.innerHTML || "";
@@ -44,7 +52,7 @@ export function RichTextEditor({
     if (sanitize && html !== rawHtml) el.innerHTML = html;
     const text = (el.innerText || "").replace(/\u00a0/g, " ").trim();
     onChange({ json: { type: "html", html } as unknown as RichTextContent, text });
-  }
+  }, [onChange]);
 
   function exec(cmd: "bold" | "italic" | "underline") {
     if (disabled) return;
@@ -59,6 +67,25 @@ export function RichTextEditor({
     document.execCommand(cmd, false, value);
     emitChange({ sanitize: false });
   }
+
+  useEffect(() => {
+    if (!actionsRef) return;
+    actionsRef.current = {
+      focus: () => {
+        editableRef.current?.focus();
+      },
+      insertHtml: (html) => {
+        if (disabled) return;
+        if (typeof document === "undefined") return;
+        editableRef.current?.focus();
+        document.execCommand("insertHTML", false, html);
+        emitChange({ sanitize: true });
+      },
+    };
+    return () => {
+      actionsRef.current = null;
+    };
+  }, [actionsRef, disabled, emitChange]);
 
   async function uploadClipboardImage(file: File) {
     if (!env.cloudinaryConfigured) {

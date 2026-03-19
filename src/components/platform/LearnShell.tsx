@@ -4,7 +4,6 @@ import { Logo } from "@/components/Logo";
 import { RoleToggle } from "@/components/platform/RoleToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getPlatformPublicEnv } from "@/lib/platform/env";
 import type { PlatformRole } from "@/lib/platform/session";
 import { cn } from "@/lib/utils";
 import { Moon, Search, Sun } from "lucide-react";
@@ -34,7 +33,6 @@ export function LearnShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryFromUrl = searchParams.get("q") ?? "";
-  const env = getPlatformPublicEnv();
 
   const [theme, setTheme] = useState<LearnTheme>("light");
   const [query, setQuery] = useState("");
@@ -64,8 +62,7 @@ export function LearnShell({
       router.push("/learn/subjects?section=primary");
       return;
     }
-    const preview = env.resourcesComingSoon ? "&preview=1" : "";
-    router.push(`/learn?q=${encodeURIComponent(q)}${preview}`);
+    router.push(`/learn?q=${encodeURIComponent(q)}`);
   }
 
   return (

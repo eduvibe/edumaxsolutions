@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Laptop, Layout, GraduationCap, CalendarDays, ArrowRight } from "lucide-react";
 import { RequestDemoModal } from "@/components/RequestDemoModal";
 import { FloatingDecor } from "@/components/FloatingDecor";
-import { FloatingIcons } from "@/components/FloatingIcons";
 import { ParallaxWrapper } from "@/components/ParallaxWrapper";
 
 
@@ -15,47 +14,46 @@ export function HeroSection() {
       icon: <Laptop className="h-6 w-6 text-white" />,
       title: "Offline CBT & LMS Installations",
       description: "Robust computer-based testing and learning management for seamless education.",
-      color: "bg-primary",
+      color: "bg-foreground",
       link: "/#solutions"
     },
     {
       icon: <Layout className="h-6 w-6 text-white" />,
       title: "Modern & Sleek Website",
       description: "Responsive, modern school websites that represent your brand excellence.",
-      color: "bg-accent",
+      color: "bg-foreground/80",
       link: "/#solutions"
     },
     {
       icon: <GraduationCap className="h-6 w-6 text-white" />,
       title: "School Portal",
       description: "Comprehensive management portal for students, staff, and parents.",
-      color: "bg-blue-500",
+      color: "bg-foreground/65",
       link: "/#solutions"
     },
     {
       icon: <CalendarDays className="h-6 w-6 text-white" />,
       title: "Academics Planning",
       description: "Expert consulting by a certified Educational Administrator to optimize your curriculum and school strategy.",
-      color: "bg-green-500",
+      color: "bg-foreground/50",
       link: "/#solutions"
     }
   ];
 
   return (
-    <section className="relative pt-20 md:pt-32 bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden">
+    <section className="relative pt-20 md:pt-32 bg-gradient-to-br from-foreground/5 via-background to-background overflow-hidden">
        {/* Background Parallax Layer (Slower) */}
        <ParallaxWrapper 
           offset={100} 
           className="absolute inset-0 overflow-hidden pointer-events-none z-0"
         >
           <FloatingDecor />
-          <FloatingIcons />
           <div
              aria-hidden="true"
-            className="absolute inset-0 grid grid-cols-2 -space-x-52 opacity-20 dark:opacity-10"
+            className="absolute inset-0 grid grid-cols-2 -space-x-52 opacity-10 dark:opacity-5"
           >
-            <div className="blur-[106px] h-56 bg-gradient-to-br from-primary to-[hsl(330,100%,85%)] dark:from-primary"></div>
-            <div className="blur-[106px] h-32 bg-gradient-to-r from-accent to-[hsl(0,72%,85%)] dark:from-accent"></div>
+            <div className="blur-[106px] h-56 bg-gradient-to-br from-foreground/30 to-foreground/10"></div>
+            <div className="blur-[106px] h-32 bg-gradient-to-r from-foreground/20 to-foreground/5"></div>
           </div>
        </ParallaxWrapper>
 
@@ -63,13 +61,13 @@ export function HeroSection() {
         <div className="grid md:grid-cols-2 gap-12 items-center mb-12">
           <ParallaxWrapper offset={-30} className="space-y-6 text-center md:text-left animate-in fade-in slide-in-from-bottom-10 duration-1000 ease-out">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground">
-              <span className="text-primary">Best CBT</span> & <span className="text-primary">School Portal</span> Software in Nigeria
+              <span className="text-foreground">Best CBT</span> & <span className="text-foreground">School Portal</span> Software in Nigeria
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground">
               EduMax Solutions provides the most <strong>affordable LMS</strong> and comprehensive <strong>School Portal</strong>. Trusted by top software providers in Nigeria for primary and secondary education.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Button asChild size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-lg transform hover:scale-[1.03] transition-all duration-300">
+              <Button asChild size="lg" className="bg-foreground hover:bg-foreground/80 text-background shadow-lg transform hover:scale-[1.03] transition-all duration-300">
                 <Link href="/#solutions">
                   <span className="flex items-center gap-2">
                     Explore Solutions
@@ -78,7 +76,7 @@ export function HeroSection() {
                 </Link>
               </Button>
               <RequestDemoModal>
-                <Button size="lg" variant="outline" className="shadow-lg transform hover:scale-[1.03] transition-all duration-300 border-accent text-accent hover:bg-accent/10 hover:text-accent">
+                <Button size="lg" variant="outline" className="shadow-lg transform hover:scale-[1.03] transition-all duration-300 border-foreground/30 text-foreground hover:bg-foreground/5 hover:text-foreground">
                   <span className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5" />
                     Request a Demo
@@ -89,7 +87,7 @@ export function HeroSection() {
           </ParallaxWrapper>
           
           <ParallaxWrapper offset={-60} className="relative group animate-in fade-in zoom-in-95 duration-1000 ease-out delay-300">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-accent to-primary/50 rounded-lg blur opacity-40 group-hover:opacity-60 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-foreground/30 via-foreground/15 to-foreground/10 rounded-lg blur opacity-40 group-hover:opacity-60 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
             <div className="relative">
               <Image
                 src="/media/heroimage.png"
@@ -107,7 +105,7 @@ export function HeroSection() {
         {/* Resting Cards Section */}
         <div className="relative z-20 translate-y-6 md:translate-y-8">
           <div className="text-center mb-10">
-            <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary text-sm font-semibold tracking-wide uppercase">
+            <span className="inline-block py-1 px-3 rounded-full bg-foreground/8 text-foreground text-sm font-semibold tracking-wide uppercase border border-foreground/15">
               Our Services
             </span>
           </div>

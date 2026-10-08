@@ -164,7 +164,7 @@ export default async function LearnPage({ searchParams }: PageProps) {
                     <Link
                       key={s.id}
                       href={`/learn/subjects/${s.slug}`}
-                      className="rounded-2xl border border-blue-500/35 bg-transparent px-4 py-3 transition-colors hover:bg-blue-500/5 hover:border-blue-500/55 dark:border-blue-400/30 dark:hover:bg-blue-400/10 dark:hover:border-blue-400/55"
+                      className="rounded-2xl border border-foreground/20 bg-transparent px-4 py-3 transition-colors hover:bg-foreground/5 hover:border-foreground/35 dark:border-foreground/20 dark:hover:bg-foreground/10 dark:hover:border-foreground/35"
                     >
                       <div className="text-sm font-semibold tracking-tight">{s.name}</div>
                       <div className="text-xs text-black/60 dark:text-white/60">{topicCounts[s.slug] ?? 0} topics</div>

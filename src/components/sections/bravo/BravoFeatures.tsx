@@ -1,100 +1,71 @@
-import {
-  Clock,
-  BookOpen,
-  BarChart3,
-  BookMarked,
-  Search,
-  Wifi,
-  ListChecks,
-  Zap,
-} from "lucide-react";
-
-const features = [
+const capabilities = [
   {
-    icon: BookOpen,
-    title: "JAMB & WAEC Past Questions",
-    description:
-      "Complete question bank covering JAMB UTME and WAEC SSCE from 2015 to the current edition — thousands of verified questions across all subjects.",
+    number: "01",
+    title: "Mock exams that mirror the real CBT",
+    body: "Full timed papers with a countdown, question palette, flag-for-review, and auto-submit. The same pressure, the same format — before the exam hall.",
   },
   {
-    icon: Clock,
-    title: "Full Mock Exams",
-    description:
-      "Timed, full-paper simulations with a live countdown timer, question palette, flag-for-review, and auto-submit when time expires — just like the real CBT.",
+    number: "02",
+    title: "Practice mode with instant explanations",
+    body: "Work through questions one at a time. Every wrong answer shows the correct option and why — so students understand, not just memorise.",
   },
   {
-    icon: Zap,
-    title: "Practice Mode",
-    description:
-      "Answer questions one at a time and get instant feedback with detailed explanations after each answer — ideal for targeted learning.",
+    number: "03",
+    title: "Past questions from 2015 to 2026",
+    body: "Over 56 000 verified JAMB UTME and WAEC SSCE questions organised by year and subject. Filter to a single year or drill the full bank.",
   },
   {
-    icon: Search,
-    title: "Browse by Year & Subject",
-    description:
-      "Filter and drill any past question paper by specific year and subject. Study exactly what you need, when you need it.",
+    number: "04",
+    title: "Score ring and UTME /400 projection",
+    body: "After every session a score ring shows subject-by-subject performance and projects a UTME total out of 400 — students see exactly where they stand.",
   },
   {
-    icon: BarChart3,
-    title: "Result Analytics",
-    description:
-      "After every session see a score ring, per-subject breakdown, and a UTME /400 projection so students always know where they stand.",
+    number: "05",
+    title: "Automatic wrong-answer notebook",
+    body: "Every question answered incorrectly is silently saved. Students revisit a focused revision list without having to note anything themselves.",
   },
   {
-    icon: BookMarked,
-    title: "Wrong-Answer Notebook",
-    description:
-      "Every question answered incorrectly is automatically saved into a personal notebook for focused revision — zero manual effort.",
-  },
-  {
-    icon: ListChecks,
-    title: "Subject Selection & Shuffle",
-    description:
-      "Pick exactly the four UTME subjects you're sitting. Shuffle questions or answers to prevent pattern memorisation.",
-  },
-  {
-    icon: Wifi,
-    title: "Works 100% Offline",
-    description:
-      "Download once, activate once. After that, every exam, every result, every notebook entry stays entirely on-device — no data, no Wi-Fi, no surprises.",
+    number: "06",
+    title: "One activation. Zero ongoing internet.",
+    body: "Install, activate once, and the app is yours. Exams, results, and the notebook stay on the device — no data, no Wi-Fi, no subscription.",
   },
 ];
 
 export function BravoFeatures() {
   return (
-    <section id="features" className="py-16 md:py-24 bg-muted/40">
+    <section id="features" className="py-20 md:py-28 bg-background">
       <div className="container mx-auto px-4 md:px-6">
-        {/* Header */}
-        <div className="text-center mb-14 animate-in fade-in slide-in-from-top-8 duration-700 ease-out">
-          <span className="inline-block py-1 px-3 rounded-full bg-foreground/8 text-foreground text-sm font-semibold tracking-wide uppercase border border-foreground/15 mb-4">
-            Everything You Need
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-            Built for serious exam prep
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Every feature in Bravo CBT is designed around one goal — getting Nigerian students ready to score high on JAMB and WAEC.
+
+        {/* Section label + headline — left-aligned, not centred */}
+        <div className="max-w-xl mb-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-4">
+            What it does
           </p>
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+            Everything a student needs.<br />Nothing they don't.
+          </h2>
         </div>
 
-        {/* Feature grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
+        {/* Two-column numbered list — no cards, just typography and line */}
+        <div className="grid md:grid-cols-2 gap-x-16 gap-y-0">
+          {capabilities.map((item, i) => (
             <div
-              key={feature.title}
-              className="group relative bg-card rounded-2xl border border-border/60 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 ease-in-out animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out"
-              style={{ animationDelay: `${index * 75}ms` }}
+              key={item.number}
+              className="group flex gap-6 py-8 border-t border-border/60 animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out"
+              style={{ animationDelay: `${i * 80}ms` }}
             >
-              {/* Icon */}
-              <div className="mb-4 inline-flex items-center justify-center h-11 w-11 rounded-xl bg-foreground/6 border border-foreground/10 group-hover:bg-foreground group-hover:text-background transition-colors duration-300">
-                <feature.icon className="h-5 w-5 text-foreground group-hover:text-background transition-colors duration-300" />
+              {/* Number — large, light, decorative */}
+              <span className="text-[2.5rem] font-extrabold text-foreground/10 leading-none tabular-nums select-none shrink-0 mt-0.5 group-hover:text-foreground/20 transition-colors duration-300">
+                {item.number}
+              </span>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-foreground leading-snug">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {item.body}
+                </p>
               </div>
-              <h3 className="text-base font-bold text-foreground mb-2 leading-snug">
-                {feature.title}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {feature.description}
-              </p>
             </div>
           ))}
         </div>

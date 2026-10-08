@@ -1,64 +1,54 @@
 import Image from "next/image";
-import { GraduationCap, Users, Award } from "lucide-react";
 
-const stats = [
+const points = [
   {
-    icon: GraduationCap,
-    value: "JAMB & WAEC",
-    label: "Fully covered",
+    title: "JAMB & WAEC",
+    body: "Full past question coverage for both exams — every subject, every year in the bank.",
   },
   {
-    icon: Users,
-    value: "Students",
-    label: "Across Nigeria",
+    title: "Works offline",
+    body: "No data. No Wi-Fi. No subscription. The app and all its content live entirely on the student's device.",
   },
   {
-    icon: Award,
-    value: "2015–2026",
-    label: "Question bank",
+    title: "Exam-day format",
+    body: "The interface mirrors what students see in the real JAMB hall — so there are no surprises when it counts.",
   },
 ];
 
 export function BravoSocialProof() {
   return (
-    <section className="relative py-0 bg-foreground overflow-hidden">
-      <div className="grid md:grid-cols-2 min-h-[340px]">
-        {/* Left — photo */}
+    <section className="relative bg-foreground overflow-hidden">
+      <div className="grid md:grid-cols-2 min-h-[380px]">
+
+        {/* Left — photo, no overlay icons or cards */}
         <div className="relative h-64 md:h-auto overflow-hidden">
           <Image
             src="/media/bravo-students.jpg"
             alt="Nigerian students sitting a computer-based exam"
             fill
             className="object-cover object-center"
-            data-ai-hint="students taking CBT exam"
           />
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-foreground/50" />
-          {/* Caption over image */}
+          <div className="absolute inset-0 bg-foreground/45" />
           <div className="absolute bottom-6 left-6 right-6">
-            <p className="text-sm font-medium text-background/80 italic leading-snug">
-              &ldquo;The same CBT experience Nigerian students face in the exam hall — practised at home, offline.&rdquo;
+            <p className="text-sm text-background/75 italic leading-snug">
+              &ldquo;The same pressure. The same format. Practised at home, before it matters.&rdquo;
             </p>
           </div>
         </div>
 
-        {/* Right — stats + copy */}
-        <div className="flex flex-col justify-center px-8 md:px-12 py-12 bg-foreground">
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-background leading-snug mb-6">
-            Designed around how<br />Nigerian students actually sit exams.
+        {/* Right — headline + plain text points, no icons, no cards */}
+        <div className="flex flex-col justify-center px-8 md:px-14 py-14">
+          <h2 className="text-2xl md:text-[1.85rem] font-extrabold tracking-tight text-background leading-tight mb-8">
+            Designed around how<br />
+            Nigerian students actually<br />
+            sit exams.
           </h2>
-          <p className="text-background/65 text-base leading-relaxed mb-8 max-w-md">
-            Bravo CBT mirrors the real JAMB CBT interface — timer, question palette, subject tabs, and all. Students who practise with Bravo arrive at the exam hall already comfortable with the format.
-          </p>
 
-          <div className="grid grid-cols-3 gap-4">
-            {stats.map(({ icon: Icon, value, label }) => (
-              <div key={label} className="text-center">
-                <div className="inline-flex items-center justify-center h-10 w-10 rounded-xl bg-background/10 border border-background/15 mb-3 mx-auto">
-                  <Icon className="h-5 w-5 text-background/70" />
-                </div>
-                <div className="text-base font-extrabold text-background leading-none">{value}</div>
-                <div className="text-xs text-background/50 mt-1">{label}</div>
+          <div className="space-y-6">
+            {points.map((pt) => (
+              <div key={pt.title} className="border-t border-background/15 pt-5">
+                <p className="text-sm font-bold text-background mb-1">{pt.title}</p>
+                <p className="text-sm text-background/60 leading-relaxed">{pt.body}</p>
               </div>
             ))}
           </div>

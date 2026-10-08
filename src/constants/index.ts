@@ -2,6 +2,7 @@
 export const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/#solutions", label: "Solutions" },
+  { href: "/bravo", label: "Bravo CBT" },
   // LMS and Management Software are detailed within the Solutions section or discoverable by scrolling.
   // FAQ is also discoverable by scrolling.
   { href: "/learn", label: "Resources" },

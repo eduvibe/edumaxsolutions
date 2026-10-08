@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -41,27 +40,14 @@ const PLANS = [
   {
     id: "renewal",
     kind: "renewal",
-    label: "Edition Renewal",
+    label: "Renewal",
     price: 3000,
     priceDisplay: "₦3,000",
-    description: "Already activated on this device — renew to the latest edition.",
+    description: "Already have Bravo CBT — renew to the latest edition or install on another device in the same household.",
     includes: [
       "Updated question bank",
       "All features continue",
       "History and notebook kept",
-    ],
-  },
-  {
-    id: "family",
-    kind: "family",
-    label: "Family Install",
-    price: 3000,
-    priceDisplay: "₦3,000",
-    description: "A family member installing on their own device — ₦1,000 less than a new activation.",
-    includes: [
-      "Full question bank on a new device",
-      "Separate profile and history",
-      "All features included",
     ],
   },
 ] as const;
@@ -136,7 +122,6 @@ function BankRow({
 export default function BravoActivatePage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("first");
   const [productId, setProductId] = useState("");
-  const [activationKey, setActivationKey] = useState("");
 
   const plan = PLANS.find((p) => p.id === selectedPlan)!;
 
@@ -399,51 +384,6 @@ export default function BravoActivatePage() {
                 <p className="text-center text-xs text-muted-foreground">
                   Paystack card &amp; transfer payment launches soon.
                 </p>
-              </div>
-            </div>
-
-            {/* Activation key */}
-            <div className="rounded-2xl border border-border bg-card p-6 space-y-4 shadow-sm">
-              <div>
-                <h2 className="text-base font-bold text-foreground">Already have a key?</h2>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Paste it below to keep it safe, then open Bravo CBT → <strong>Product → Activate</strong> and paste it there. The app unlocks instantly — no internet needed.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="activation-key" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                  Activation Key
-                </Label>
-                <Textarea
-                  id="activation-key"
-                  placeholder="Paste your activation key here (Ctrl+V)"
-                  value={activationKey}
-                  onChange={(e) => setActivationKey(e.target.value.trim())}
-                  className="font-mono text-sm resize-none h-24 tracking-wide"
-                  spellCheck={false}
-                />
-              </div>
-
-              {activationKey && (
-                <div className="flex gap-2">
-                  <CopyButton value={activationKey} className="flex-1 justify-center" />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setActivationKey("")}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )}
-
-              <div className="flex items-start gap-3 rounded-lg bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
-                <Info className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>
-                  Activation happens inside the desktop app, not on this website. Copy the key, open Bravo CBT, and paste it in the activation screen.
-                </span>
               </div>
             </div>
 

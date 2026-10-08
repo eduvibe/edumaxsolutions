@@ -14,15 +14,16 @@ Defined in `data/store-config.json`:
 
 | Type | Price | When |
 |---|---|---|
-| First activation | ₦4,000 | New device, never activated |
-| Renewal / Family install | ₦3,000 | Edition renewal on same device, OR a family member installing on their own PC |
+| New activation | ₦4,000 | First time on any device |
+| Renewal | ₦3,000 | Edition renewal on same device, OR installing on another device in the same household |
 
-The `/bravo/activate` pay page must offer three options:
-1. **New activation** — ₦4,000
-2. **Edition renewal** (existing customer, same device) — ₦3,000
-3. **Family member's new install** — ₦3,000
+The `/bravo/activate` page offers two plans:
+1. **New Activation** — ₦4,000 (first install on a new device)
+2. **Renewal** — ₦3,000 (existing customer renewing edition, or same household second device)
 
-The `POST /api/orders` endpoint uses a `kind` field to distinguish these and charge accordingly.
+There is no separate "Family Install" plan — Renewal at ₦3,000 covers both cases.
+
+The `POST /api/orders` endpoint uses a `kind` field: `"new"` or `"renewal"`.
 
 Manual key generation (bank transfer orders):
 ```bash
@@ -136,4 +137,3 @@ curl -X POST https://edumaxsolutions.ng/api/mock/create \
 - [ ] Upload initial installer + `version.json` to `/updates/`
 - [ ] Enable the "Pay Online" button on `/bravo/activate` (currently disabled — Paystack not yet wired)
 - [ ] Enable the "Download App" button on `/bravo` hero and CTA (currently disabled — awaiting final build)
-- [ ] Add the third plan option ("Family member's new install" at ₦3,000) to the activate page

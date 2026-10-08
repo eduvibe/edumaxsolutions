@@ -13,47 +13,62 @@ import {
   Copy,
   Check,
   ArrowLeft,
-  WifiOff,
   CreditCard,
   Building2,
   MessageCircle,
   Mail,
   Info,
-  ChevronRight,
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Plans — matches data/store-config.json priceNaira / renewalPriceNaira ────
 
 const PLANS = [
   {
     id: "first",
-    label: "First Activation",
+    kind: "new",
+    label: "New Activation",
     price: 4000,
     priceDisplay: "₦4,000",
-    description: "New device — unlock all questions and features for the first time.",
+    description: "First time on this device — unlocks all questions and features.",
     includes: [
-      "Questions 2015 to 2026",
-      "JAMB and WAEC simulation",
-      "Scores, analysis and notebook",
+      "All past questions (JAMB & WAEC)",
+      "Mock exams, practice mode and analytics",
+      "Wrong-answer notebook",
     ],
   },
   {
     id: "renewal",
-    label: "Renewal",
+    kind: "renewal",
+    label: "Edition Renewal",
     price: 3000,
     priceDisplay: "₦3,000",
-    description: "Already activated on this device? Renew to the latest edition for ₦1,000 less.",
+    description: "Already activated on this device — renew to the latest edition.",
     includes: [
-      "Questions 2015 to 2026 (updated)",
-      "JAMB and WAEC simulation",
-      "Scores, analysis and notebook kept",
+      "Updated question bank",
+      "All features continue",
+      "History and notebook kept",
+    ],
+  },
+  {
+    id: "family",
+    kind: "family",
+    label: "Family Install",
+    price: 3000,
+    priceDisplay: "₦3,000",
+    description: "A family member installing on their own device — ₦1,000 less than a new activation.",
+    includes: [
+      "Full question bank on a new device",
+      "Separate profile and history",
+      "All features included",
     ],
   },
 ] as const;
 
 type PlanId = (typeof PLANS)[number]["id"];
+
+// ─── Bank details ──────────────────────────────────────────────────────────────
 
 const BANK = {
   name: "Kuda MFB",
@@ -62,14 +77,14 @@ const BANK = {
 };
 
 const STEPS = [
-  "Transfer the exact amount to the account above (bank app, USSD, agent or counter).",
+  "Transfer the exact amount to the account above — bank app, USSD, agent or counter.",
   "Use your Product ID as the narration or reference of the transfer.",
   "Send the receipt screenshot with your Product ID to WhatsApp +234 806 781 9642 or email edumaxsolutions.ng@gmail.com.",
   "Once we confirm the payment your activation key is sent to the same WhatsApp number or email, usually within minutes (9am to 7pm daily).",
-  "Paste the key into the activation box in the app and press Activate. The app unlocks immediately — no website needed.",
+  "Open Bravo CBT, go to Product → Activate, paste the key and press Activate. The app unlocks immediately.",
 ];
 
-// ─── Copy button helper ────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function CopyButton({ value, className }: { value: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -86,13 +101,11 @@ function CopyButton({ value, className }: { value: string; className?: string })
         className
       )}
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-foreground" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? "Copied" : "Copy"}
     </button>
   );
 }
-
-// ─── Bank detail row ───────────────────────────────────────────────────────────
 
 function BankRow({
   label,
@@ -118,7 +131,7 @@ function BankRow({
   );
 }
 
-// ─── Main page ─────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BravoActivatePage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("first");
@@ -129,6 +142,7 @@ export default function BravoActivatePage() {
 
   return (
     <div className="min-h-screen bg-background">
+
       {/* ── Page header ── */}
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
@@ -146,9 +160,7 @@ export default function BravoActivatePage() {
               <div className="text-sm font-extrabold tracking-tight text-foreground leading-none">
                 Bravo CBT
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                Offline exam simulator
-              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">Offline exam simulator</div>
             </div>
           </div>
           <Link
@@ -164,54 +176,59 @@ export default function BravoActivatePage() {
       <div className="container mx-auto px-4 md:px-6 py-10 md:py-14">
         <div className="grid lg:grid-cols-2 gap-10 xl:gap-16 items-start max-w-5xl mx-auto">
 
-          {/* ── LEFT COLUMN — plan + bank transfer ── */}
-          <div className="space-y-6">
+          {/* ── LEFT — plan selector + payment ── */}
+          <div className="space-y-7">
 
-            {/* Plan selector */}
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mb-1">
-                Activate Bravo CBT
+                Get Bravo CBT
               </h1>
               <p className="text-sm text-muted-foreground">
-                Choose a plan, transfer payment, then paste your key.
+                Choose the plan that applies to you, pay by bank transfer, and receive your activation key.
               </p>
             </div>
 
-            <div className="space-y-3">
+            {/* Plan selector — 3 options stacked for clarity */}
+            <div className="space-y-2.5">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                Plan
+                Select plan
               </Label>
-              <div className="grid grid-cols-2 gap-3">
-                {PLANS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedPlan(p.id)}
-                    className={cn(
-                      "rounded-xl border p-4 text-left transition-all duration-150",
-                      selectedPlan === p.id
-                        ? "border-foreground bg-foreground text-background shadow-md"
-                        : "border-border bg-card text-foreground hover:border-foreground/40"
-                    )}
-                  >
-                    <div className="text-lg font-extrabold leading-none">{p.priceDisplay}</div>
+              {PLANS.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPlan(p.id)}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-all duration-150 flex items-start justify-between gap-4",
+                    selectedPlan === p.id
+                      ? "border-foreground bg-foreground shadow-md"
+                      : "border-border bg-card hover:border-foreground/35"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
                     <div className={cn(
-                      "text-xs font-semibold mt-1",
-                      selectedPlan === p.id ? "text-background/80" : "text-foreground"
+                      "text-sm font-bold leading-none mb-1",
+                      selectedPlan === p.id ? "text-background" : "text-foreground"
                     )}>
                       {p.label}
                     </div>
                     <div className={cn(
-                      "text-xs mt-2 leading-snug",
+                      "text-xs leading-snug",
                       selectedPlan === p.id ? "text-background/60" : "text-muted-foreground"
                     )}>
                       {p.description}
                     </div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                  <div className={cn(
+                    "text-lg font-extrabold tabular-nums shrink-0",
+                    selectedPlan === p.id ? "text-background" : "text-foreground"
+                  )}>
+                    {p.priceDisplay}
+                  </div>
+                </button>
+              ))}
             </div>
 
-            {/* Product ID input */}
+            {/* Product ID */}
             <div className="space-y-2">
               <Label htmlFor="product-id" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 Your Product ID
@@ -222,42 +239,43 @@ export default function BravoActivatePage() {
                   placeholder="e.g. BCBT-YDR9-G5WQ-0860"
                   value={productId}
                   onChange={(e) => setProductId(e.target.value.toUpperCase())}
-                  className="font-mono tracking-widest text-sm uppercase"
+                  className="font-mono tracking-widest text-sm"
                   spellCheck={false}
                 />
                 {productId && <CopyButton value={productId} />}
               </div>
               <p className="text-xs text-muted-foreground">
-                Find this inside Bravo CBT under <strong>Product → Activate</strong>. Use it as the transfer narration.
+                Open Bravo CBT → <strong>Product → Activate</strong> to find your ID. Use it as the bank transfer narration.
               </p>
             </div>
 
             <Separator />
 
-            {/* Payment method tabs */}
-            <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 block">
-                How to pay
+            {/* Payment tabs */}
+            <div className="space-y-3">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                Payment method
               </Label>
               <Tabs defaultValue="bank">
-                <TabsList className="w-full grid grid-cols-2 mb-4">
-                  <TabsTrigger value="bank" className="gap-2">
+                <TabsList className="w-full grid grid-cols-2 mb-5">
+                  <TabsTrigger value="bank" className="gap-1.5">
                     <Building2 className="h-4 w-4" />
                     Bank Transfer
                   </TabsTrigger>
-                  <TabsTrigger value="online" disabled className="gap-2 opacity-50">
+                  <TabsTrigger value="online" disabled className="gap-1.5 opacity-50">
                     <CreditCard className="h-4 w-4" />
                     Pay Online
-                    <span className="ml-1 rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                    <span className="ml-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
                       Soon
                     </span>
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="bank" className="space-y-4">
-                  {/* Bank detail card */}
+
+                  {/* Bank detail block */}
                   <div className="rounded-xl border border-border bg-card overflow-hidden">
-                    <div className="px-4 py-2 bg-muted/60 border-b border-border">
+                    <div className="px-4 py-2 bg-muted/50 border-b border-border">
                       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         Transfer to
                       </span>
@@ -268,69 +286,52 @@ export default function BravoActivatePage() {
                       <BankRow label="Account Name" value={BANK.accountName} bold />
                       <BankRow label="Amount" value={plan.priceDisplay} bold />
                       {productId && (
-                        <BankRow
-                          label="Narration (Product ID)"
-                          value={productId}
-                          copyable
-                          bold
-                        />
+                        <BankRow label="Narration" value={productId} copyable bold />
                       )}
                     </div>
                   </div>
 
-                  {/* Step-by-step */}
-                  <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Steps
-                    </span>
-                    <ol className="space-y-3 mt-2">
-                      {STEPS.map((step, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-foreground/80 leading-relaxed">
-                          <span className="flex-shrink-0 mt-0.5 h-5 w-5 rounded-full bg-foreground text-background flex items-center justify-center text-[11px] font-bold">
-                            {i + 1}
-                          </span>
-                          <span
-                            dangerouslySetInnerHTML={{
-                              __html: step
-                                .replace(
-                                  "+234 806 781 9642",
-                                  '<a href="https://wa.me/2348067819642" class="underline underline-offset-2 hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">+234 806 781 9642</a>'
-                                )
-                                .replace(
-                                  "edumaxsolutions.ng@gmail.com",
-                                  '<a href="mailto:edumaxsolutions.ng@gmail.com" class="underline underline-offset-2 hover:text-foreground transition-colors">edumaxsolutions.ng@gmail.com</a>'
-                                ),
-                            }}
-                          />
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
+                  {/* Steps */}
+                  <ol className="space-y-3">
+                    {STEPS.map((step, i) => (
+                      <li key={i} className="flex gap-3 text-sm text-foreground/75 leading-relaxed">
+                        <span className="flex-shrink-0 mt-0.5 h-5 w-5 rounded-full bg-foreground text-background flex items-center justify-center text-[11px] font-bold">
+                          {i + 1}
+                        </span>
+                        <span
+                          dangerouslySetInnerHTML={{
+                            __html: step
+                              .replace(
+                                "+234 806 781 9642",
+                                '<a href="https://wa.me/2348067819642" class="underline underline-offset-2 hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">+234 806 781 9642</a>'
+                              )
+                              .replace(
+                                "edumaxsolutions.ng@gmail.com",
+                                '<a href="mailto:edumaxsolutions.ng@gmail.com" class="underline underline-offset-2 hover:text-foreground transition-colors">edumaxsolutions.ng@gmail.com</a>'
+                              ),
+                          }}
+                        />
+                      </li>
+                    ))}
+                  </ol>
 
-                  {/* Confirmation button */}
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className="w-full border-foreground/30 hover:bg-foreground/5 gap-2"
+                  {/* WhatsApp confirm */}
+                  <a
+                    href="https://wa.me/2348067819642"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full rounded-xl border border-foreground/25 text-foreground bg-transparent hover:bg-foreground/5 px-4 py-3 text-sm font-medium transition-colors"
                   >
-                    <a
-                      href="https://wa.me/2348067819642"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                      I've completed the transfer — WhatsApp us
-                    </a>
-                  </Button>
+                    <MessageCircle className="h-4 w-4" />
+                    I&apos;ve completed the transfer — WhatsApp us
+                  </a>
 
-                  {/* Info notice */}
-                  <div className="flex gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                  {/* Notice */}
+                  <div className="flex gap-3 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
                     <Info className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>
-                      Bank transfer is ready now. Online card payment (Paystack) is coming soon.
-                      After your transfer the activation key is sent to your WhatsApp or email,
-                      usually within minutes{" "}
+                      Bank transfer is live now. Card and online payment via Paystack is coming
+                      soon. Keys are sent within minutes of confirmation —{" "}
                       <span className="inline-flex items-center gap-1 font-medium text-foreground">
                         <Clock className="h-3.5 w-3.5" />
                         9am – 7pm daily
@@ -343,28 +344,25 @@ export default function BravoActivatePage() {
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN — order summary + activation key input ── */}
+          {/* ── RIGHT — order summary + activation key ── */}
           <div className="space-y-6 lg:sticky lg:top-28">
 
             {/* Order summary */}
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
               <div className="px-6 py-5 border-b border-border">
-                <div className="flex items-center gap-2 mb-1">
-                  <WifiOff className="h-4 w-4 text-foreground/50" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Order Summary
-                  </span>
-                </div>
-                <div className="text-xl font-extrabold text-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                  Order Summary
+                </p>
+                <p className="text-xl font-extrabold text-foreground">
                   {plan.label} — {plan.priceDisplay}
-                </div>
+                </p>
               </div>
 
               <div className="px-6 py-4 space-y-3">
                 {plan.includes.map((item) => (
-                  <div key={item} className="flex items-center justify-between text-sm">
-                    <span className="text-foreground/80">{item}</span>
-                    <span className="text-xs font-semibold text-foreground bg-foreground/8 border border-foreground/10 rounded-full px-2 py-0.5">
+                  <div key={item} className="flex items-center justify-between text-sm gap-3">
+                    <span className="text-foreground/75">{item}</span>
+                    <span className="text-xs font-semibold text-foreground border border-foreground/15 rounded-full px-2 py-0.5 shrink-0">
                       Included
                     </span>
                   </div>
@@ -373,51 +371,43 @@ export default function BravoActivatePage() {
 
               <Separator />
 
-              <div className="px-6 py-4 space-y-2">
-                <div className="flex justify-between text-sm">
+              <div className="px-6 py-4 space-y-2 text-sm">
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="font-medium">{plan.priceDisplay}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Tax</span>
                   <span className="font-medium">₦0</span>
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-foreground/4 border-t border-border">
-                <div className="flex justify-between items-center">
-                  <span className="text-base font-bold text-foreground">Due today</span>
-                  <span className="text-2xl font-extrabold text-foreground">
-                    {plan.priceDisplay}
-                  </span>
-                </div>
+              <div className="px-6 py-4 bg-foreground/[0.03] border-t border-border flex justify-between items-center">
+                <span className="text-base font-bold text-foreground">Due today</span>
+                <span className="text-2xl font-extrabold text-foreground">{plan.priceDisplay}</span>
               </div>
 
-              {/* Activate CTA — Paystack placeholder */}
-              <div className="px-6 pb-6 pt-4 space-y-3">
+              <div className="px-6 pb-6 pt-3 space-y-2.5">
                 <Button
                   size="lg"
                   disabled
-                  className="w-full bg-foreground text-background hover:bg-foreground/90 font-bold opacity-50 cursor-not-allowed gap-2"
+                  className="w-full bg-foreground text-background opacity-40 cursor-not-allowed"
                 >
-                  <CreditCard className="h-5 w-5" />
+                  <CreditCard className="h-4 w-4 mr-2" />
                   Pay Online — Coming Soon
                 </Button>
                 <p className="text-center text-xs text-muted-foreground">
-                  Online payment via Paystack launches soon. Use bank transfer above for now.
+                  Paystack card &amp; transfer payment launches soon.
                 </p>
               </div>
             </div>
 
-            {/* ── Activation key input ── */}
+            {/* Activation key */}
             <div className="rounded-2xl border border-border bg-card p-6 space-y-4 shadow-sm">
               <div>
-                <h2 className="text-base font-bold text-foreground">
-                  Already have a key?
-                </h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Paste your activation key below. Open Bravo CBT, go to{" "}
-                  <strong>Product → Activate</strong>, and paste it there to unlock the app instantly.
+                <h2 className="text-base font-bold text-foreground">Already have a key?</h2>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Paste it below to keep it safe, then open Bravo CBT → <strong>Product → Activate</strong> and paste it there. The app unlocks instantly — no internet needed.
                 </p>
               </div>
 
@@ -427,7 +417,7 @@ export default function BravoActivatePage() {
                 </Label>
                 <Textarea
                   id="activation-key"
-                  placeholder="Paste the activation key here (Ctrl+V)"
+                  placeholder="Paste your activation key here (Ctrl+V)"
                   value={activationKey}
                   onChange={(e) => setActivationKey(e.target.value.trim())}
                   className="font-mono text-sm resize-none h-24 tracking-wide"
@@ -441,7 +431,7 @@ export default function BravoActivatePage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 gap-2"
+                    className="flex-1"
                     onClick={() => setActivationKey("")}
                   >
                     Clear
@@ -449,31 +439,31 @@ export default function BravoActivatePage() {
                 </div>
               )}
 
-              <div className="flex items-start gap-3 rounded-xl bg-muted/50 border border-border p-3 text-xs text-muted-foreground">
+              <div className="flex items-start gap-3 rounded-lg bg-muted/40 border border-border p-3 text-xs text-muted-foreground">
                 <Info className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>
-                  Activation happens <strong className="text-foreground">inside the desktop app</strong> — not on this website. Copy the key above, open Bravo CBT, and paste it in the activation screen.
+                  Activation happens inside the desktop app, not on this website. Copy the key, open Bravo CBT, and paste it in the activation screen.
                 </span>
               </div>
             </div>
 
-            {/* Contact strip */}
-            <div className="rounded-2xl border border-border bg-card p-5 flex flex-col sm:flex-row gap-3">
+            {/* Support */}
+            <div className="grid grid-cols-2 gap-3">
               <a
                 href="https://wa.me/2348067819642"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:bg-muted px-4 py-3 text-sm font-medium text-foreground transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card hover:bg-muted px-4 py-3 text-sm font-medium text-foreground transition-colors"
               >
                 <MessageCircle className="h-4 w-4" />
-                WhatsApp Support
+                WhatsApp
               </a>
               <a
                 href="mailto:edumaxsolutions.ng@gmail.com"
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:bg-muted px-4 py-3 text-sm font-medium text-foreground transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card hover:bg-muted px-4 py-3 text-sm font-medium text-foreground transition-colors"
               >
                 <Mail className="h-4 w-4" />
-                Email Support
+                Email
               </a>
             </div>
           </div>

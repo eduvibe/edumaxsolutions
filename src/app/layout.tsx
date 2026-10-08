@@ -21,6 +21,16 @@ export const metadata: Metadata = {
     default: 'EduMax Solutions | Best CBT & School Management Software in Nigeria',
     template: '%s | EduMax Solutions'
   },
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', type: 'image/png', sizes: '512x512' },
+    ],
+    shortcut: '/favicon.ico',
+  },
   description: 'EduMax Solutions offers the best CBT software, affordable LMS, and top-rated school portals for primary and secondary schools in Nigeria. Transform your school management today.',
   keywords: [
     'Best CBT software Nigeria',

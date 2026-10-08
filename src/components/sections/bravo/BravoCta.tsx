@@ -50,10 +50,10 @@ export function BravoCta() {
                 size="lg"
                 className="bg-background text-foreground hover:bg-background/90 shadow-lg transform hover:scale-[1.03] transition-all duration-300 font-bold"
               >
-                <Link href="/contact">
+                <Link href="/bravo/activate">
                   <span className="flex items-center gap-2">
                     <Download className="h-5 w-5" />
-                    Get Bravo CBT
+                    Get Activation Key
                   </span>
                 </Link>
               </Button>
@@ -71,6 +71,9 @@ export function BravoCta() {
                 </Link>
               </Button>
             </div>
+            <p className="text-sm text-background/50 pt-1">
+              App download link coming soon — purchase your key now and activate the moment it launches.
+            </p>
           </div>
 
           {/* Right — spec cards */}

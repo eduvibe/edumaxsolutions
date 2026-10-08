@@ -78,10 +78,10 @@ export function BravoHero() {
                 size="lg"
                 className="bg-foreground hover:bg-foreground/80 text-background shadow-lg transform hover:scale-[1.03] transition-all duration-300"
               >
-                <Link href="#download">
+                <Link href="/bravo/activate">
                   <span className="flex items-center gap-2">
                     <Download className="h-5 w-5" />
-                    Download Bravo CBT
+                    Get Activation Key
                   </span>
                 </Link>
               </Button>
@@ -99,6 +99,15 @@ export function BravoHero() {
                 </Link>
               </Button>
             </div>
+
+            {/* Coming soon notice */}
+            <p className="text-xs text-muted-foreground">
+              App download link coming soon.{" "}
+              <Link href="/bravo/activate" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                Purchase your activation key now
+              </Link>{" "}
+              and be ready the moment it launches.
+            </p>
 
             {/* Stat strip */}
             <div className="flex flex-wrap justify-center md:justify-start gap-6 pt-2 border-t border-border/50">

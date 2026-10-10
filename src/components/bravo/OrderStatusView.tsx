@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Loader2, Mail, Clock, AlertTriangle } from "lucide-react";
+import { Check, CheckCircle2, Copy, Loader2, Mail, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   ORDER_REF_CLIENT_RE,
@@ -163,28 +163,57 @@ export function OrderStatusView() {
         )}
 
         {order && order.status === "fulfilled" && order.activationKey && (
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4 shadow-sm">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Your activation key</p>
-              <p className="text-sm text-muted-foreground">
-                Product ID <span className="font-mono text-foreground">{order.productId}</span>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+            <div className="px-6 py-5 bg-foreground border-b border-border flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-background shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-background leading-none">Payment confirmed</p>
+                <p className="text-xs text-background/60 mt-0.5">
+                  {order.emailSent && order.email ? `Key also sent to ${order.email}` : "Your key is shown below"}
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+                  Your activation key
+                </p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Product ID <span className="font-mono text-foreground">{order.productId}</span>
+                </p>
+                <code className="block rounded-lg bg-muted border border-border px-4 py-3 text-sm font-mono break-all leading-relaxed text-foreground select-all">
+                  {order.activationKey}
+                </code>
+                <Button onClick={copyKey} variant="outline" className="w-full mt-2">
+                  {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                  {copied ? "Copied" : "Copy key"}
+                </Button>
+              </div>
+              <div className="space-y-2 text-sm text-foreground/75">
+                <p className="font-semibold text-foreground">To activate:</p>
+                <ol className="space-y-1.5 list-none">
+                  {[
+                    "Open Bravo CBT on your device.",
+                    "Go to Product → Activate.",
+                    "Paste the key above and press Activate.",
+                    "The app unlocks immediately, no internet needed.",
+                  ].map((step, i) => (
+                    <li key={i} className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-foreground text-background flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">
+                        {i + 1}
+                      </span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Mail className="h-3.5 w-3.5" />
+                {order.emailSent && order.email
+                  ? `A copy was sent to ${order.email}.`
+                  : "Keep your key safe. It cannot be recovered from your Product ID alone."}
               </p>
             </div>
-            <div className="rounded-xl bg-muted/50 p-4 font-mono text-sm break-all select-all">{order.activationKey}</div>
-            <Button onClick={copyKey} variant="outline" className="w-full">
-              {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-              {copied ? "Copied" : "Copy key"}
-            </Button>
-            <ol className="list-decimal pl-5 space-y-1 text-sm text-muted-foreground">
-              <li>Open Bravo CBT and go to Product → Activate.</li>
-              <li>Paste the key and press Activate. The app unlocks immediately.</li>
-            </ol>
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Mail className="h-3.5 w-3.5" />
-              {order.emailSent && order.email
-                ? `A copy was sent to ${order.email}.`
-                : "We could not send an email copy. Keep this key somewhere safe."}
-            </p>
           </div>
         )}
 

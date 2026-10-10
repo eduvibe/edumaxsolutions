@@ -43,7 +43,7 @@ const PLANS = [
     label: "Renewal",
     price: 3000,
     priceDisplay: "₦3,000",
-    description: "Already have Bravo CBT — renew to the latest edition or install on another device in the same household.",
+    description: "Already have Bravo CBT — renew to the latest edition, or install on another household device.",
     includes: [
       "Updated question bank",
       "All features continue",
@@ -250,15 +250,15 @@ export default function BravoActivatePage() {
               <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 Payment method
               </Label>
-              <Tabs defaultValue="bank">
+              <Tabs defaultValue="online">
                 <TabsList className="w-full grid grid-cols-2 mb-5">
-                  <TabsTrigger value="bank" className="gap-1.5">
-                    <Building2 className="h-4 w-4" />
-                    Bank Transfer
-                  </TabsTrigger>
                   <TabsTrigger value="online" className="gap-1.5">
                     <CreditCard className="h-4 w-4" />
                     Pay Online
+                  </TabsTrigger>
+                  <TabsTrigger value="bank" className="gap-1.5">
+                    <Building2 className="h-4 w-4" />
+                    Bank Transfer
                   </TabsTrigger>
                 </TabsList>
 

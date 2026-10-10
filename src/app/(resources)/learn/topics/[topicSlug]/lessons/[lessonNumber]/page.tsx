@@ -18,7 +18,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: Promise<{ topicSlug: string; lessonNumber: string }> | { topicSlug: string; lessonNumber: string };
+  params: Promise<{ topicSlug: string; lessonNumber: string }>;
 };
 
 export const revalidate = 3600;

@@ -4,7 +4,7 @@ export const metadata = {
   title: "Set New Password",
 };
 
-export default async function StudentResetPage({ searchParams }: { searchParams?: Promise<{ token?: string }> | { token?: string } }) {
+export default async function StudentResetPage({ searchParams }: { searchParams?: Promise<{ token?: string }> }) {
   const sp = searchParams ? await searchParams : undefined;
   const token = sp?.token ?? "";
 

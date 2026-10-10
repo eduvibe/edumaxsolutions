@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +19,7 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OnlinePaymentPanel } from "@/components/bravo/OnlinePaymentPanel";
 
 // ─── Plans — matches data/store-config.json priceNaira / renewalPriceNaira ────
 
@@ -123,6 +123,15 @@ export default function BravoActivatePage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("first");
   const [productId, setProductId] = useState("");
 
+  // Deep links from the Bravo app: /bravo/activate?productId=...&plan=first|renewal
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get("productId");
+    if (pid) setProductId(pid.trim().toUpperCase());
+    const plan = params.get("plan");
+    if (plan === "first" || plan === "renewal") setSelectedPlan(plan);
+  }, []);
+
   const plan = PLANS.find((p) => p.id === selectedPlan)!;
 
   return (
@@ -169,7 +178,7 @@ export default function BravoActivatePage() {
                 Get Bravo CBT
               </h1>
               <p className="text-sm text-muted-foreground">
-                Choose the plan that applies to you, pay by bank transfer, and receive your activation key.
+                Choose the plan that applies to you, pay online with Paystack or by bank transfer, and receive your activation key.
               </p>
             </div>
 
@@ -247,14 +256,15 @@ export default function BravoActivatePage() {
                     <Building2 className="h-4 w-4" />
                     Bank Transfer
                   </TabsTrigger>
-                  <TabsTrigger value="online" disabled className="gap-1.5 opacity-50">
+                  <TabsTrigger value="online" className="gap-1.5">
                     <CreditCard className="h-4 w-4" />
                     Pay Online
-                    <span className="ml-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
-                      Soon
-                    </span>
                   </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="online" className="space-y-4">
+                  <OnlinePaymentPanel productId={productId} planId={selectedPlan} priceDisplay={plan.priceDisplay} />
+                </TabsContent>
 
                 <TabsContent value="bank" className="space-y-4">
 
@@ -315,8 +325,7 @@ export default function BravoActivatePage() {
                   <div className="flex gap-3 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
                     <Info className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>
-                      Bank transfer is live now. Card and online payment via Paystack is coming
-                      soon. Keys are sent within minutes of confirmation —{" "}
+                      Prefer to pay by bank transfer? Keys are sent within minutes of confirmation —{" "}
                       <span className="inline-flex items-center gap-1 font-medium text-foreground">
                         <Clock className="h-3.5 w-3.5" />
                         9am – 7pm daily
@@ -373,16 +382,8 @@ export default function BravoActivatePage() {
               </div>
 
               <div className="px-6 pb-6 pt-3 space-y-2.5">
-                <Button
-                  size="lg"
-                  disabled
-                  className="w-full bg-foreground text-background opacity-40 cursor-not-allowed"
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Pay Online — Coming Soon
-                </Button>
                 <p className="text-center text-xs text-muted-foreground">
-                  Paystack card &amp; transfer payment launches soon.
+                  Pay online with card or bank transfer (Paystack), or use bank transfer on the left. Keys are issued only after payment is confirmed.
                 </p>
               </div>
             </div>

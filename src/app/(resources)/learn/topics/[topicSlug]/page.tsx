@@ -6,7 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: Promise<{ topicSlug: string }> | { topicSlug: string };
+  params: Promise<{ topicSlug: string }>;
 };
 
 export default async function TopicPage({ params }: PageProps) {

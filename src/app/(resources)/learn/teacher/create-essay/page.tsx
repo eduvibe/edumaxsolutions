@@ -10,7 +10,7 @@ export const metadata = {
 export default async function CreateEssayPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ subjectSlug?: string; topicSlug?: string; lessonNumber?: string }> | { subjectSlug?: string; topicSlug?: string; lessonNumber?: string };
+  searchParams?: Promise<{ subjectSlug?: string; topicSlug?: string; lessonNumber?: string }>;
 }) {
   if ((await getPlatformRole()) !== "teacher") {
     redirect("/learn/teacher/login");

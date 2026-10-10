@@ -10,7 +10,7 @@ export const metadata = {
 export default async function UploadTemplatePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ type?: string }> | { type?: string };
+  searchParams?: Promise<{ type?: string }>;
 }) {
   if ((await getPlatformRole()) !== "teacher") {
     redirect("/learn/teacher/login");

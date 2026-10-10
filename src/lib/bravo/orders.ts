@@ -24,6 +24,8 @@ export type BravoDeps = {
   paystack: PaystackClient;
   paystackSecretKey: string;
   signer: ActivationKeySigner;
+  /** Edition stamped on every new order (BRAVO_EDITION_YEAR). Order creation refuses when unset. */
+  editionYear?: number;
   mailer: Mailer | null;
   siteUrl: string;
   now?: () => Date;
@@ -52,6 +54,7 @@ type OrderRow = {
   paystack_transaction_id: string | null;
   paid_at: string | null;
   review_reason: string | null;
+  edition_year: number | null;
   email_status: "not_sent" | "sent" | "failed";
   last_verified_at: string | null;
   created_at: string;
@@ -83,6 +86,7 @@ function toOrder(row: Row): OrderRow {
     paystack_transaction_id: str(row, "paystack_transaction_id"),
     paid_at: str(row, "paid_at"),
     review_reason: str(row, "review_reason"),
+    edition_year: row.edition_year === null || row.edition_year === undefined ? null : Number(row.edition_year),
     email_status: row.email_status as OrderRow["email_status"],
     last_verified_at: str(row, "last_verified_at"),
     created_at: String(row.created_at),
@@ -151,6 +155,9 @@ export async function createPendingOrder(
     if (!email) throw new BravoServiceError(400, "invalid_email", "Enter a valid email address");
   }
 
+  if (!deps.editionYear) {
+    throw new BravoServiceError(503, "not_configured", "Online payment is temporarily unavailable.");
+  }
   const plan = PLANS[input.plan];
   const orderRef = newOrderRef();
   const statusToken = newStatusToken();
@@ -158,9 +165,9 @@ export async function createPendingOrder(
 
   await deps.db.execute({
     sql: `INSERT INTO bravo_orders
-            (order_ref, product_id, plan, amount_kobo, currency, email, status, status_token_hash, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?)`,
-    args: [orderRef, productId, plan.id, plan.amountKobo, CURRENCY, email, hashStatusToken(statusToken), createdAt, createdAt],
+            (order_ref, product_id, plan, amount_kobo, currency, email, status, status_token_hash, edition_year, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?, ?)`,
+    args: [orderRef, productId, plan.id, plan.amountKobo, CURRENCY, email, hashStatusToken(statusToken), deps.editionYear, createdAt, createdAt],
   });
 
   return {
@@ -409,7 +416,15 @@ async function issueKeyOnce(deps: BravoDeps, order: OrderRow): Promise<KeyRow> {
   const existing = await getIssuedKey(deps, order.order_ref);
   if (existing) return existing;
 
-  const activationKey = await deps.signer({ productId: order.product_id, plan: order.plan, orderRef: order.order_ref });
+  if (!order.edition_year) {
+    throw new Error("order has no edition_year; refusing to issue a key");
+  }
+  const activationKey = await deps.signer({
+    productId: order.product_id,
+    plan: order.plan,
+    orderRef: order.order_ref,
+    editionYear: order.edition_year,
+  });
   if (typeof activationKey !== "string" || activationKey.trim().length === 0) {
     throw new Error("signer returned an empty key");
   }

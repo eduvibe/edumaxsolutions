@@ -22,13 +22,10 @@ export function getBravoDeps(): BravoDeps {
     assertActivationPrivateKeyMatchesPublicKey(config.activationPrivateKeyPem);
   }
 
-  // Keys are only issued when both the private key and the edition year are configured.
+  // Keys are issued only when the private key is configured. Each key's edition comes from the order.
   let signer: ActivationKeySigner = unvendoredActivationKeySigner;
-  if (config.activationPrivateKeyPem && config.editionYear) {
-    signer = createLicenseCoreSigner({
-      privateKeyPem: config.activationPrivateKeyPem,
-      editionYear: config.editionYear,
-    });
+  if (config.activationPrivateKeyPem) {
+    signer = createLicenseCoreSigner({ privateKeyPem: config.activationPrivateKeyPem });
   }
 
   const db: Client = createClient({ url: config.tursoUrl, authToken: config.tursoAuthToken });
@@ -37,6 +34,7 @@ export function getBravoDeps(): BravoDeps {
     paystack: createPaystackClient({ secretKey: config.paystackSecretKey }),
     paystackSecretKey: config.paystackSecretKey,
     signer,
+    editionYear: config.editionYear,
     mailer: createResendMailer({ apiKey: config.resendApiKey, from: config.emailFrom }),
     siteUrl: config.siteUrl,
   };

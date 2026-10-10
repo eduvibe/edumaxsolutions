@@ -138,11 +138,13 @@ A copy is vendored at `src/lib/bravo/vendor/license-core.js` (verbatim from `edu
 
 `createLicenseCoreSigner` (in `src/lib/bravo/activation-key.ts`) signs each key and then **verifies it against the committed public key** before returning it. A wrong private key therefore cannot reach a buyer.
 
-Keys are issued only when **both** `BRAVO_ACTIVATION_PRIVATE_KEY` and `BRAVO_EDITION_YEAR` are set. Otherwise the signer fails closed.
+**Edition per order.** `BRAVO_EDITION_YEAR` is read when an order is created and stored on that order (`bravo_orders.edition_year`, migration `0002`). The key is signed with the order's stored edition, so changing the variable later never changes keys for orders already placed. Order creation returns `503 not_configured` while the variable is unset. Keys are issued only when `BRAVO_ACTIVATION_PRIVATE_KEY` is set.
+
+**Editions.** The edition is the year of the app build a key unlocks. The app decides renewal versus new activation from the device, not from the key. When a new edition ships, change `BRAVO_EDITION_YEAR` before the first sale of that edition. Mock tests and question edits within the year do not need a new edition year.
 
 Current defaults, which are product decisions and should be confirmed:
 - Bundle: `BOTH` (3) for every order. Orders do not carry a bundle yet.
-- Expiry: lifetime (`expiresAt = 0`), `flags = 1`.
+- Expiry: lifetime (`expiresAt = 0`), `flags = 1`. Keys do not expire.
 
 The committed public key matches the key pair from the Bravo repo (checked against the PEM supplied for this work).
 
@@ -156,7 +158,7 @@ The committed public key matches the key pair from the Bravo repo (checked again
 | `RESEND_API_KEY` | server | key | key | Sensitive |
 | `EMAIL_FROM` | server | `Bravo CBT <no-reply@edumaxsolutions.ng>` | same | Domain must be verified in Resend |
 | `BRAVO_ACTIVATION_PRIVATE_KEY` | server | **leave unset** (see below) | production PKCS#8 PEM | Sensitive. Must match the committed public key |
-| `BRAVO_EDITION_YEAR` | server | `2025` or `2026` (decide) | same | Four-digit year stamped into every key. Keys fail closed while unset |
+| `BRAVO_EDITION_YEAR` | server | `2026` (current edition) | same | Four-digit year recorded on each new order. Order creation fails while unset. Change it when a new edition ships |
 | `BRAVO_SITE_URL` | server | Preview origin | `https://www.edumaxsolutions.com.ng` | Used in Paystack callback URL |
 
 No variable here uses the `NEXT_PUBLIC_` prefix. Nothing is committed to Git. `.env.example` lists the names with empty values.
@@ -191,7 +193,7 @@ Checkout and payment verification still work there, and keys fail closed (500, r
 ## Tests
 
 ```bash
-npm test              # vitest: 58 tests against an in-memory libSQL DB using the real migration
+npm test              # vitest: 61 tests against an in-memory libSQL DB using the real migration
 npm run typecheck
 npm run lint          # 2 pre-existing errors in src/components/sections/bravo/* remain
 npm run build

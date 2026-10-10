@@ -206,6 +206,32 @@ describe("checkout initialisation", () => {
   });
 });
 
+describe("edition is recorded per order", () => {
+  it("refuses to create orders while BRAVO_EDITION_YEAR is unset", async () => {
+    const { deps } = await makeEnv();
+    deps.editionYear = undefined;
+    await expect(createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first" })).rejects.toMatchObject({
+      status: 503,
+      code: "not_configured",
+    });
+  });
+
+  it("signs with the edition stored on the order, even if the setting changes later", async () => {
+    const { db, deps, paystack, signer } = await makeEnv();
+    const order = await createCheckedOutOrder(deps, { plan: "first" }); // stored as 2026
+    deps.editionYear = 2027; // a new edition is configured before this payment is verified
+    paystack.state.transactions.set(order.orderRef, transactionFor(order.orderRef, FIRST_KOBO));
+
+    const { body, signature } = signedWebhook(chargeSuccessEvent(order.orderRef));
+    const res = await handlePaystackWebhook(deps, body, signature);
+
+    expect(res.body.outcome).toBe("fulfilled");
+    expect(signer).toHaveBeenCalledWith(expect.objectContaining({ editionYear: 2026 }));
+    const row = await orderRow(db, order.orderRef);
+    expect(row.edition_year).toBe(2026);
+  });
+});
+
 describe("happy path: verified payment -> one key -> protected retrieval", () => {
   it("issues one key after webhook verification, emails it once and returns it only with the token", async () => {
     const { db, deps, paystack, signer, mailer } = await makeEnv();
@@ -219,7 +245,7 @@ describe("happy path: verified payment -> one key -> protected retrieval", () =>
     expect(res.body.outcome).toBe("fulfilled");
     await expectStatus(db, order.orderRef, "fulfilled");
     expect(signer).toHaveBeenCalledTimes(1);
-    expect(signer).toHaveBeenCalledWith({ productId: VALID_PRODUCT_ID, plan: "first", orderRef: order.orderRef });
+    expect(signer).toHaveBeenCalledWith({ productId: VALID_PRODUCT_ID, plan: "first", orderRef: order.orderRef, editionYear: 2026 });
 
     const keys = await keyRows(db, order.orderRef);
     expect(keys).toHaveLength(1);
@@ -472,7 +498,7 @@ describe("fail-closed key issuance", () => {
   });
 
   it("the default signer throws a clear error and never returns a key", async () => {
-    await expect(unvendoredActivationKeySigner({ productId: VALID_PRODUCT_ID, plan: "first", orderRef: "BCBT_x" })).rejects.toThrow(/not vendored/);
+    await expect(unvendoredActivationKeySigner({ productId: VALID_PRODUCT_ID, plan: "first", orderRef: "BCBT_x", editionYear: 2026 })).rejects.toThrow(/not vendored/);
   });
 });
 

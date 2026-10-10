@@ -1,6 +1,6 @@
 import { createClient, type Client } from "@libsql/client";
 import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, vi } from "vitest";
 import type { PaystackClient, PaystackTransaction } from "@/lib/bravo/paystack";
@@ -15,11 +15,14 @@ export const TEST_PAYSTACK_SECRET = "sk_test_unit_test_secret";
 export const VALID_PRODUCT_ID = "BCBT-YDR9-G5WQ-0860";
 export const VALID_EMAIL = "parent@example.com";
 
-/** Real migration file, executed against an in-memory libSQL database. */
+/** Real migration files, applied in order to an in-memory libSQL database (same as the runner). */
 export async function createTestDb(): Promise<Client> {
   const db = createClient({ url: ":memory:" });
-  const sql = readFileSync(join(process.cwd(), "db", "migrations", "0001_bravo_online_payments.sql"), "utf8");
-  await db.executeMultiple(sql);
+  const dir = join(process.cwd(), "db", "migrations");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+  for (const file of files) {
+    await db.executeMultiple(readFileSync(join(dir, file), "utf8"));
+  }
   return db;
 }
 
@@ -68,6 +71,7 @@ export function makeDeps(overrides: Partial<BravoDeps> & { paystackFake?: Return
     paystack: paystackFake.client,
     paystackSecretKey: TEST_PAYSTACK_SECRET,
     signer: fakeSigner(),
+    editionYear: 2026,
     mailer: fakeMailer(),
     siteUrl: "https://www.edumaxsolutions.com.ng",
     now: () => new Date("2026-10-10T12:00:00.000Z"),

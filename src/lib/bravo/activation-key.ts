@@ -21,6 +21,8 @@ export type ActivationKeyRequest = {
   productId: string;
   plan: PlanId;
   orderRef: string;
+  /** Edition recorded on the order at creation time. */
+  editionYear: number;
 };
 
 /** Must produce a key in the exact format defined by the Bravo app's shared/license-core.js. */
@@ -41,7 +43,6 @@ export const unvendoredActivationKeySigner: ActivationKeySigner = async () => {
 
 export type LicenseCoreSignerOptions = {
   privateKeyPem: string;
-  editionYear: number;
   /** Bravo bundle: JAMB=1, WAEC=2, BOTH=3. Defaults to BOTH until orders carry a bundle. */
   bundle?: number;
   /** Used to self-check every issued key. Defaults to the committed Bravo public key. */
@@ -54,21 +55,21 @@ export type LicenseCoreSignerOptions = {
  * the public key before it is returned, so a wrong private key can never reach a buyer.
  */
 export function createLicenseCoreSigner(opts: LicenseCoreSignerOptions): ActivationKeySigner {
-  if (!Number.isInteger(opts.editionYear) || opts.editionYear < 2000 || opts.editionYear > 2100) {
-    throw new Error("editionYear must be a year between 2000 and 2100");
-  }
   const bundle = opts.bundle ?? BUNDLE.BOTH;
   const publicKeyPem = opts.publicKeyPem ?? BRAVO_ACTIVATION_PUBLIC_KEY_PEM;
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
 
-  return async ({ productId }) => {
+  return async ({ productId, editionYear }) => {
     const pid = normalizeProductId(productId);
     if (!pid) throw new Error("signer received an invalid product id");
+    if (!Number.isInteger(editionYear) || editionYear < 2000 || editionYear > 2100) {
+      throw new Error("signer received an invalid editionYear");
+    }
     const key: string = await signActivationKey({
       privateKeyPem: opts.privateKeyPem,
       productId: pid,
       bundle,
-      editionYear: opts.editionYear,
+      editionYear,
       issuedAt: now(),
       expiresAt: 0,
       flags: 1,

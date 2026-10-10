@@ -10,7 +10,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: Promise<{ noteId: string }> | { noteId: string };
+  params: Promise<{ noteId: string }>;
 };
 
 export default async function NotePage({ params }: PageProps) {

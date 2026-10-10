@@ -11,7 +11,7 @@ export const metadata = {
 export default async function TeacherTopicNotePage({
   params,
 }: {
-  params: Promise<{ topicSlug: string; lessonNumber: string }> | { topicSlug: string; lessonNumber: string };
+  params: Promise<{ topicSlug: string; lessonNumber: string }>;
 }) {
   if ((await getPlatformRole()) !== "teacher") {
     redirect("/learn/teacher/login");

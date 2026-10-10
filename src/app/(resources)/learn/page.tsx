@@ -13,7 +13,7 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams?: Promise<{ q?: string }> | { q?: string };
+  searchParams?: Promise<{ q?: string }>;
 };
 
 export default async function LearnPage({ searchParams }: PageProps) {

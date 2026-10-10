@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 type PageProps = {
-  searchParams?: Promise<{ section?: string; year?: string }> | { section?: string; year?: string };
+  searchParams?: Promise<{ section?: string; year?: string }>;
 };
 
 export default async function SubjectsPage({ searchParams }: PageProps) {

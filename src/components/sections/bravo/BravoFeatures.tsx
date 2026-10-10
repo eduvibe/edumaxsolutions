@@ -42,7 +42,7 @@ export function BravoFeatures() {
             What it does
           </p>
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-            Everything a student needs.<br />Nothing they don't.
+            Everything a student needs.<br />Nothing they don&apos;t.
           </h2>
         </div>
 

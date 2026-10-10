@@ -5,6 +5,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // libsql ships a native binding; keep it out of the server bundle (Bravo online payments).
+  serverExternalPackages: ["@libsql/client", "libsql"],
   turbopack: {
     root: __dirname,
   },

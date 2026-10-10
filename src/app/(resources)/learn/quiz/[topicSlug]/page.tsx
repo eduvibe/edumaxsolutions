@@ -6,8 +6,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: Promise<{ topicSlug: string }> | { topicSlug: string };
-  searchParams?: Promise<{ lesson?: string }> | { lesson?: string };
+  params: Promise<{ topicSlug: string }>;
+  searchParams?: Promise<{ lesson?: string }>;
 };
 
 export default async function QuizPage({ params, searchParams }: PageProps) {

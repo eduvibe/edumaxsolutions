@@ -13,8 +13,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 type PageProps = {
-  params: Promise<{ subjectSlug: string }> | { subjectSlug: string };
-  searchParams?: Promise<{ year?: string; thread?: string; section?: string }> | { year?: string; thread?: string; section?: string };
+  params: Promise<{ subjectSlug: string }>;
+  searchParams?: Promise<{ year?: string; thread?: string; section?: string }>;
 };
 
 export default async function SubjectPage({ params, searchParams }: PageProps) {

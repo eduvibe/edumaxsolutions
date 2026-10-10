@@ -33,7 +33,7 @@ export function BravoScreenshots() {
             Familiar format.<br />Built for focus.
           </h2>
           <p className="mt-4 text-base text-muted-foreground leading-relaxed max-w-md">
-            Bravo CBT's interface matches the real JAMB CBT environment — so by exam day, there are no surprises.
+            Bravo CBT&apos;s interface matches the real JAMB CBT environment — so by exam day, there are no surprises.
           </p>
         </div>
 

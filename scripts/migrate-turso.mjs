@@ -18,6 +18,10 @@ if (!url) {
 
 const db = createClient({ url, authToken });
 
+// Read-only: show what already exists, so a table created by another code path is visible before changes.
+const existing = await db.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'bravo_orders'");
+console.log("existing bravo_orders:", existing.rows[0]?.sql ?? "(no table yet)");
+
 await db.execute(
   "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
 );

@@ -1,5 +1,11 @@
 import { createPrivateKey, createPublicKey } from "node:crypto";
 import type { PlanId } from "./pricing";
+import {
+  BUNDLE,
+  normalizeProductId,
+  signActivationKey,
+  verifyActivationKey,
+} from "./vendor/license-core.js";
 
 /**
  * Public verification key from the Bravo app repo (non-secret).
@@ -32,6 +38,53 @@ export const unvendoredActivationKeySigner: ActivationKeySigner = async () => {
     "Activation key format (Bravo shared/license-core.js) is not vendored yet; refusing to issue keys."
   );
 };
+
+export type LicenseCoreSignerOptions = {
+  privateKeyPem: string;
+  editionYear: number;
+  /** Bravo bundle: JAMB=1, WAEC=2, BOTH=3. Defaults to BOTH until orders carry a bundle. */
+  bundle?: number;
+  /** Used to self-check every issued key. Defaults to the committed Bravo public key. */
+  publicKeyPem?: string;
+  now?: () => number;
+};
+
+/**
+ * Signs keys with the Bravo shared/license-core.js format. Every key is verified against
+ * the public key before it is returned, so a wrong private key can never reach a buyer.
+ */
+export function createLicenseCoreSigner(opts: LicenseCoreSignerOptions): ActivationKeySigner {
+  if (!Number.isInteger(opts.editionYear) || opts.editionYear < 2000 || opts.editionYear > 2100) {
+    throw new Error("editionYear must be a year between 2000 and 2100");
+  }
+  const bundle = opts.bundle ?? BUNDLE.BOTH;
+  const publicKeyPem = opts.publicKeyPem ?? BRAVO_ACTIVATION_PUBLIC_KEY_PEM;
+  const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
+
+  return async ({ productId }) => {
+    const pid = normalizeProductId(productId);
+    if (!pid) throw new Error("signer received an invalid product id");
+    const key: string = await signActivationKey({
+      privateKeyPem: opts.privateKeyPem,
+      productId: pid,
+      bundle,
+      editionYear: opts.editionYear,
+      issuedAt: now(),
+      expiresAt: 0,
+      flags: 1,
+    });
+    const check = await verifyActivationKey({
+      activationKey: key,
+      productId: pid,
+      publicKeyPem,
+      now: now(),
+    });
+    if (!check.ok) {
+      throw new Error(`self-check of issued key failed: ${check.reason}`);
+    }
+    return key;
+  };
+}
 
 /** Ensures the server-only private key corresponds to the committed public key. */
 export function assertActivationPrivateKeyMatchesPublicKey(privateKeyPem: string): void {

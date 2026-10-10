@@ -12,6 +12,8 @@ export type BravoServerConfig = {
   emailFrom: string;
   /** Undefined when not configured: keys then fail closed, but checkout and payment still work. */
   activationPrivateKeyPem: string | undefined;
+  /** From BRAVO_EDITION_YEAR. Undefined means keys fail closed until it is set. */
+  editionYear: number | undefined;
   siteUrl: string;
 };
 
@@ -43,6 +45,15 @@ export function getBravoServerConfig(env: Record<string, string | undefined> = p
   const rawPem = env.BRAVO_ACTIVATION_PRIVATE_KEY?.trim() || undefined;
   const activationPrivateKeyPem = rawPem && rawPem.includes("\\n") ? rawPem.replace(/\\n/g, "\n") : rawPem;
 
+  const editionRaw = env.BRAVO_EDITION_YEAR?.trim();
+  let editionYear: number | undefined;
+  if (editionRaw) {
+    editionYear = Number(editionRaw);
+    if (!/^\d{4}$/.test(editionRaw) || editionYear < 2000 || editionYear > 2100) {
+      throw new BravoConfigError("BRAVO_EDITION_YEAR must be a four-digit year, e.g. 2025");
+    }
+  }
+
   return {
     paystackSecretKey,
     paystackMode: isLiveKey ? "live" : "test",
@@ -51,6 +62,7 @@ export function getBravoServerConfig(env: Record<string, string | undefined> = p
     resendApiKey: required("RESEND_API_KEY"),
     emailFrom: required("EMAIL_FROM"),
     activationPrivateKeyPem,
+    editionYear,
     siteUrl: (env.BRAVO_SITE_URL?.trim() || DEFAULT_SITE_URL).replace(/\/+$/, ""),
   };
 }

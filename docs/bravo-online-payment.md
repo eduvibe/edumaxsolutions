@@ -131,19 +131,20 @@ Product ID alone never grants access to an order.
 - `PAYSTACK_SECRET_KEY` is validated against `VERCEL_ENV`: Production refuses `sk_test_`, Preview refuses `sk_live_`.
 - Provider error details are logged, never returned to the browser.
 
-## Activation key signer (blocked on one file)
+## Activation key signer
 
-`src/lib/bravo/activation-key.ts` contains the committed **public** key and a signer interface. The signer is currently
-`unvendoredActivationKeySigner`, which **fails closed**: no key is issued until it is replaced.
+Keys use the format in the Bravo app's `shared/license-core.js` (ECDSA P-256 over a 20-byte payload, base32, `BCBTK1-` prefix).
+A copy is vendored at `src/lib/bravo/vendor/license-core.js` (verbatim from `eduvibe/bravo` main, commit `7feb3ca`), with types in `license-core.d.ts`.
 
-The key format must come from the Bravo app repo, not be invented here. The non-secret file needed is:
+`createLicenseCoreSigner` (in `src/lib/bravo/activation-key.ts`) signs each key and then **verifies it against the committed public key** before returning it. A wrong private key therefore cannot reach a buyer.
 
-- `shared/license-core.js` (the source of truth for the key format and its sign/verify functions)
-- plus the exact keygen argument mapping from `vendor/keygen.mjs` (what `--product` and `--edition` mean and how they are encoded)
+Keys are issued only when **both** `BRAVO_ACTIVATION_PRIVATE_KEY` and `BRAVO_EDITION_YEAR` are set. Otherwise the signer fails closed.
 
-Once it is provided, vendor it as `src/lib/bravo/vendor/license-core.js` (plus a `.d.ts`), write the adapter in `src/lib/bravo/service.ts`
-using `BRAVO_ACTIVATION_PRIVATE_KEY`, and add a test that verifies every issued key with the committed public key.
-Do not commit the private signing key.
+Current defaults, which are product decisions and should be confirmed:
+- Bundle: `BOTH` (3) for every order. Orders do not carry a bundle yet.
+- Expiry: lifetime (`expiresAt = 0`), `flags = 1`.
+
+The committed public key matches the key pair from the Bravo repo (checked against the PEM supplied for this work).
 
 ## Environment variables
 
@@ -155,6 +156,7 @@ Do not commit the private signing key.
 | `RESEND_API_KEY` | server | key | key | Sensitive |
 | `EMAIL_FROM` | server | `Bravo CBT <no-reply@edumaxsolutions.ng>` | same | Domain must be verified in Resend |
 | `BRAVO_ACTIVATION_PRIVATE_KEY` | server | **leave unset** (see below) | production PKCS#8 PEM | Sensitive. Must match the committed public key |
+| `BRAVO_EDITION_YEAR` | server | `2025` or `2026` (decide) | same | Four-digit year stamped into every key. Keys fail closed while unset |
 | `BRAVO_SITE_URL` | server | Preview origin | `https://www.edumaxsolutions.com.ng` | Used in Paystack callback URL |
 
 No variable here uses the `NEXT_PUBLIC_` prefix. Nothing is committed to Git. `.env.example` lists the names with empty values.
@@ -189,7 +191,7 @@ Checkout and payment verification still work there, and keys fail closed (500, r
 ## Tests
 
 ```bash
-npm test              # vitest: 53 tests against an in-memory libSQL DB using the real migration
+npm test              # vitest: 58 tests against an in-memory libSQL DB using the real migration
 npm run typecheck
 npm run lint          # 2 pre-existing errors in src/components/sections/bravo/* remain
 npm run build

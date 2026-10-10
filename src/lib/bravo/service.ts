@@ -7,7 +7,9 @@ import { createPaystackClient } from "./paystack";
 import { createResendMailer } from "./email";
 import {
   assertActivationPrivateKeyMatchesPublicKey,
+  createLicenseCoreSigner,
   unvendoredActivationKeySigner,
+  type ActivationKeySigner,
 } from "./activation-key";
 import type { BravoDeps } from "./orders";
 
@@ -20,14 +22,21 @@ export function getBravoDeps(): BravoDeps {
     assertActivationPrivateKeyMatchesPublicKey(config.activationPrivateKeyPem);
   }
 
+  // Keys are only issued when both the private key and the edition year are configured.
+  let signer: ActivationKeySigner = unvendoredActivationKeySigner;
+  if (config.activationPrivateKeyPem && config.editionYear) {
+    signer = createLicenseCoreSigner({
+      privateKeyPem: config.activationPrivateKeyPem,
+      editionYear: config.editionYear,
+    });
+  }
+
   const db: Client = createClient({ url: config.tursoUrl, authToken: config.tursoAuthToken });
   cached = {
     db,
     paystack: createPaystackClient({ secretKey: config.paystackSecretKey }),
     paystackSecretKey: config.paystackSecretKey,
-    // TODO(bravo): replace with the signer built from the vendored Bravo shared/license-core.js,
-    // using config.activationPrivateKeyPem. Until then, no key can be issued (fail closed).
-    signer: unvendoredActivationKeySigner,
+    signer,
     mailer: createResendMailer({ apiKey: config.resendApiKey, from: config.emailFrom }),
     siteUrl: config.siteUrl,
   };

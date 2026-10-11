@@ -95,21 +95,19 @@ describe("order creation", () => {
     await expect(createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first", email: "not-an-email" })).rejects.toMatchObject({ code: "invalid_email" });
   });
 
-  it("ignores any amount supplied by the client and stores the server price", async () => {
+  it("rejects any client-supplied price, currency, edition or status, and stores the server price otherwise", async () => {
     const { db, deps } = await makeEnv();
-    const created = await createPendingOrder(deps, {
-      productId: VALID_PRODUCT_ID,
-      plan: "renewal",
-      email: VALID_EMAIL,
-      amount: 1,
-      amount_kobo: 1,
-      currency: "USD",
-      status: "fulfilled",
-    } as never);
+    for (const extra of [{ amount: 1 }, { amount_kobo: 1 }, { currency: "USD" }, { status: "fulfilled" }, { editionYear: 2099 }, { edition: 2099 }]) {
+      await expect(
+        createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "renewal", email: VALID_EMAIL, ...extra })
+      ).rejects.toMatchObject({ status: 400, code: "authoritative_field_rejected" });
+    }
+    const created = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "renewal", email: VALID_EMAIL });
     const row = await orderRow(db, created.orderRef);
     expect(row?.amount_kobo).toBe(RENEWAL_KOBO);
     expect(row?.currency).toBe("NGN");
     expect(row?.status).toBe("pending_payment");
+    expect(row?.edition_year).toBe(2026);
     expect(created.amountNaira).toBe(3000);
   });
 

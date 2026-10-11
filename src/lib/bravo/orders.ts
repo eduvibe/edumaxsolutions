@@ -48,6 +48,7 @@ type OrderRow = {
   amount_kobo: number;
   currency: string;
   email: string | null;
+  email_source: "creation" | "checkout" | null;
   status: OrderStatus;
   status_token_hash: string;
   authorization_url: string | null;
@@ -65,7 +66,60 @@ type KeyRow = { order_ref: string; product_id: string; activation_key: string; i
 /** Minimum gap between Paystack verify calls triggered by polling. */
 const RECONCILE_INTERVAL_MS = 15_000;
 
+/**
+ * How long an order handed over from the Bravo app can START a new Paystack checkout.
+ * Expiry blocks only new checkouts. A checkout already started on Paystack is still completed
+ * by the webhook/verify path, because the buyer may have paid after the window closed.
+ */
+export const CHECKOUT_WINDOW_MS = 2 * 60 * 60 * 1000;
+
 const nowIso = (deps: BravoDeps) => (deps.now ? deps.now() : new Date()).toISOString();
+const nowMs = (deps: BravoDeps) => (deps.now ? deps.now() : new Date()).getTime();
+
+/**
+ * Fields that the client must never set. Matched by name on the request body. Product ID and plan are
+ * the order identity, so they are accepted at creation only, never at checkout. Price, currency, edition,
+ * status, tokens and Paystack data are always computed or stored by the server.
+ */
+const AUTHORITATIVE_FIELD_RE =
+  /amount|price|currency|edition|status|token|paystack|authori|order_?ref|kobo|naira|bundle|activation|issued|expir|flag/i;
+const CREATE_ALLOWED_FIELDS = new Set(["productId", "plan", "email"]);
+const CHECKOUT_ALLOWED_FIELDS = new Set(["email"]);
+const CHECKOUT_FORBIDDEN_IDENTITY_FIELDS = ["productId", "plan"];
+
+/** Throws 400 when the body tries to set a value the server owns. Unknown benign fields are ignored. */
+export function rejectAuthoritativeFields(body: Record<string, unknown> | undefined, allowed: Set<string>, forbiddenNames: string[] = []) {
+  if (!body) return;
+  for (const key of Object.keys(body)) {
+    if (allowed.has(key)) continue;
+    if (AUTHORITATIVE_FIELD_RE.test(key) || forbiddenNames.includes(key)) {
+      throw new BravoServiceError(
+        400,
+        "authoritative_field_rejected",
+        "Product ID, plan, price and edition are set by Bravo CBT and cannot be changed here."
+      );
+    }
+  }
+}
+
+function parseOptionalEmail(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  const email = normalizeEmail(value);
+  if (!email) throw new BravoServiceError(400, "invalid_email", "Enter a valid email address");
+  return email;
+}
+
+/** True once the handoff window has closed for an order that has NOT yet started Paystack checkout. */
+export function isCheckoutExpired(order: Pick<OrderRow, "created_at" | "authorization_url">, nowMillis: number): boolean {
+  if (order.authorization_url) return false;
+  const created = Date.parse(order.created_at);
+  return !Number.isFinite(created) || nowMillis - created > CHECKOUT_WINDOW_MS;
+}
+
+/** The buyer may change an email they typed themselves, until Paystack checkout has started. */
+function isBuyerEmailChangeable(order: OrderRow): boolean {
+  return order.email_source === "checkout" && !order.authorization_url;
+}
 
 function str(row: Row, key: string): string | null {
   const v = row[key];
@@ -80,6 +134,7 @@ function toOrder(row: Row): OrderRow {
     amount_kobo: Number(row.amount_kobo),
     currency: String(row.currency),
     email: str(row, "email"),
+    email_source: (str(row, "email_source") as OrderRow["email_source"]) ?? null,
     status: row.status as OrderStatus,
     status_token_hash: String(row.status_token_hash),
     authorization_url: str(row, "authorization_url"),
@@ -143,17 +198,13 @@ export type CreatedOrder = {
 
 export async function createPendingOrder(
   deps: BravoDeps,
-  input: { productId?: unknown; plan?: unknown; email?: unknown }
+  input: { productId?: unknown; plan?: unknown; email?: unknown; [extra: string]: unknown }
 ): Promise<CreatedOrder> {
+  rejectAuthoritativeFields(input, CREATE_ALLOWED_FIELDS);
   const productId = normalizeProductId(input.productId);
   if (!productId) throw new BravoServiceError(400, "invalid_product_id", "Enter a valid Bravo Product ID");
   if (!isPlanId(input.plan)) throw new BravoServiceError(400, "invalid_plan", "Choose a valid plan");
-
-  let email: string | null = null;
-  if (input.email !== undefined && input.email !== null && input.email !== "") {
-    email = normalizeEmail(input.email);
-    if (!email) throw new BravoServiceError(400, "invalid_email", "Enter a valid email address");
-  }
+  const email = parseOptionalEmail(input.email);
 
   if (!deps.editionYear) {
     throw new BravoServiceError(503, "not_configured", "Online payment is temporarily unavailable.");
@@ -165,9 +216,21 @@ export async function createPendingOrder(
 
   await deps.db.execute({
     sql: `INSERT INTO bravo_orders
-            (order_ref, product_id, plan, amount_kobo, currency, email, status, status_token_hash, edition_year, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?, ?)`,
-    args: [orderRef, productId, plan.id, plan.amountKobo, CURRENCY, email, hashStatusToken(statusToken), deps.editionYear, createdAt, createdAt],
+            (order_ref, product_id, plan, amount_kobo, currency, email, email_source, status, status_token_hash, edition_year, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?, ?)`,
+    args: [
+      orderRef,
+      productId,
+      plan.id,
+      plan.amountKobo,
+      CURRENCY,
+      email,
+      email ? "creation" : null,
+      hashStatusToken(statusToken),
+      deps.editionYear,
+      createdAt,
+      createdAt,
+    ],
   });
 
   return {
@@ -184,33 +247,54 @@ export async function createPendingOrder(
 
 // ─── 2. Start Paystack checkout ─────────────────────────────────────────────
 
+/**
+ * Starts (or resumes) Paystack checkout for one order.
+ *  - Saved email (from the app) is used server-side. No email is needed from the browser.
+ *  - Without a saved email, the buyer's email is required once and stored before Paystack starts.
+ *  - Once Paystack has been initialised, the same link is returned and the email is locked.
+ */
 export async function startCheckout(
   deps: BravoDeps,
-  input: { orderRef: string; statusToken: string | null; email?: unknown }
+  input: { orderRef: string; statusToken: string | null; email?: unknown; body?: Record<string, unknown> }
 ): Promise<{ orderRef: string; authorizationUrl: string }> {
-  const order = await loadAuthorizedOrder(deps, input.orderRef, input.statusToken);
+  let order = await loadAuthorizedOrder(deps, input.orderRef, input.statusToken);
+  rejectAuthoritativeFields(input.body, CHECKOUT_ALLOWED_FIELDS, CHECKOUT_FORBIDDEN_IDENTITY_FIELDS);
+
   if (order.status !== "pending_payment") {
     throw new BravoServiceError(409, "order_not_payable", `Order is already ${order.status}`);
   }
+  const provided = parseOptionalEmail(input.email);
 
-  let email: string | null = order.email;
-  if (input.email !== undefined && input.email !== null && input.email !== "") {
-    email = normalizeEmail(input.email);
-    if (!email) throw new BravoServiceError(400, "invalid_email", "Enter a valid email address");
+  if (order.authorization_url) return resumeCheckout(order, provided);
+
+  if (isCheckoutExpired(order, nowMs(deps))) {
+    throw new BravoServiceError(410, "order_expired", "This payment link has expired. Start the purchase again from Bravo CBT.");
   }
-  if (!email) throw new BravoServiceError(400, "email_required", "An email address is required to pay");
 
-  if (order.authorization_url) {
-    // Paystack references are single-use, so the same checkout link is reused and the email cannot change.
-    if (order.email && order.email !== email) {
-      throw new BravoServiceError(409, "checkout_already_started", "Checkout already started for this order with another email. Create a new order.");
+  if (provided && provided !== order.email) {
+    if (order.email && !isBuyerEmailChangeable(order)) {
+      throw new BravoServiceError(409, "email_locked", "This order is tied to a different email. Start a new order from Bravo CBT.");
     }
-    return { orderRef: order.order_ref, authorizationUrl: order.authorization_url };
+    // Claim (or change, for a buyer-typed email) the address before Paystack ever sees it.
+    await deps.db.execute({
+      sql: `UPDATE bravo_orders
+               SET email = ?, email_source = 'checkout', updated_at = ?
+             WHERE order_ref = ? AND status = 'pending_payment' AND authorization_url IS NULL
+               AND (email IS NULL OR (email_source = 'checkout' AND email = ?))`,
+      args: [provided, nowIso(deps), order.order_ref, order.email],
+    });
+    order = (await loadOrder(deps, order.order_ref)) ?? order;
+    if (order.authorization_url) return resumeCheckout(order, provided);
+    if (order.email !== provided) {
+      throw new BravoServiceError(409, "email_locked", "This order is tied to a different email. Start a new order from Bravo CBT.");
+    }
   }
+
+  if (!order.email) throw new BravoServiceError(400, "email_required", "An email address is required to pay");
 
   const initialized = await deps.paystack
     .initializeTransaction({
-      email,
+      email: order.email, // the stored address, never a browser value that was not just validated and saved
       amountKobo: order.amount_kobo, // server-side amount only
       reference: order.order_ref,
       callbackUrl: `${deps.siteUrl}/bravo/activate/status?order=${encodeURIComponent(order.order_ref)}`,
@@ -221,17 +305,29 @@ export async function startCheckout(
       throw new BravoServiceError(502, "payment_provider_error", "Could not start payment. Please try again.");
     });
 
-  const now = nowIso(deps);
-  await deps.db.execute({
+  // Store the link only if the email is still the one Paystack was initialised with. A concurrent email change
+  // in the meantime must not leave a Paystack transaction that disagrees with the stored order email.
+  const stored = await deps.db.execute({
     sql: `UPDATE bravo_orders
-             SET email = ?, authorization_url = ?, paystack_access_code = ?, updated_at = ?
-           WHERE order_ref = ? AND status = 'pending_payment' AND authorization_url IS NULL`,
-    args: [email, initialized.authorizationUrl, initialized.accessCode, now, order.order_ref],
+             SET authorization_url = ?, paystack_access_code = ?, updated_at = ?
+           WHERE order_ref = ? AND status = 'pending_payment' AND authorization_url IS NULL AND email = ?`,
+    args: [initialized.authorizationUrl, initialized.accessCode, nowIso(deps), order.order_ref, order.email],
   });
+  if (stored.rowsAffected === 1) {
+    return { orderRef: order.order_ref, authorizationUrl: initialized.authorizationUrl };
+  }
 
-  // If a concurrent request won the race, return the stored link instead.
+  // A concurrent request stored its own link first (same email), so return that one.
   const current = await loadOrder(deps, order.order_ref);
-  return { orderRef: order.order_ref, authorizationUrl: current?.authorization_url ?? initialized.authorizationUrl };
+  if (current?.authorization_url) return resumeCheckout(current, order.email);
+  throw new BravoServiceError(409, "email_locked", "This order's email changed while payment was starting. Please try again.");
+}
+
+function resumeCheckout(order: OrderRow, provided: string | null): { orderRef: string; authorizationUrl: string } {
+  if (provided && order.email && provided !== order.email) {
+    throw new BravoServiceError(409, "checkout_already_started", "Checkout already started for this order with another email. Create a new order.");
+  }
+  return { orderRef: order.order_ref, authorizationUrl: order.authorization_url as string };
 }
 
 // ─── 3. Protected status / key retrieval ───────────────────────────────────
@@ -243,7 +339,12 @@ export type PublicOrderStatus = {
   plan: PlanId;
   amountNaira: number;
   currency: typeof CURRENCY;
+  /** Masked address for display only. The full address is never sent to the browser. */
   email: string | null;
+  /** True when an email is already stored for this order (the app supplied it or the buyer typed it). */
+  emailOnFile: boolean;
+  /** True when the handoff window has closed and no Paystack checkout was started. The browser must not offer payment. */
+  checkoutExpired: boolean;
   createdAt: string;
   paidAt: string | null;
   emailSent: boolean;
@@ -261,6 +362,7 @@ const STATUS_MESSAGES: Record<OrderStatus, string> = {
 
 async function toPublicStatus(deps: BravoDeps, order: OrderRow): Promise<PublicOrderStatus> {
   const key = order.status === "fulfilled" ? await getIssuedKey(deps, order.order_ref) : null;
+  const expired = order.status === "pending_payment" && isCheckoutExpired(order, nowMs(deps));
   return {
     orderRef: order.order_ref,
     status: order.status,
@@ -269,6 +371,8 @@ async function toPublicStatus(deps: BravoDeps, order: OrderRow): Promise<PublicO
     amountNaira: order.amount_kobo / 100,
     currency: CURRENCY,
     email: maskEmail(order.email),
+    emailOnFile: order.email !== null,
+    checkoutExpired: expired,
     createdAt: order.created_at,
     paidAt: order.paid_at,
     emailSent: key?.email_sent_at != null,
@@ -286,7 +390,7 @@ export async function getOrderStatus(
   input: { orderRef: string; statusToken: string | null }
 ): Promise<PublicOrderStatus & { message: string }> {
   let order = await loadAuthorizedOrder(deps, input.orderRef, input.statusToken);
-  const now = (deps.now ? deps.now() : new Date()).getTime();
+  const now = nowMs(deps);
   const lastVerified = order.last_verified_at ? Date.parse(order.last_verified_at) : 0;
 
   // Polling can reconcile a pending order by asking Paystack directly. This never trusts the browser.
@@ -414,7 +518,14 @@ async function markNeedsReview(deps: BravoDeps, ref: string, reason: string) {
 /** Creates the key row exactly once. A concurrent loser signs a key it then discards. */
 async function issueKeyOnce(deps: BravoDeps, order: OrderRow): Promise<KeyRow> {
   const existing = await getIssuedKey(deps, order.order_ref);
-  if (existing) return existing;
+  if (existing) {
+    // A previous attempt may have stored the key but stopped before marking the order fulfilled. Finish that step.
+    await deps.db.execute({
+      sql: "UPDATE bravo_orders SET status = 'fulfilled', updated_at = ? WHERE order_ref = ? AND status = 'paid'",
+      args: [nowIso(deps), order.order_ref],
+    });
+    return existing;
+  }
 
   if (!order.edition_year) {
     throw new Error("order has no edition_year; refusing to issue a key");

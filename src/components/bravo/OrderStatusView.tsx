@@ -224,8 +224,8 @@ export function OrderStatusView() {
         )}
 
         <div className="flex flex-wrap gap-3 pt-2 text-sm">
-          <Link href="/bravo/activate" className="underline underline-offset-2 text-muted-foreground hover:text-foreground">
-            Back to activation
+          <Link href="/bravo" className="underline underline-offset-2 text-muted-foreground hover:text-foreground">
+            Back to Bravo CBT
           </Link>
         </div>
       </div>

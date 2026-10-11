@@ -33,9 +33,9 @@ const jsonReq = (url: string, body: unknown, headers: Record<string, string> = {
   new Request(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
 
 describe("POST /api/bravo/orders", () => {
-  it("creates a pending order and ignores client-supplied amounts", async () => {
+  it("creates a pending order with the server-side price and rejects client-supplied amounts", async () => {
     const res = await routes.createOrder(
-      jsonReq("https://site.test/api/bravo/orders", { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL, amount: 1 })
+      jsonReq("https://site.test/api/bravo/orders", { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL })
     );
     expect(res.status).toBe(201);
     expect(res.headers.get("cache-control")).toContain("no-store");
@@ -44,6 +44,12 @@ describe("POST /api/bravo/orders", () => {
     expect(body.statusToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     const row = await orderRow(env.db, body.orderRef);
     expect(row?.amount_kobo).toBe(400000);
+
+    const tampered = await routes.createOrder(
+      jsonReq("https://site.test/api/bravo/orders", { productId: VALID_PRODUCT_ID, plan: "first", amount: 1 })
+    );
+    expect(tampered.status).toBe(400);
+    expect((await tampered.json()).error).toBe("authoritative_field_rejected");
   });
 
   it("rejects an invalid body with 400", async () => {

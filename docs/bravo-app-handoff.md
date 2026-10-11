@@ -8,8 +8,8 @@ Written from the website session (`arena/6828d715-edumaxsolutions`, head `200137
 - Website side is implemented and tested (113 tests). A real Production payment has already succeeded
   through the flow. Do not change the payment path without re-testing.
 - The app side is **not** implemented in this session. Nothing in `eduvibe/bravo` was modified.
-- Not yet live: migration `0003` must be applied to Turso before the new website code is deployed
-  (`npm run db:migrate`).
+- Not yet live: migration `0003` must be applied to Production Turso before the new website code is deployed.
+  Follow `docs/bravo-production-migration-runbook.md` (preflight first, then back up, then migrate).
 
 ## What the app must do
 

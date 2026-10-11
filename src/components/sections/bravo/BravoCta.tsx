@@ -1,7 +1,8 @@
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Download } from "lucide-react";
+import { ActivationInfoTrigger } from "@/components/sections/bravo/ActivationInfoDialog";
 
 const highlights = [
   "Full mock exams with timer and auto-submit",
@@ -47,16 +48,13 @@ export function BravoCta() {
 
             {/* CTAs — primary light bg + explicit-colour border button */}
             <div className="flex flex-col sm:flex-row gap-3 pt-1">
-              <Button
-                asChild
+              <ActivationInfoTrigger
                 size="lg"
                 className="bg-background text-foreground hover:bg-background/90 font-semibold transition-all duration-200 hover:scale-[1.02]"
               >
-                <Link href="/bravo/activate">
-                  <Download className="h-4 w-4 mr-2" />
-                  Get Activation Key
-                </Link>
-              </Button>
+                <Download className="h-4 w-4 mr-2" />
+                Get Activation Key
+              </ActivationInfoTrigger>
 
               {/* Disabled download — awaiting final build */}
               <Button

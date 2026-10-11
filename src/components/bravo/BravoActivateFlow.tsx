@@ -5,10 +5,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Copy, Check, ArrowLeft, CreditCard, Building2, MessageCircle, Mail, Info, Clock, Loader2, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Copy, Check, ArrowLeft, CreditCard, Building2, MessageCircle, Mail, Info, Clock, Loader2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  ApiRequestError,
   ORDER_REF_CLIENT_RE,
   bravoFetch,
   readStatusToken,
@@ -81,47 +80,19 @@ function Header() {
   );
 }
 
-/** Shown to anyone who opens the page without a valid order from the Bravo CBT app. No order data, no payment form. */
-function StartFromAppView({ problem }: { problem: string | null }) {
+/**
+ * Shown for every invalid, missing, expired, or wrong-token visit. It is deliberately generic: no steps, no payment
+ * form, no bank details, and no order data. It does not reveal whether an order exists.
+ */
+function UnavailableView() {
   return (
-    <div className="mx-auto max-w-xl space-y-6 py-4">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground mb-1">Get your Bravo CBT activation key</h1>
-        <p className="text-sm text-muted-foreground">
-          Activation orders start inside the Bravo CBT app, so your Product ID and plan are checked before you pay.
-        </p>
-      </div>
-      {problem && (
-        <div role="alert" className="flex gap-3 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{problem}</span>
-        </div>
-      )}
-      <ol className="space-y-3">
-        {[
-          "Open Bravo CBT on your device and go to Product → Activate.",
-          "Choose New Activation or Renewal, then press Pay Online.",
-          "Your browser opens this page with your order. Confirm the details and pay.",
-          "Your key appears here and in the app automatically once payment is confirmed.",
-        ].map((step, i) => (
-          <li key={i} className="flex gap-3 text-sm text-foreground/75 leading-relaxed">
-            <span className="flex-shrink-0 mt-0.5 h-5 w-5 rounded-full bg-foreground text-background flex items-center justify-center text-[11px] font-bold">
-              {i + 1}
-            </span>
-            <span>{step}</span>
-          </li>
-        ))}
-      </ol>
+    <div role="status" className="mx-auto max-w-xl space-y-4 py-8 text-center">
+      <h1 className="text-2xl font-extrabold tracking-tight text-foreground">This page is not available</h1>
       <p className="text-sm text-muted-foreground">
-        Need help? WhatsApp{" "}
-        <a href="https://wa.me/2348067819642" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
-          +234 806 781 9642
-        </a>{" "}
-        or email{" "}
-        <a href="mailto:edumaxsolutions.ng@gmail.com" className="underline underline-offset-2 hover:text-foreground">
-          edumaxsolutions.ng@gmail.com
-        </a>
-        .
+        Activation is started from the Bravo CBT app.{" "}
+        <Link href="/bravo" className="underline underline-offset-2 hover:text-foreground">
+          Back to Bravo CBT
+        </Link>
       </p>
     </div>
   );
@@ -277,7 +248,7 @@ function ReadyView({ order, statusToken }: { order: ActivateOrder; statusToken: 
   );
 }
 
-type Phase = { kind: "loading" } | { kind: "start"; problem: string | null } | { kind: "ready"; order: ActivateOrder; statusToken: string };
+type Phase = { kind: "loading" } | { kind: "unavailable" } | { kind: "ready"; order: ActivateOrder; statusToken: string };
 
 /**
  * Protected checkout. The only way into the order views is a server-validated order reference and token from the Bravo CBT app
@@ -293,11 +264,11 @@ export function BravoActivateFlow() {
     const linkToken = fragment.get("t");
 
     if (!orderRef) {
-      setPhase({ kind: "start", problem: null });
+      setPhase({ kind: "unavailable" });
       return;
     }
     if (!ORDER_REF_CLIENT_RE.test(orderRef)) {
-      setPhase({ kind: "start", problem: "This payment link is not valid. Start the purchase again from Bravo CBT." });
+      setPhase({ kind: "unavailable" });
       return;
     }
 
@@ -308,10 +279,7 @@ export function BravoActivateFlow() {
       window.history.replaceState(null, "", `${window.location.pathname}?order=${encodeURIComponent(orderRef)}`);
     }
     if (!token) {
-      setPhase({
-        kind: "start",
-        problem: "Open this page from the Bravo CBT app, or from the same browser where you started this payment.",
-      });
+      setPhase({ kind: "unavailable" });
       return;
     }
 
@@ -325,15 +293,9 @@ export function BravoActivateFlow() {
         }
         setPhase({ kind: "ready", order, statusToken: token });
       })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setPhase({
-          kind: "start",
-          problem:
-            err instanceof ApiRequestError && err.status === 404
-              ? "We could not find this order for this browser. Check the link from Bravo CBT and try again."
-              : "We could not load this order. Please try again from Bravo CBT.",
-        });
+      .catch(() => {
+        // Same generic result for unknown, wrong-token, and server errors, so the page reveals nothing about orders.
+        if (!cancelled) setPhase({ kind: "unavailable" });
       });
     return () => {
       cancelled = true;
@@ -349,7 +311,7 @@ export function BravoActivateFlow() {
             <Loader2 className="h-4 w-4 animate-spin" /> Loading your order…
           </div>
         )}
-        {phase.kind === "start" && <StartFromAppView problem={phase.problem} />}
+        {phase.kind === "unavailable" && <UnavailableView />}
         {phase.kind === "ready" && <ReadyView order={phase.order} statusToken={phase.statusToken} />}
       </div>
     </div>

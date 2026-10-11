@@ -74,8 +74,12 @@ Product ID, plan, and server price, and offers Pay Online and Bank Transfer.
   uses the stored address for Paystack.
 - **No saved email:** the page asks the buyer for an email once. The server stores it before Paystack starts. Until then,
   the buyer can correct it. After Paystack starts, the email is locked.
-- **Without a valid token,** the page shows only instructions to start from the Bravo CBT app. It has no order data,
-  no bank details, and no payment form. It is marked `noindex`.
+- **Without a valid token,** the page shows one generic "This page is not available" message with a link back to `/bravo`.
+  It has no steps, order data, bank details, or payment form, and it does not reveal whether an order exists. A visit with no
+  `?order=` parameter is redirected on the server to `/bravo`. The page is marked `noindex`.
+- **Public marketing page:** "Get Activation Key" and "How activation works" open an accessible modal
+  (`src/components/sections/bravo/ActivationInfoDialog.tsx`). The modal links nowhere and shows no order or token details.
+  It closes with the × button, the "Got it" button, Escape, or a click outside.
 - **The website no longer creates orders.** There is no public Product ID form or deep link. Orders come only from the app.
 - **Checkout-start window: 30 minutes from order creation** (`CHECKOUT_WINDOW_MINUTES` in `src/lib/bravo/orders.ts`).
   The window limits only **starting or restarting** checkout: creating a new Paystack transaction, or changing the buyer's
@@ -245,7 +249,7 @@ Checkout and payment verification still work there, and keys fail closed (500, r
 ## Tests
 
 ```bash
-npm test              # vitest: 93 tests against an in-memory libSQL DB using the real migrations
+npm test              # vitest: 113 tests against an in-memory libSQL DB using the real migrations
 npm run typecheck
 npm run lint          # passes with --max-warnings=0
 npm run build

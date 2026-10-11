@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import Image from "next/image";
 import { Download } from "lucide-react";
 import { FloatingDecor } from "@/components/FloatingDecor";
 import { ParallaxWrapper } from "@/components/ParallaxWrapper";
+import { ActivationInfoTrigger } from "@/components/sections/bravo/ActivationInfoDialog";
 
 export function BravoHero() {
   return (
@@ -45,16 +45,13 @@ export function BravoHero() {
 
             {/* CTAs — primary solid + secondary explicit-colour border */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start pt-1">
-              <Button
-                asChild
+              <ActivationInfoTrigger
                 size="lg"
                 className="bg-foreground hover:bg-foreground/85 text-background font-semibold transition-all duration-200 hover:scale-[1.02]"
               >
-                <Link href="/bravo/activate">
-                  <Download className="h-4 w-4 mr-2" />
-                  Get Activation Key
-                </Link>
-              </Button>
+                <Download className="h-4 w-4 mr-2" />
+                Get Activation Key
+              </ActivationInfoTrigger>
 
               {/* Disabled download — awaiting final build */}
               <Button
@@ -68,9 +65,7 @@ export function BravoHero() {
 
             <p className="text-xs text-muted-foreground">
               Purchase your activation key now.{" "}
-              <Link href="/bravo/activate" className="underline underline-offset-4 hover:text-foreground transition-colors">
-                How activation works &rarr;
-              </Link>
+              <ActivationInfoTrigger variant="link">How activation works &rarr;</ActivationInfoTrigger>
             </p>
           </ParallaxWrapper>
 

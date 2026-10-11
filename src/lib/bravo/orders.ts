@@ -16,6 +16,7 @@ import type { PaystackClient, PaystackTransaction } from "./paystack";
 import { verifyPaystackWebhookSignature } from "./paystack";
 import type { ActivationKeySigner } from "./activation-key";
 import type { Mailer } from "./email";
+import { logBravoSignal } from "./monitoring";
 
 export type OrderStatus = "pending_payment" | "paid" | "fulfilled" | "needs_review";
 
@@ -67,11 +68,17 @@ type KeyRow = { order_ref: string; product_id: string; activation_key: string; i
 const RECONCILE_INTERVAL_MS = 15_000;
 
 /**
- * How long an order handed over from the Bravo app can START a new Paystack checkout.
- * Expiry blocks only new checkouts. A checkout already started on Paystack is still completed
- * by the webhook/verify path, because the buyer may have paid after the window closed.
+ * CHECKOUT-START WINDOW. Counted from order creation. It limits only STARTING or RESTARTING checkout:
+ * requesting a new Paystack transaction, or changing the buyer email before one exists.
+ *
+ * It never rejects a Paystack transaction that was already started. Such an order keeps its link, and the
+ * webhook and verify polling still fulfil it when Paystack confirms payment, even after this window.
  */
-export const CHECKOUT_WINDOW_MS = 2 * 60 * 60 * 1000;
+export const CHECKOUT_WINDOW_MINUTES = 30;
+export const CHECKOUT_WINDOW_MS = CHECKOUT_WINDOW_MINUTES * 60 * 1000;
+export const CHECKOUT_WINDOW_MESSAGE =
+  `Checkout can only be started within ${CHECKOUT_WINDOW_MINUTES} minutes of the order being created. ` +
+  "Start a new order from Bravo CBT. A payment already started on Paystack is still processed.";
 
 const nowIso = (deps: BravoDeps) => (deps.now ? deps.now() : new Date()).toISOString();
 const nowMs = (deps: BravoDeps) => (deps.now ? deps.now() : new Date()).getTime();
@@ -109,7 +116,7 @@ function parseOptionalEmail(value: unknown): string | null {
   return email;
 }
 
-/** True once the handoff window has closed for an order that has NOT yet started Paystack checkout. */
+/** True once the checkout-start window has closed for an order that has NOT yet started Paystack checkout. */
 export function isCheckoutExpired(order: Pick<OrderRow, "created_at" | "authorization_url">, nowMillis: number): boolean {
   if (order.authorization_url) return false;
   const created = Date.parse(order.created_at);
@@ -268,7 +275,8 @@ export async function startCheckout(
   if (order.authorization_url) return resumeCheckout(order, provided);
 
   if (isCheckoutExpired(order, nowMs(deps))) {
-    throw new BravoServiceError(410, "order_expired", "This payment link has expired. Start the purchase again from Bravo CBT.");
+    logBravoSignal("checkout_window_closed", { orderRef: order.order_ref });
+    throw new BravoServiceError(410, "checkout_window_closed", CHECKOUT_WINDOW_MESSAGE);
   }
 
   if (provided && provided !== order.email) {

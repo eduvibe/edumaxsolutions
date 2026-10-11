@@ -77,9 +77,14 @@ Product ID, plan, and server price, and offers Pay Online and Bank Transfer.
 - **Without a valid token,** the page shows only instructions to start from the Bravo CBT app. It has no order data,
   no bank details, and no payment form. It is marked `noindex`.
 - **The website no longer creates orders.** There is no public Product ID form or deep link. Orders come only from the app.
-- **Expiry:** an order can start a **new** Paystack checkout for 2 hours after it is created (`CHECKOUT_WINDOW_MS` in
-  `src/lib/bravo/orders.ts`). After that, checkout returns `410 order_expired` and the status shows `checkoutExpired: true`.
-  A checkout already started on Paystack still completes, because the buyer may pay after the window closes.
+- **Checkout-start window: 30 minutes from order creation** (`CHECKOUT_WINDOW_MINUTES` in `src/lib/bravo/orders.ts`).
+  The window limits only **starting or restarting** checkout: creating a new Paystack transaction, or changing the buyer's
+  email before one exists. After it, checkout returns `410 checkout_window_closed` with a buyer-facing message, and the status
+  shows `checkoutExpired: true`.
+  - It **never rejects a Paystack transaction that was already started.** That order keeps its link. If Paystack confirms
+    payment, the webhook or poll reconciliation fulfils it, even after the window.
+  - Because the window counts from creation, the app must open the browser straight after `POST /api/bravo/orders`.
+    A buyer who waits more than 30 minutes before opening the link gets the closed-window message and must start a new order.
 
 ### 3. Poll the exact order
 
@@ -122,7 +127,7 @@ Errors (all JSON `{ "error": "...", "message": "..." }`):
 | 409 | `order_not_payable` | Order already paid or fulfilled |
 | 409 | `email_locked` | A different email was sent for an order whose email came from the app, or whose email was locked by checkout |
 | 409 | `checkout_already_started` | Paystack already started with another email |
-| 410 | `order_expired` | The 2-hour checkout window has closed and no Paystack checkout was started |
+| 410 | `checkout_window_closed` | The 30-minute checkout-start window has closed and no Paystack checkout was started. Starting a new order is required. A payment already started on Paystack is still processed |
 | 429 | `rate_limited` | Slow down |
 | 502 | `payment_provider_error` | Paystack unavailable. Retry later |
 | 503 | `not_configured` | Server env vars missing |
@@ -210,16 +215,37 @@ Checkout and payment verification still work there, and keys fail closed (500, r
 - A `needs_review` order is intentionally blocked. Resolve it by hand, then update the row, after checking Paystack.
 - An email failure leaves `email_status = 'failed'`. The key is still stored and shown on the status page. Re-sending is a manual step for now.
 - Rate limits use in-memory counters, so they are per serverless instance. Use a shared limiter (for example Upstash or Vercel WAF rules) before heavy traffic.
-- Pending orders are never deleted. A cleanup job can be added later. Expired pending orders are harmless: they cannot start checkout.
+- Pending orders are never deleted. A cleanup job can be added later. Expired pending orders are harmless: they cannot start a new checkout.
 - **Order creation (`POST /api/bravo/orders`) is still open at the HTTP layer,** because the app has no credential to present.
   Protection comes from the rules above: the key is issued only after a verified payment, the token is unguessable, orders expire,
   and creation is rate limited. A per-app credential would be a further hardening step, but it requires an app change.
+- **No shared secret is added to the app.** Order creation is not authenticated by a shared key. The Bravo app is a
+  distributed desktop build, so any key in it can be extracted, and the app cannot be changed in this session. The controls
+  are the ones below.
+
+### Rate limits and abuse monitoring
+
+| Route | Limit (per client IP, per minute) | Signal on breach |
+|---|---|---|
+| `POST /api/bravo/orders` | 20 | `rate_limited`, `route: create` |
+| `POST /api/bravo/orders/{ref}/checkout` | 20 | `rate_limited`, `route: checkout` |
+| `GET /api/bravo/orders/{ref}` | 120 | 429 only (polling) |
+
+- Limits are **in memory per serverless instance**, so they are approximate. A shared limiter (Upstash, or Vercel WAF rules)
+  is the stronger control and is still a recommended follow-up.
+- Signals are single JSON log lines, for example `{"bravo_signal":"rate_limited","route":"create","ip_hash":"…"}`. IP addresses
+  are hashed (12 hex characters of SHA-256). Tokens, full emails, and raw IPs are never logged. Other signals: `checkout_window_closed`.
+- Search the Vercel runtime logs for `bravo_signal`. Alert on a burst of `rate_limited` from one `ip_hash`.
+- Spot-check creation abuse in Turso. The count of unpaid orders with no checkout started should stay low:
+  `SELECT COUNT(*) FROM bravo_orders WHERE status = 'pending_payment' AND authorization_url IS NULL AND created_at > datetime('now','-1 day');`
+  Pending orders are never deleted. Expired ones cannot be paid through checkout, so they cost storage only.
+
 - **Migration `0003` must be applied before the new code goes live** (`npm run db:migrate`). It adds `bravo_orders.email_source`.
 
 ## Tests
 
 ```bash
-npm test              # vitest: 86 tests against an in-memory libSQL DB using the real migrations
+npm test              # vitest: 93 tests against an in-memory libSQL DB using the real migrations
 npm run typecheck
 npm run lint          # passes with --max-warnings=0
 npm run build

@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   CHECKOUT_WINDOW_MS,
+  CHECKOUT_WINDOW_MESSAGE,
   BravoServiceError,
   createPendingOrder,
   fulfillFromPaystack,
@@ -234,6 +235,117 @@ describe("server-authoritative Product ID, plan, price and edition", () => {
   });
 });
 
+describe("checkout-start window (30 minutes)", () => {
+  const MIN = 60 * 1000;
+
+  it("is exactly 30 minutes and is counted from order creation", () => {
+    expect(CHECKOUT_WINDOW_MS).toBe(30 * MIN);
+    expect(CHECKOUT_WINDOW_MESSAGE).toContain("30 minutes");
+  });
+
+  it("still starts checkout at 29 minutes and refuses it after 31 minutes, with a buyer-facing explanation", async () => {
+    const { deps, paystack } = await makeEnv();
+    const early = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL });
+    deps.now = () => new Date(BASE_NOW.getTime() + 29 * MIN);
+    await startCheckout(deps, { orderRef: early.orderRef, statusToken: early.statusToken });
+    expect(paystack.state.initCalls).toHaveLength(1);
+
+    deps.now = () => new Date(BASE_NOW.getTime());
+    const late = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL });
+    deps.now = () => new Date(BASE_NOW.getTime() + 31 * MIN);
+    const error = await startCheckout(deps, { orderRef: late.orderRef, statusToken: late.statusToken }).then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(error).toMatchObject({ status: 410, code: "checkout_window_closed", message: CHECKOUT_WINDOW_MESSAGE });
+    expect(paystack.state.initCalls).toHaveLength(1);
+    expect((error as Error).message).toContain("A payment already started on Paystack is still processed.");
+  });
+
+  it("a Paystack checkout started inside the window is never rejected later, and its payment is fulfilled by the webhook", async () => {
+    const { db, deps, paystack, signer, mailer } = await makeEnv();
+    const order = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL });
+    deps.now = () => new Date(BASE_NOW.getTime() + 10 * MIN);
+    const started = await startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken });
+
+    // 45 minutes after creation: past the window.
+    deps.now = () => new Date(BASE_NOW.getTime() + 45 * MIN);
+    const resumed = await startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken });
+    expect(resumed.authorizationUrl).toBe(started.authorizationUrl);
+    const status = await getOrderStatus(deps, { orderRef: order.orderRef, statusToken: order.statusToken });
+    expect(status.checkoutExpired).toBe(false);
+    expect(paystack.state.initCalls).toHaveLength(1);
+
+    paystack.state.transactions.set(order.orderRef, transactionFor(order.orderRef, FIRST_KOBO));
+    const body = chargeSuccessEvent(order.orderRef);
+    const res = await handlePaystackWebhook(deps, body, signPaystackBody(body));
+    expect(res).toMatchObject({ status: 200, body: { outcome: "fulfilled" } });
+    expect(signer).toHaveBeenCalledTimes(1);
+    expect(mailer).toHaveBeenCalledTimes(1);
+    expect((await orderRow(db, order.orderRef))?.status).toBe("fulfilled");
+  });
+
+  it("a started checkout is also fulfilled by poll reconciliation after the window, with no webhook", async () => {
+    const { deps, paystack, signer } = await makeEnv();
+    const order = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "renewal", email: VALID_EMAIL });
+    deps.now = () => new Date(BASE_NOW.getTime() + 5 * MIN);
+    await startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken });
+
+    deps.now = () => new Date(BASE_NOW.getTime() + 60 * MIN);
+    paystack.state.transactions.set(order.orderRef, transactionFor(order.orderRef, RENEWAL_KOBO));
+    const status = await getOrderStatus(deps, { orderRef: order.orderRef, statusToken: order.statusToken });
+    expect(status.status).toBe("fulfilled");
+    expect(status.activationKey).toBeTruthy();
+    expect(signer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("abuse signals", () => {
+  it("hashes IP addresses and never logs tokens or full emails", async () => {
+    const { hashIp, logBravoSignal } = await import("@/lib/bravo/monitoring");
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    logBravoSignal("rate_limited", { route: "create", ip: "203.0.113.9" });
+    const line = String(spy.mock.calls.at(-1)?.[0]);
+    spy.mockRestore();
+    expect(JSON.parse(line)).toMatchObject({ bravo_signal: "rate_limited", route: "create", ip_hash: hashIp("203.0.113.9") });
+    expect(line).not.toContain("203.0.113.9");
+  });
+
+  it("logs when the checkout window closes for an order", async () => {
+    const { deps } = await makeEnv();
+    const order = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL });
+    deps.now = () => new Date(BASE_NOW.getTime() + 31 * 60 * 1000);
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken }).catch(() => null);
+    const lines = spy.mock.calls.map((c) => String(c[0]));
+    spy.mockRestore();
+    expect(lines.some((l) => l.includes('"bravo_signal":"checkout_window_closed"') && l.includes(order.orderRef))).toBe(true);
+  });
+
+  it("returns 429 and logs a signal when one client exceeds the order-creation limit", async () => {
+    const { deps } = await makeEnv();
+    holder.deps = deps;
+    const { POST } = await import("@/app/api/bravo/orders/route");
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let last = 0;
+    for (let i = 0; i < 21; i++) {
+      const res = await POST(
+        new Request("https://site.test/api/bravo/orders", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-forwarded-for": "198.51.100.77" },
+          body: JSON.stringify({ productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL }),
+        })
+      );
+      last = res.status;
+    }
+    const lines = spy.mock.calls.map((c) => String(c[0]));
+    spy.mockRestore();
+    expect(last).toBe(429);
+    expect(lines.some((l) => l.includes('"bravo_signal":"rate_limited"') && l.includes('"route":"create"'))).toBe(true);
+    expect(lines.join("\n")).not.toContain("198.51.100.77");
+  });
+});
+
 describe("handoff token, ownership and expiry", () => {
   it("returns 404 for a missing, malformed, wrong or another order's token", async () => {
     const { deps, paystack } = await makeEnv();
@@ -254,13 +366,13 @@ describe("handoff token, ownership and expiry", () => {
     }
   });
 
-  it("refuses to start a new checkout after the handoff window has expired (410), and reports it in status", async () => {
+  it("refuses to start a new checkout after the 30-minute window (410), and reports it in status", async () => {
     const { db, deps, paystack } = await makeEnv();
     const order = await createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first", email: VALID_EMAIL });
 
     deps.now = () => new Date(BASE_NOW.getTime() + CHECKOUT_WINDOW_MS + 1000);
 
-    await expectServiceError(startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken }), 410, "order_expired");
+    await expectServiceError(startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken }), 410, "checkout_window_closed");
     expect(paystack.state.initCalls).toHaveLength(0);
     expect((await orderRow(db, order.orderRef))?.authorization_url).toBeNull();
 
@@ -275,7 +387,7 @@ describe("handoff token, ownership and expiry", () => {
     await expectServiceError(
       startCheckout(deps, { orderRef: order.orderRef, statusToken: order.statusToken, email: VALID_EMAIL }),
       410,
-      "order_expired"
+      "checkout_window_closed"
     );
     expect(paystack.state.initCalls).toHaveLength(0);
   });

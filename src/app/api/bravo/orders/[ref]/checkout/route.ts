@@ -6,14 +6,19 @@ import { bearerToken } from "@/lib/bravo/tokens";
 import { bravoErrorResponse, jsonNoStore, readJsonObject } from "@/lib/bravo/http";
 import { startCheckout } from "@/lib/bravo/orders";
 import { getBravoDeps } from "@/lib/bravo/service";
+import { logBravoSignal } from "@/lib/bravo/monitoring";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, ctx: { params: Promise<{ ref: string }> }) {
   const { ref } = await ctx.params;
-  const limit = checkRateLimit(`bravo:checkout:${getClientIp(req)}`, 20, 60_000);
-  if (!limit.ok) return jsonNoStore({ error: "rate_limited", message: "Too many requests. Try again shortly." }, 429);
+  const ip = getClientIp(req);
+  const limit = checkRateLimit(`bravo:checkout:${ip}`, 20, 60_000);
+  if (!limit.ok) {
+    logBravoSignal("rate_limited", { route: "checkout", ip });
+    return jsonNoStore({ error: "rate_limited", message: "Too many requests. Try again shortly." }, 429);
+  }
 
   const body = (await readJsonObject(req)) ?? {};
   try {

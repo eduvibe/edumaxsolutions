@@ -5,13 +5,18 @@ import { getClientIp, checkRateLimit } from "@/app/api/_lib/rateLimit";
 import { readJsonObject, bravoErrorResponse, jsonNoStore } from "@/lib/bravo/http";
 import { createPendingOrder } from "@/lib/bravo/orders";
 import { getBravoDeps } from "@/lib/bravo/service";
+import { logBravoSignal } from "@/lib/bravo/monitoring";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const limit = checkRateLimit(`bravo:create:${getClientIp(req)}`, 20, 60_000);
-  if (!limit.ok) return jsonNoStore({ error: "rate_limited", message: "Too many requests. Try again shortly." }, 429);
+  const ip = getClientIp(req);
+  const limit = checkRateLimit(`bravo:create:${ip}`, 20, 60_000);
+  if (!limit.ok) {
+    logBravoSignal("rate_limited", { route: "create", ip });
+    return jsonNoStore({ error: "rate_limited", message: "Too many requests. Try again shortly." }, 429);
+  }
 
   const body = await readJsonObject(req);
   if (!body) return jsonNoStore({ error: "invalid_body", message: "Send a JSON object" }, 400);

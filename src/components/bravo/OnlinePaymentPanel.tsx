@@ -18,7 +18,7 @@ export type ActivateOrder = {
   email: string | null;
   /** True when the server already holds an email for this order (from the Bravo app or typed earlier). */
   emailOnFile: boolean;
-  /** True when the handoff window closed before Paystack was started. */
+  /** True when the 30-minute checkout-start window closed before Paystack was started. */
   checkoutExpired: boolean;
 };
 
@@ -76,8 +76,9 @@ export function OnlinePaymentPanel({ order, statusToken }: Props) {
       <div role="alert" className="flex gap-3 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
         <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
         <span>
-          This payment link has expired. Go back to Bravo CBT and choose Pay Online again to start a new order. Your bank transfer
-          details are still available below.
+          Checkout can only be started within 30 minutes of the order being created, and this order is now past that limit. Go back
+          to Bravo CBT and choose Pay Online again to start a new order. If you already started a payment on Paystack from this order,
+          that payment is still processed and your key will be issued. Bank transfer details are still available below.
         </span>
       </div>
     );

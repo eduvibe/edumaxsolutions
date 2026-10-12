@@ -32,6 +32,9 @@ export function OrderStatusView() {
   const [order, setOrder] = useState<OrderStatus | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
+  // True when this browser has no server-issued status token for the order. The Paystack callback
+  // lands here without one, so the view shows only a generic confirmation and no order data.
+  const [noAccess, setNoAccess] = useState(false);
   const [copied, setCopied] = useState(false);
   const startedAt = useRef(0);
 
@@ -42,7 +45,7 @@ export function OrderStatusView() {
     const linkToken = fragment.get("t");
 
     if (!ref || !ORDER_REF_CLIENT_RE.test(ref)) {
-      setProblem("This status link is missing an order reference. Open the link from Bravo CBT or from your payment page.");
+      setNoAccess(true);
       return;
     }
     if (linkToken) {
@@ -57,7 +60,7 @@ export function OrderStatusView() {
     if (!orderRef) return;
     const token = readStatusToken(orderRef);
     if (!token) {
-      setProblem("Open this page in the same browser where you started the payment, or use the status link from Bravo CBT.");
+      setNoAccess(true);
       return;
     }
 
@@ -74,7 +77,8 @@ export function OrderStatusView() {
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiRequestError && err.status === 404) {
-          setProblem("We could not find this order for this browser. Use the status link from Bravo CBT.");
+          // Unknown order or a token that does not match. Show the same generic view as a callback with no handoff.
+          setNoAccess(true);
           return;
         }
         if (err instanceof ApiRequestError && err.status === 429) {
@@ -102,6 +106,30 @@ export function OrderStatusView() {
     await navigator.clipboard.writeText(order.activationKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (noAccess) {
+    return (
+      <div className="container mx-auto px-4 md:px-6 py-12 md:py-16">
+        <div className="mx-auto max-w-xl space-y-6">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">Payment is being confirmed</h1>
+          <div className="flex gap-3 rounded-xl border border-border bg-card p-4 text-sm">
+            <Clock className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-muted-foreground">
+                Return to Bravo CBT. Your activation key will be emailed to you, and the app activates automatically once
+                your payment is confirmed.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 pt-2 text-sm">
+            <Link href="/bravo" className="underline underline-offset-2 text-muted-foreground hover:text-foreground">
+              Back to Bravo CBT
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

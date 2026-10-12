@@ -51,3 +51,17 @@ Do not add a shared secret. The decision is recorded in the main doc.
 - Decide whether to add a per-app credential later. That needs a change in the app build.
 - Run a Preview build of the website before merging (the sandbox could not fetch Google Fonts).
 - Apply migration `0003` on Turso before deploying the new website code.
+
+## Paystack callback (direct app flow)
+
+The app creates an order with `POST /api/bravo/orders`, calls `POST /api/bravo/orders/{ref}/checkout` with the
+bearer status token, and opens the Paystack URL directly. It never visits `/bravo/activate`.
+
+The Paystack callback is `/bravo/activate/status?order={ref}`. It contains no token. Without a status token saved
+in this browser's `sessionStorage`, the page shows only a generic message: "Payment is being confirmed. Return to
+Bravo CBT. Your activation key will be emailed to you." It shows no order reference, product, or key, and makes no
+API call. A 404 from the status API gets the same generic view.
+
+With a saved token (the in-browser flow from `/bravo/activate`), the status page polls and shows the order as before.
+The app activates by polling and the key is also emailed. Pricing, Paystack verification, fulfilment, rate limits,
+and the 30-minute checkout-start window are unchanged.

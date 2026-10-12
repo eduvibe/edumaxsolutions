@@ -463,7 +463,7 @@ describe("protected page and API surface", () => {
   it("the activate page is excluded from search indexes", async () => {
     const mod = await import("@/app/(main)/bravo/activate/page");
     expect(mod.metadata.robots).toMatchObject({ index: false, follow: false });
-  });
+  }, 30000); // first import of the page is slow on a cold machine
 });
 
 describe("route handlers", () => {

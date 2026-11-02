@@ -577,7 +577,15 @@ describe("database constraints (defence in depth)", () => {
     const { join } = await import("node:path");
     await db.executeMultiple(readFileSync(join(process.cwd(), "db", "migrations", "0001_bravo_online_payments.sql"), "utf8"));
     const tables = await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'bravo_%' ORDER BY name");
-    expect(tables.rows.map((r) => r.name)).toEqual(["bravo_issued_keys", "bravo_orders", "bravo_payment_events"]);
+    expect(tables.rows.map((r) => r.name)).toEqual([
+      "bravo_issued_keys",
+      "bravo_mock_events",
+      "bravo_mock_scores",
+      "bravo_orders",
+      "bravo_payment_events",
+      "bravo_reports",
+      "bravo_staff",
+    ]);
   });
 });
 

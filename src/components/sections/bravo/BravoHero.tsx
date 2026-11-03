@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import Image from "next/image";
 import { Download } from "lucide-react";
 import { FloatingDecor } from "@/components/FloatingDecor";
@@ -53,13 +54,16 @@ export function BravoHero() {
                 Get Activation Key
               </ActivationInfoTrigger>
 
-              {/* Disabled download — awaiting final build */}
+              {/* Stable download entry point; the route 503s "coming soon" until BRAVO_DOWNLOAD_URL is set */}
               <Button
                 size="lg"
-                disabled
-                className="bg-transparent border border-foreground/20 text-foreground/40 font-medium cursor-not-allowed"
+                asChild
+                className="bg-transparent border border-foreground/20 text-foreground font-medium hover:bg-foreground/5"
               >
-                Download App — Coming Soon
+                <Link href="/bravo/download">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download App
+                </Link>
               </Button>
             </div>
 

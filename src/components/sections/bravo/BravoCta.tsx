@@ -59,10 +59,13 @@ export function BravoCta() {
               {/* Disabled download — awaiting final build */}
               <Button
                 size="lg"
-                disabled
-                className="bg-transparent border border-background/20 text-background/40 font-medium cursor-not-allowed"
+                asChild
+                className="bg-transparent border border-background/20 text-background font-medium hover:bg-background/5"
               >
-                Download App — Coming Soon
+                <Link href="/bravo/download">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download App
+                </Link>
               </Button>
             </div>
 

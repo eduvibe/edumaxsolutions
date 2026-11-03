@@ -1,12 +1,15 @@
 "use client";
 
 // Staff-only console: view current mock event, publish/end events, review/export reports,
-// and (super-admin) manage staff accounts. Independent of the Edumax learning platform:
-// staff sign in with a Bravo staff token, kept in memory only (never localStorage) and
-// re-verified server-side on every staff API route.
+// and (super-admin) manage staff accounts. Single-screen tabbed layout (no scrolling).
+// Independent of the Edumax learning platform: staff sign in with a Bravo staff token,
+// kept in memory only (never localStorage) and re-verified server-side on every API route.
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCallback, useEffect, useState } from "react";
 
@@ -210,144 +213,197 @@ export function BravoConsoleClient() {
 
   if (!authed) {
     return (
-      <div className="mx-auto max-w-sm space-y-3 p-8 text-black dark:text-white">
-        <h1 className="text-2xl font-extrabold tracking-tight">Bravo Console</h1>
-        <p className="text-sm text-black/70 dark:text-white/70">Staff sign-in is required.</p>
-        <Input
-          type="password"
-          placeholder="Staff token"
-          value={tokenInput}
-          onChange={(e) => setTokenInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && void signIn()}
-        />
-        <Button onClick={() => void signIn()}>Sign in</Button>
+      <div className="flex min-h-[70vh] items-center justify-center px-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>Bravo Console</CardTitle>
+            <CardDescription>Staff sign-in is required.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Input
+              type="password"
+              placeholder="Staff token"
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void signIn()}
+            />
+            <Button className="w-full" onClick={() => void signIn()}>Sign in</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  const openCount = reports.filter((r) => r.status === "open").length;
+  const tabs = [
+    can("mock_manage") ? "mock" : null,
+    can("reports_review") ? "reports" : null,
+    me?.isSuperAdmin ? "staff" : null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 py-10 text-black dark:text-white">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold tracking-tight">Bravo Console</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
-          Signed in as {me?.name} {me?.isSuperAdmin ? "(super admin)" : `· ${me?.permissions.join(", ")}`}
-        </p>
+    <div className="mx-auto max-w-5xl px-4 py-8 text-black dark:text-white">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">Bravo Console</h1>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            {me?.name} {me?.isSuperAdmin ? "· super admin" : `· ${me?.permissions.join(", ")}`}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => { setAuthed(false); setStaffToken(""); setMe(null); }}>Sign out</Button>
       </header>
 
-      {can("mock_manage") && (
-        <>
-          <section className="space-y-3 rounded-2xl border border-black/10 p-5 dark:border-white/10">
-            <h2 className="text-xl font-bold">Current mock event</h2>
-            {mock ? (
-              <div className="space-y-1 text-sm">
-                <p><strong>{mock.title}</strong> ({mock.examId})</p>
-                <p>Edition {mock.editionYear} · {mock.durationMin} min · seed {mock.seed}</p>
-                {mock.subjectIds && <p>Subjects: {mock.subjectIds.join(", ")}{mock.countPerSubject ? ` × ${mock.countPerSubject}` : ""}</p>}
-                <p>Starts {mock.startsAt} · Closes {mock.closeAt}</p>
-                <Button variant="destructive" onClick={endMock}>End event now</Button>
-              </div>
-            ) : (
-              <p className="text-sm text-black/60 dark:text-white/60">No active mock event.</p>
-            )}
-          </section>
+      <Tabs defaultValue={tabs[0]} className="w-full">
+        <TabsList className="mb-4">
+          {can("mock_manage") && <TabsTrigger value="mock">Mock</TabsTrigger>}
+          {can("reports_review") && <TabsTrigger value="reports">Reports {openCount > 0 && <Badge className="ml-2">{openCount}</Badge>}</TabsTrigger>}
+          {me?.isSuperAdmin && <TabsTrigger value="staff">Staff</TabsTrigger>}
+        </TabsList>
 
-          <section className="space-y-3 rounded-2xl border border-black/10 p-5 dark:border-white/10">
-            <h2 className="text-xl font-bold">Publish mock event</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-              <div><Label>Exam ID</Label><Input value={form.examId} onChange={(e) => setForm({ ...form, examId: e.target.value })} /></div>
-              <div><Label>Subject IDs (comma separated, optional)</Label><Input value={form.subjectIds} onChange={(e) => setForm({ ...form, subjectIds: e.target.value })} /></div>
-              <div><Label>Count per subject (optional)</Label><Input value={form.countPerSubject} onChange={(e) => setForm({ ...form, countPerSubject: e.target.value })} /></div>
-              <div><Label>Duration (min)</Label><Input type="number" value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: e.target.value })} /></div>
-              <div><Label>Edition year</Label><Input type="number" value={form.editionYear} onChange={(e) => setForm({ ...form, editionYear: e.target.value })} /></div>
-              <div><Label>Seed</Label><Input value={form.seed} onChange={(e) => setForm({ ...form, seed: e.target.value })} /></div>
-              <div><Label>Starts at (ISO 8601)</Label><Input placeholder="2026-11-03T09:00:00Z" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></div>
-              <div><Label>Close at (ISO 8601, hard cutoff)</Label><Input placeholder="2026-11-03T12:00:00Z" value={form.closeAt} onChange={(e) => setForm({ ...form, closeAt: e.target.value })} /></div>
-            </div>
-            <Button onClick={publish}>Publish event</Button>
-          </section>
-        </>
-      )}
+        {can("mock_manage") && (
+          <TabsContent value="mock" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Current mock event</CardTitle>
+                  <CardDescription>{mock ? "Live now — clients can start within the window." : "No active mock event."}</CardDescription>
+                </div>
+                {mock && <Button variant="destructive" size="sm" onClick={endMock}>End now</Button>}
+              </CardHeader>
+              {mock && (
+                <CardContent className="flex flex-wrap gap-2 text-sm">
+                  <Badge variant="secondary">{mock.examId}</Badge>
+                  <Badge variant="secondary">Edition {mock.editionYear}</Badge>
+                  <Badge variant="secondary">{mock.durationMin} min</Badge>
+                  <Badge variant="secondary">seed {mock.seed}</Badge>
+                  {mock.subjectIds?.map((s) => <Badge key={s} variant="outline">{s}{mock.countPerSubject ? ` ×${mock.countPerSubject}` : ""}</Badge>)}
+                  <Badge variant="outline">starts {mock.startsAt}</Badge>
+                  <Badge variant="outline">closes {mock.closeAt}</Badge>
+                  <span className="w-full font-semibold">{mock.title}</span>
+                </CardContent>
+              )}
+            </Card>
 
-      {can("reports_review") && (
-        <section className="space-y-3 rounded-2xl border border-black/10 p-5 dark:border-white/10">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-xl font-bold">Reports</h2>
-            <select
-              className="rounded-md border border-black/15 bg-transparent px-2 py-1 text-sm dark:border-white/15"
-              value={reportStatus}
-              onChange={(e) => setReportStatus(e.target.value as typeof reportStatus)}
-            >
-              <option value="open">Open</option>
-              <option value="resolved">Resolved</option>
-              <option value="all">All</option>
-            </select>
-            {can("reports_export") && <Button size="sm" variant="outline" onClick={exportReports}>Export CSV</Button>}
-          </div>
-          {reports.length === 0 ? (
-            <p className="text-sm text-black/60 dark:text-white/60">No reports.</p>
-          ) : (
-            <ul className="space-y-2">
-              {reports.map((r) => (
-                <li key={r.id} className="rounded-xl border border-black/10 p-3 text-sm dark:border-white/10">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold">{r.category}</span>
-                    <span className="text-xs text-black/50 dark:text-white/50">{r.received_at}</span>
-                  </div>
-                  {r.message ? (
-                    <p className="mt-1 whitespace-pre-wrap">{r.message}</p>
-                  ) : (
-                    <p className="mt-1 text-black/70 dark:text-white/70">
-                      {r.exam_id}/{r.subject_id}/{r.question_id}
-                      {r.year ? ` · ${r.year}` : ""}{r.model ? ` · ${r.model}` : ""} · {r.product_id}
-                    </p>
-                  )}
-                  {r.status === "open" ? (
-                    <Button size="sm" className="mt-2" onClick={() => resolve(r.id)}>Mark reviewed</Button>
-                  ) : (
-                    <p className="mt-2 text-xs text-black/50 dark:text-white/50">Resolved {r.resolved_at}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Publish mock event</CardTitle>
+                <CardDescription>Scheduled or immediate. closeAt is a hard cutoff.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+                  <div><Label>Exam ID</Label><Input value={form.examId} onChange={(e) => setForm({ ...form, examId: e.target.value })} /></div>
+                  <div><Label>Subject IDs (comma separated, optional)</Label><Input value={form.subjectIds} onChange={(e) => setForm({ ...form, subjectIds: e.target.value })} /></div>
+                  <div><Label>Count per subject (optional)</Label><Input value={form.countPerSubject} onChange={(e) => setForm({ ...form, countPerSubject: e.target.value })} /></div>
+                  <div><Label>Duration (min)</Label><Input type="number" value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: e.target.value })} /></div>
+                  <div><Label>Edition year</Label><Input type="number" value={form.editionYear} onChange={(e) => setForm({ ...form, editionYear: e.target.value })} /></div>
+                  <div><Label>Seed</Label><Input value={form.seed} onChange={(e) => setForm({ ...form, seed: e.target.value })} /></div>
+                  <div><Label>Starts at (ISO 8601)</Label><Input placeholder="2026-11-03T09:00:00Z" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></div>
+                  <div><Label>Close at (ISO 8601)</Label><Input placeholder="2026-11-03T12:00:00Z" value={form.closeAt} onChange={(e) => setForm({ ...form, closeAt: e.target.value })} /></div>
+                </div>
+                <Button onClick={publish}>Publish event</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
-      {me?.isSuperAdmin && (
-        <section className="space-y-3 rounded-2xl border border-black/10 p-5 dark:border-white/10">
-          <h2 className="text-xl font-bold">Staff accounts</h2>
-          <div className="flex flex-wrap items-end gap-3">
-            <div><Label>Name</Label><Input value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} /></div>
-            {ALL_PERMISSIONS.map((p) => (
-              <label key={p} className="flex items-center gap-1 text-sm">
-                <input
-                  type="checkbox"
-                  checked={newStaffPerms.includes(p)}
-                  onChange={(e) => setNewStaffPerms((prev) => (e.target.checked ? [...prev, p] : prev.filter((x) => x !== p)))}
-                />
-                {p}
-              </label>
-            ))}
-            <Button onClick={addStaff}>Add staff</Button>
-          </div>
-          {createdToken && (
-            <p className="rounded-lg bg-black/5 p-2 text-xs dark:bg-white/10">
-              New staff token (shown once): <code className="break-all">{createdToken}</code>
-            </p>
-          )}
-          <ul className="space-y-2">
-            {staff.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 p-3 text-sm dark:border-white/10">
-                <span>
-                  <strong>{s.name}</strong> · {s.permissions.join(", ")} · {s.active ? "active" : `revoked ${s.revoked_at ?? ""}`}
-                </span>
-                {s.active && <Button size="sm" variant="destructive" onClick={() => revoke(s.id)}>Revoke</Button>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {can("reports_review") && (
+          <TabsContent value="reports">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Reports</CardTitle>
+                  <CardDescription>Student question reports and general feedback.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="rounded-md border border-black/15 bg-transparent px-2 py-1 text-sm dark:border-white/15"
+                    value={reportStatus}
+                    onChange={(e) => setReportStatus(e.target.value as typeof reportStatus)}
+                  >
+                    <option value="open">Open</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="all">All</option>
+                  </select>
+                  {can("reports_export") && <Button size="sm" variant="outline" onClick={exportReports}>Export CSV</Button>}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {reports.length === 0 ? (
+                  <p className="text-sm text-black/60 dark:text-white/60">No reports.</p>
+                ) : (
+                  <ul className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                    {reports.map((r) => (
+                      <li key={r.id} className="rounded-xl border border-black/10 p-3 text-sm dark:border-white/10">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Badge variant={r.status === "open" ? "default" : "secondary"}>{r.category}</Badge>
+                          <span className="text-xs text-black/50 dark:text-white/50">{r.received_at}</span>
+                        </div>
+                        {r.message ? (
+                          <p className="mt-1 whitespace-pre-wrap">{r.message}</p>
+                        ) : (
+                          <p className="mt-1 text-black/70 dark:text-white/70">
+                            {r.exam_id}/{r.subject_id}/{r.question_id}
+                            {r.year ? ` · ${r.year}` : ""}{r.model ? ` · ${r.model}` : ""} · {r.product_id}
+                          </p>
+                        )}
+                        {r.status === "open" ? (
+                          <Button size="sm" className="mt-2" onClick={() => resolve(r.id)}>Mark reviewed</Button>
+                        ) : (
+                          <p className="mt-2 text-xs text-black/50 dark:text-white/50">Resolved {r.resolved_at}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {me?.isSuperAdmin && (
+          <TabsContent value="staff">
+            <Card>
+              <CardHeader>
+                <CardTitle>Staff accounts</CardTitle>
+                <CardDescription>Add staff with permission levels, or revoke access instantly.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div><Label>Name</Label><Input value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} /></div>
+                  {ALL_PERMISSIONS.map((p) => (
+                    <label key={p} className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={newStaffPerms.includes(p)}
+                        onChange={(e) => setNewStaffPerms((prev) => (e.target.checked ? [...prev, p] : prev.filter((x) => x !== p)))}
+                      />
+                      {p}
+                    </label>
+                  ))}
+                  <Button onClick={addStaff}>Add staff</Button>
+                </div>
+                {createdToken && (
+                  <p className="rounded-lg bg-black/5 p-2 text-xs dark:bg-white/10">
+                    New staff token (shown once): <code className="break-all">{createdToken}</code>
+                  </p>
+                )}
+                <ul className="space-y-2">
+                  {staff.map((s) => (
+                    <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 p-3 text-sm dark:border-white/10">
+                      <span>
+                        <strong>{s.name}</strong> · {s.permissions.join(", ")} ·{" "}
+                        {s.active ? <Badge variant="secondary">active</Badge> : <Badge variant="outline">revoked {s.revoked_at ?? ""}</Badge>}
+                      </span>
+                      {s.active && <Button size="sm" variant="destructive" onClick={() => revoke(s.id)}>Revoke</Button>}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

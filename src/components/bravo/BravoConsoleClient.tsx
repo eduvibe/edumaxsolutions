@@ -46,6 +46,24 @@ type StaffRow = { id: string; name: string; permissions: string[]; active: boole
 
 const ALL_PERMISSIONS = ["mock_manage", "reports_review", "reports_export"] as const;
 
+/** Auto-generated exam id, e.g. mock-20261103-a7f2. */
+function makeExamId(): string {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  const rand = Math.random().toString(16).slice(2, 6);
+  return `mock-${ymd}-${rand}`;
+}
+
+function makeSeed(): string {
+  return Math.random().toString(16).slice(2, 10);
+}
+
+/** datetime-local value -> ISO 8601 UTC string. */
+function toIso(local: string): string {
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 export function BravoConsoleClient() {
   const { toast } = useToast();
   const [staffToken, setStaffToken] = useState("");
@@ -59,14 +77,15 @@ export function BravoConsoleClient() {
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffPerms, setNewStaffPerms] = useState<string[]>(["reports_review"]);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  const [allSubjects, setAllSubjects] = useState(true);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [form, setForm] = useState({
     title: "",
-    examId: "",
-    subjectIds: "",
-    countPerSubject: "",
+    examId: makeExamId(),
     durationMin: "60",
     editionYear: String(new Date().getFullYear()),
-    seed: "",
+    seed: makeSeed(),
     startsAt: "",
     closeAt: "",
   });
@@ -93,9 +112,16 @@ export function BravoConsoleClient() {
       me?.isSuperAdmin ? authedFetch("/api/staff") : Promise.resolve(null),
     ]);
     if (mockRes.ok) setMock(((await mockRes.json()) as { mock: MockConfig | null }).mock);
+    if (can("mock_manage")) {
+      const subRes = await fetch("/api/curriculum/subjects", { cache: "no-store" });
+      if (subRes.ok) {
+        const data = (await subRes.json()) as { subjects?: { name?: string; slug?: string }[] };
+        setAvailableSubjects((data.subjects ?? []).map((s) => s.name ?? s.slug ?? "").filter(Boolean));
+      }
+    }
     if (repRes?.ok) setReports(((await repRes.json()) as { reports: ReportRow[] }).reports);
     if (staffRes?.ok) setStaff(((await staffRes.json()) as { staff: StaffRow[] }).staff);
-  }, [authedFetch, reportStatus, me]);
+  }, [authedFetch, reportStatus, me, can]);
 
   async function signIn() {
     const token = tokenInput.trim();
@@ -127,18 +153,18 @@ export function BravoConsoleClient() {
         body: JSON.stringify({
           title: form.title,
           examId: form.examId,
-          subjectIds: form.subjectIds ? form.subjectIds.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
-          countPerSubject: form.countPerSubject ? Number(form.countPerSubject) : undefined,
+          subjectIds: allSubjects ? undefined : selectedSubjects,
           durationMin: Number(form.durationMin),
           editionYear: Number(form.editionYear),
           seed: form.seed,
-          startsAt: form.startsAt,
-          closeAt: form.closeAt,
+          startsAt: toIso(form.startsAt),
+          closeAt: toIso(form.closeAt),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; mock?: MockConfig };
       if (!res.ok) throw new Error(data.error ?? "Failed to publish mock");
       toast({ title: "Mock published", description: data.mock?.title });
+      setForm((f) => ({ ...f, examId: makeExamId(), seed: makeSeed(), title: "" }));
       await load();
     } catch (e) {
       toast({ title: "Publish failed", description: e instanceof Error ? e.message : "Unknown error" });
@@ -292,14 +318,49 @@ export function BravoConsoleClient() {
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-                  <div><Label>Exam ID</Label><Input value={form.examId} onChange={(e) => setForm({ ...form, examId: e.target.value })} /></div>
-                  <div><Label>Subject IDs (comma separated, optional)</Label><Input value={form.subjectIds} onChange={(e) => setForm({ ...form, subjectIds: e.target.value })} /></div>
-                  <div><Label>Count per subject (optional)</Label><Input value={form.countPerSubject} onChange={(e) => setForm({ ...form, countPerSubject: e.target.value })} /></div>
+                  <div>
+                    <Label>Exam ID (auto-generated)</Label>
+                    <div className="flex gap-2">
+                      <Input readOnly value={form.examId} className="bg-black/5 dark:bg-white/5" />
+                      <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, examId: makeExamId() })}>New</Button>
+                    </div>
+                  </div>
                   <div><Label>Duration (min)</Label><Input type="number" value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: e.target.value })} /></div>
                   <div><Label>Edition year</Label><Input type="number" value={form.editionYear} onChange={(e) => setForm({ ...form, editionYear: e.target.value })} /></div>
-                  <div><Label>Seed</Label><Input value={form.seed} onChange={(e) => setForm({ ...form, seed: e.target.value })} /></div>
-                  <div><Label>Starts at (ISO 8601)</Label><Input placeholder="2026-11-03T09:00:00Z" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></div>
-                  <div><Label>Close at (ISO 8601)</Label><Input placeholder="2026-11-03T12:00:00Z" value={form.closeAt} onChange={(e) => setForm({ ...form, closeAt: e.target.value })} /></div>
+                  <div>
+                    <Label>Seed (auto-generated)</Label>
+                    <div className="flex gap-2">
+                      <Input readOnly value={form.seed} className="bg-black/5 dark:bg-white/5" />
+                      <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, seed: makeSeed() })}>New</Button>
+                    </div>
+                    <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+                      The seed deterministically shuffles/selects questions from those already installed in the app, so every student gets a reproducible paper for this event.
+                    </p>
+                  </div>
+                  <div><Label>Starts at</Label><Input type="datetime-local" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></div>
+                  <div><Label>Close at (hard cutoff)</Label><Input type="datetime-local" value={form.closeAt} onChange={(e) => setForm({ ...form, closeAt: e.target.value })} /></div>
+                </div>
+                <div>
+                  <Label>Subjects</Label>
+                  <label className="mt-2 flex items-center gap-2 text-sm font-medium">
+                    <input type="checkbox" checked={allSubjects} onChange={(e) => setAllSubjects(e.target.checked)} />
+                    All subjects
+                  </label>
+                  {!allSubjects && (
+                    <div className="mt-2 flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+                      {availableSubjects.map((sub) => (
+                        <label key={sub} className="flex cursor-pointer items-center gap-1 rounded-full border border-black/15 px-3 py-1 text-xs dark:border-white/15">
+                          <input
+                            type="checkbox"
+                            checked={selectedSubjects.includes(sub)}
+                            onChange={(e) => setSelectedSubjects((prev) => (e.target.checked ? [...prev, sub] : prev.filter((x) => x !== sub)))}
+                          />
+                          {sub}
+                        </label>
+                      ))}
+                      {availableSubjects.length === 0 && <span className="text-xs text-black/50">No subjects found.</span>}
+                    </div>
+                  )}
                 </div>
                 <Button onClick={publish}>Publish event</Button>
               </CardContent>

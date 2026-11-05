@@ -390,10 +390,10 @@ export function BravoConsoleClient() {
                   <div><Label>Duration (min)</Label><Input type="number" value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: e.target.value })} /></div>
                   <div><Label>Edition year</Label><Input type="number" value={form.editionYear} onChange={(e) => setForm({ ...form, editionYear: e.target.value })} /></div>
                   <div>
-                    <Label>Seed (auto-generated)</Label>
+                    <Label>Seed (auto-generated, editable)</Label>
                     <div className="flex gap-2">
-                      <Input readOnly value={form.seed} className="bg-black/5 dark:bg-white/5" />
-                      <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, seed: makeSeed() })}>New</Button>
+                      <Input value={form.seed} onChange={(e) => setForm({ ...form, seed: e.target.value })} />
+                      <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, seed: makeSeed() })}>Random</Button>
                     </div>
                     <p className="mt-1 text-xs text-black/50 dark:text-white/50">
                       The seed deterministically shuffles/selects questions from those already installed in the app, so every student gets a reproducible paper for this event.

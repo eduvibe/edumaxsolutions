@@ -193,10 +193,12 @@ describe("mock routes", () => {
     const body = (await cur.json()) as { mock: MockConfigLike | null };
     expect(body.mock?.examId).toBe("utme");
     expect(body.mock && "closeAt" in body.mock).toBe(true);
+    expect(body.mock?.editionYear).toBe(2026);
+    expect(typeof body.mock?.seed).toBe("string");
     expect((await end(jsonReq("https://site.test/api/mock/end", {}, STAFF_TOKEN))).status).toBe(200);
     const after = (await (await current()).json()) as { mock: unknown };
     expect(after.mock).toBeNull();
   });
 });
 
-type MockConfigLike = { examId: string; closeAt: string };
+type MockConfigLike = { examId: string; closeAt: string; editionYear: number; seed: string };

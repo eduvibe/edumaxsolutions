@@ -1,6 +1,10 @@
 // Applies db/migrations/*.sql to the Turso database named by server env vars.
-// Usage:  TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... npm run db:migrate
+// Usage:  npm run db:migrate
+// Credentials come from the environment or from a git-ignored .env.local:
+//   TURSO_DATABASE_URL=libsql://<db>-<org>.turso.io
+//   TURSO_AUTH_TOKEN=...
 // Secrets are read from the environment only and never printed.
+import "dotenv/config";
 import { createClient } from "@libsql/client";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -12,7 +16,25 @@ const migrationsDir = join(here, "..", "db", "migrations");
 const url = process.env.TURSO_DATABASE_URL?.trim();
 const authToken = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
 if (!url) {
-  console.error("TURSO_DATABASE_URL is not set");
+  console.error("TURSO_DATABASE_URL is not set (environment or .env.local)");
+  process.exit(1);
+}
+// Fail fast on malformed URLs instead of a cryptic HTTP 400 from the server.
+let targetName = "(unknown)";
+try {
+  const parsed = new URL(url);
+  if (parsed.protocol !== "libsql:") {
+    console.error(`TURSO_DATABASE_URL must use the libsql:// scheme, got '${parsed.protocol}//' — refusing to run.`);
+    process.exit(1);
+  }
+  targetName = parsed.hostname;
+} catch {
+  console.error("TURSO_DATABASE_URL is not a valid libsql:// URL — refusing to run.");
+  process.exit(1);
+}
+console.log(`target database: ${targetName}  (token: ${authToken ? "set" : "MISSING"})`);
+if (!authToken) {
+  console.error("TURSO_AUTH_TOKEN is not set (environment or .env.local)");
   process.exit(1);
 }
 

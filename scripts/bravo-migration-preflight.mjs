@@ -4,6 +4,7 @@
 // Usage:  TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... node scripts/bravo-migration-preflight.mjs
 // Exit codes: 0 = ledger and schema consistent with the migration files; 2 = reconciliation needed before db:migrate;
 //             1 = could not run the check.
+import "dotenv/config";
 import { createClient } from "@libsql/client";
 import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";

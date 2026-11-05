@@ -2,12 +2,17 @@
 // GET  /api/reports?status=open|resolved|all&limit=... — staff (admin) only.
 import { getClientIp, checkRateLimit } from "@/app/api/_lib/rateLimit";
 import { requireBravoStaff } from "@/lib/bravo/staff";
-import { readJsonObject, jsonNoStore } from "@/lib/bravo/http";
+import { readJsonObject, jsonNoStore, CORS_HEADERS, corsPreflight } from "@/lib/bravo/http";
 import { getBravoDb } from "@/lib/bravo/db";
 import { storeReport, listReports, validateReportPayload, ReportValidationError } from "@/lib/bravo/reports";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Browser clients (Bravo web build) need a preflight answer; Electron main-process does not.
+export async function OPTIONS() {
+  return corsPreflight();
+}
 
 export async function POST(req: Request) {
   const ip = getClientIp(req);
@@ -23,7 +28,8 @@ export async function POST(req: Request) {
     const payload = validateReportPayload(body);
     const { created } = await storeReport(getBravoDb(), payload, new Date().toISOString());
     // Persist first; there is no notification step that could lose the report.
-    return jsonNoStore({ ok: true, id: payload.id, created }, created ? 201 : 200);
+    // Bravo treats delivery as successful only when JSON has ok:true and reportId === submitted id.
+    return jsonNoStore({ ok: true, reportId: payload.id, id: payload.id, created }, created ? 201 : 200, CORS_HEADERS);
   } catch (error) {
     if (error instanceof ReportValidationError) {
       return jsonNoStore({ error: error.code, message: error.message }, 400);

@@ -106,13 +106,30 @@ describe("report routes", () => {
   const authedGet = (url: string, token = STAFF_TOKEN) =>
     new Request(url, { headers: { authorization: `Bearer ${token}` } });
 
-  it("POST /api/reports is public and rejects question-content payloads", async () => {
+  it("POST /api/reports is public, returns the Bravo success contract (ok + reportId), and rejects question-content payloads", async () => {
     const POST = await postRoute();
     const ok = await POST(jsonReq("https://site.test/api/reports", questionBody));
     expect(ok.status).toBe(200); // duplicate of the stored id -> idempotent 200
+    const okBody = (await ok.json()) as { ok: boolean; reportId: string };
+    expect(okBody.ok).toBe(true);
+    expect(okBody.reportId).toBe(questionBody.id);
     const bad = await POST(jsonReq("https://site.test/api/reports", { ...questionBody, id: "rep_0003IjKl", stem: "2+2=?" }));
     expect(bad.status).toBe(400);
     expect((await bad.json()).error).toBe("forbidden_field");
+  });
+
+  it("accepts productId: null and answers CORS preflight", async () => {
+    const POST = await postRoute();
+    const res = await POST(jsonReq("https://site.test/api/reports", { ...feedbackBody, id: "rep_nullPid1", productId: null }));
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { ok: boolean; reportId: string };
+    expect(body).toMatchObject({ ok: true, reportId: "rep_nullPid1" });
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+
+    const mod = await import("@/app/api/reports/route");
+    const pre = await mod.OPTIONS();
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get("access-control-allow-methods")).toContain("POST");
   });
 
   it("GET /api/reports requires the Bravo staff token", async () => {

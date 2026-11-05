@@ -102,7 +102,8 @@ export function validateReportPayload(body: Record<string, unknown>): ReportPayl
   }
 
   const createdAt = requireIso(body.createdAt, "createdAt");
-  const productId = requireString(body.productId, "productId", 40);
+  // The Bravo client may send productId: null (e.g. before activation); store as empty string.
+  const productId = body.productId === null ? "" : requireString(body.productId, "productId", 40);
   const appVersion = requireString(body.appVersion, "appVersion", 40);
 
   if (category === "general_feedback") {

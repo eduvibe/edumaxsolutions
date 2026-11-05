@@ -2,12 +2,16 @@
 // enforces startsAt/closeAt, and stores the score. Offline submissions are accepted
 // late only when the attempt started before closeAt and ended at/before closeAt.
 import { getClientIp, checkRateLimit } from "@/app/api/_lib/rateLimit";
-import { readJsonObject, jsonNoStore } from "@/lib/bravo/http";
+import { readJsonObject, jsonNoStore, CORS_HEADERS, corsPreflight } from "@/lib/bravo/http";
 import { getBravoDb } from "@/lib/bravo/db";
 import { submitMockScore, MockValidationError } from "@/lib/bravo/mock";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+export async function OPTIONS() {
+  return corsPreflight();
+}
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const ip = getClientIp(req);
@@ -23,7 +27,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   try {
     const result = await submitMockScore(getBravoDb(), decodeURIComponent(id), body, new Date().toISOString());
     if (!result.accepted) return jsonNoStore({ error: result.code, message: result.message }, 400);
-    return jsonNoStore({ ok: true, id: result.id }, 201);
+    return jsonNoStore({ ok: true, id: result.id }, 201, CORS_HEADERS);
   } catch (error) {
     if (error instanceof MockValidationError) {
       return jsonNoStore({ error: error.code, message: error.message }, 400);

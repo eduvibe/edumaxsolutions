@@ -40,6 +40,16 @@ function requireIso(value: unknown, field: string): string {
   return v;
 }
 
+/**
+ * Accepts attempt timestamps as ISO 8601 strings OR Unix epoch milliseconds
+ * (number or numeric string) — Bravo's offline queue stores ms. Returns ISO 8601 UTC.
+ */
+function parseTimestamp(value: unknown, field: string): string {
+  if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString();
+  if (typeof value === "string" && /^\d{10,14}$/.test(value.trim())) return new Date(Number(value.trim())).toISOString();
+  return requireIso(value, field);
+}
+
 /** Validates the staff-supplied event configuration (same fields as the Bravo Manager page). */
 export function validateMockConfig(body: Record<string, unknown>): Omit<MockEventConfig, "id"> {
   const title = requireString(body.title, "title", 200);
@@ -162,7 +172,7 @@ export type ScoreSubmission = {
   endedAt: string;
 };
 
-export type ScoreResult = { accepted: true; id: string } | { accepted: false; code: string; message: string };
+export type ScoreResult = { accepted: true; id: string; duplicate?: boolean } | { accepted: false; code: string; message: string };
 
 /**
  * Validates an activation key against its Product ID using the vendored Bravo
@@ -171,9 +181,11 @@ export type ScoreResult = { accepted: true; id: string } | { accepted: false; co
  * before closeAt and ended at or before closeAt.
  */
 export async function submitMockScore(db: Client, eventId: string, body: Record<string, unknown>, now: string): Promise<ScoreResult> {
+  // Look up the mock by the ID in the path — a closed/ended mock must still accept delayed
+  // offline scores when its timing rules permit. no_active_mock is only for unknown IDs.
   const event = await db.execute({ sql: "SELECT * FROM bravo_mock_events WHERE id = ?", args: [eventId] });
   const ev = event.rows[0] as unknown as MockEventDbRow | undefined;
-  if (!ev || ev.status !== "active") return { accepted: false, code: "no_active_mock", message: "No active mock event" };
+  if (!ev) return { accepted: false, code: "no_active_mock", message: "Unknown mock event id" };
 
   const productId = requireString(body.productId, "productId", 40);
   const activationKey = requireString(body.activationKey, "activationKey", 120);
@@ -185,13 +197,14 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
   let startedAt: string;
   let endedAt: string;
   try {
-    startedAt = requireIso(body.startedAt, "startedAt");
-    endedAt = requireIso(body.endedAt, "endedAt");
+    startedAt = parseTimestamp(body.startedAt, "startedAt");
+    endedAt = parseTimestamp(body.endedAt, "endedAt");
   } catch (e) {
     return { accepted: false, code: (e as MockValidationError).code, message: (e as Error).message };
   }
 
   // Verify the activation key for this Product ID (offline-capable Bravo license check).
+  // The key itself is never stored or logged.
   const keyCheck = await verifyActivationKey({
     activationKey,
     productId,
@@ -199,7 +212,7 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
   });
   if (!keyCheck.ok) return { accepted: false, code: "invalid_activation_key", message: `Activation key check failed: ${keyCheck.reason}` };
 
-  // Cutoff enforcement: startsAt blocks early starts; closeAt is the hard boundary.
+  // Cutoff enforcement against the event's configured window (regardless of active status).
   if (Date.parse(startedAt) < Date.parse(ev.starts_at)) {
     return { accepted: false, code: "before_start", message: "Attempt started before the mock startsAt" };
   }
@@ -213,9 +226,22 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
     return { accepted: false, code: "invalid_window", message: "endedAt must be at/after startedAt" };
   }
 
+  // Idempotent per (event, product): check existing first. A retry of the identical accepted
+  // submission is acknowledged with the original id; a different one never overwrites.
+  const existing = await db.execute({
+    sql: "SELECT id, score, total, started_at, ended_at FROM bravo_mock_scores WHERE event_id = ? AND product_id = ?",
+    args: [eventId, productId],
+  });
+  const prior = existing.rows[0] as unknown as { id: string; score: number; total: number; started_at: string; ended_at: string } | undefined;
+  if (prior) {
+    const identical = prior.score === score && prior.total === total && prior.started_at === startedAt && prior.ended_at === endedAt;
+    if (identical) return { accepted: true, id: prior.id, duplicate: true };
+    return { accepted: false, code: "duplicate_score", message: "A different score was already accepted for this product on this event" };
+  }
+
   const id = randomUUID();
   await db.execute({
-    sql: `INSERT INTO bravo_mock_scores (id, event_id, product_id, score, total, started_at, ended_at, submitted_at)
+    sql: `INSERT OR IGNORE INTO bravo_mock_scores (id, event_id, product_id, score, total, started_at, ended_at, submitted_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [id, eventId, productId, score as number, total as number, startedAt, endedAt, now],
   });

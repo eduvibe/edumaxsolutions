@@ -152,10 +152,70 @@ describe("mock edit/delete lock rules", () => {
   });
 });
 
+describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idempotent retry)", () => {
+  const MS = (iso: string) => Date.parse(iso); // Bravo sends Unix ms
+  const base = {
+    productId: VALID_PRODUCT_ID,
+    activationKey: "BCBTK1-TEST",
+    score: 30,
+    total: 400,
+    startedAt: MS("2026-11-02T09:30:00.000Z"),
+    endedAt: MS("2026-11-02T10:30:00.000Z"),
+  };
+
+  beforeEach(async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    eventId = event.id;
+  });
+
+  it("1. accepts a valid score while the mock is active", async () => {
+    const r = await submitMockScore(db, eventId, base, NOW);
+    expect(r.accepted).toBe(true);
+  });
+
+  it("2. accepts a delayed score for a known mock after it closes (started < closeAt, ended <= closeAt)", async () => {
+    await endCurrentMock(db, NOW); // mock is now ended
+    const late = await submitMockScore(db, eventId, base, "2026-11-05T09:00:00.000Z"); // days later
+    expect(late.accepted).toBe(true);
+  });
+
+  it("3. rejects endedAt after closeAt (after_close) even for a known ended mock", async () => {
+    await endCurrentMock(db, NOW);
+    const r = await submitMockScore(db, eventId, { ...base, endedAt: MS("2026-11-02T11:00:01.000Z") }, NOW);
+    if (!r.accepted) expect(r.code).toBe("after_close");
+  });
+
+  it("4. rejects an unknown mock id with no_active_mock", async () => {
+    const r = await submitMockScore(db, "does-not-exist", base, NOW);
+    if (!r.accepted) expect(r.code).toBe("no_active_mock");
+  });
+
+  it("5. rejects invalid activation key and invalid score", async () => {
+    holder.keyOk = false;
+    const badKey = await submitMockScore(db, eventId, base, NOW);
+    if (!badKey.accepted) expect(badKey.code).toBe("invalid_activation_key");
+    holder.keyOk = true;
+    const badScore = await submitMockScore(db, eventId, { ...base, score: 401, total: 400 }, NOW);
+    if (!badScore.accepted) expect(badScore.code).toBe("invalid_score");
+  });
+
+  it("6. idempotent retry: identical resubmission acknowledged, different one rejected without overwrite", async () => {
+    const first = await submitMockScore(db, eventId, base, NOW);
+    expect(first.accepted).toBe(true);
+    const retry = await submitMockScore(db, eventId, base, "2026-11-03T08:00:00.000Z");
+    expect(retry.accepted).toBe(true);
+    if (retry.accepted) expect(retry.duplicate).toBe(true);
+    const diff = await submitMockScore(db, eventId, { ...base, score: 99 }, NOW);
+    if (!diff.accepted) expect(diff.code).toBe("duplicate_score");
+    const board = await getLeaderboard(db, eventId, 10);
+    expect(board[0].score).toBe(30); // original not overwritten
+  });
+});
+
 describe("leaderboard privacy", () => {
   it("exposes only leaderboard-safe fields, best score per product", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
-    await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 10, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:00:00.000Z" }, NOW);
+    // one accepted score per product now; submit the best directly
     await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 35, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:10:00.000Z" }, NOW);
     await submitMockScore(db, event.id, { productId: "BCBT-OTHER-0001", activationKey: "k", score: 20, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:10:00.000Z" }, NOW);
 

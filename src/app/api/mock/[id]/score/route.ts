@@ -5,6 +5,7 @@ import { getClientIp, checkRateLimit } from "@/app/api/_lib/rateLimit";
 import { readJsonObject, jsonNoStore, CORS_HEADERS, corsPreflight } from "@/lib/bravo/http";
 import { getBravoDb } from "@/lib/bravo/db";
 import { submitMockScore, MockValidationError } from "@/lib/bravo/mock";
+import { logBravoSignal } from "@/lib/bravo/monitoring";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   try {
     const result = await submitMockScore(getBravoDb(), decodeURIComponent(id), body, new Date().toISOString());
-    if (!result.accepted) return jsonNoStore({ error: result.code, message: result.message }, 400);
+    if (!result.accepted) {
+      // Log the rejection reason (code + event id only, never productId/key/scores) for Vercel log inspection.
+      logBravoSignal("score_rejected", { route: "score", ip, reason: result.code, eventId: decodeURIComponent(id) });
+      return jsonNoStore({ error: result.code, message: result.message }, 400);
+    }
     return jsonNoStore({ ok: true, id: result.id }, 201, CORS_HEADERS);
   } catch (error) {
     if (error instanceof MockValidationError) {

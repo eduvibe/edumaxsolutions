@@ -202,3 +202,9 @@ export async function resolveReport(db: Client, id: string, resolvedAt: string):
   const row = await db.execute({ sql: "SELECT * FROM bravo_reports WHERE id = ?", args: [id] });
   return (row.rows[0] as unknown as ReportRow) ?? null;
 }
+
+/** Permanently deletes a report (e.g. test entries or already-treated ones). */
+export async function deleteReport(db: Client, id: string): Promise<boolean> {
+  const result = await db.execute({ sql: "DELETE FROM bravo_reports WHERE id = ?", args: [id] });
+  return result.rowsAffected > 0;
+}

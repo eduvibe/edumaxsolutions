@@ -247,3 +247,57 @@ export async function getLeaderboard(db: Client, eventId: string, limit = 100): 
   }
   return entries;
 }
+
+export async function getMockEvent(db: Client, id: string): Promise<(MockEventConfig & { status: string }) | null> {
+  const result = await db.execute({ sql: "SELECT * FROM bravo_mock_events WHERE id = ?", args: [id] });
+  const row = result.rows[0] as unknown as MockEventDbRow | undefined;
+  return row ? { ...rowToConfig(row), status: row.status } : null;
+}
+
+async function eventScoreCount(db: Client, eventId: string): Promise<number> {
+  const r = await db.execute({ sql: "SELECT COUNT(*) AS n FROM bravo_mock_scores WHERE event_id = ?", args: [eventId] });
+  return Number((r.rows[0] as unknown as { n: number | string }).n);
+}
+
+/**
+ * Edits an active event's configuration. Only allowed before the event starts
+ * (now < startsAt) and while no scores have been submitted — once students have
+ * started, the event is locked and can only be ended.
+ */
+export async function updateMockEvent(
+  db: Client,
+  id: string,
+  config: Omit<MockEventConfig, "id">,
+  now: string
+): Promise<{ ok: true; mock: MockEventConfig } | { ok: false; code: string; message: string }> {
+  const ev = await getMockEvent(db, id);
+  if (!ev) return { ok: false, code: "not_found", message: "Mock event not found" };
+  if (ev.status !== "active") return { ok: false, code: "locked", message: "Event is ended and cannot be edited" };
+  if (Date.parse(now) >= Date.parse(ev.startsAt)) return { ok: false, code: "locked", message: "Event has already started; end it instead" };
+  if ((await eventScoreCount(db, id)) > 0) return { ok: false, code: "locked", message: "Scores already submitted; event is locked" };
+  await db.execute({
+    sql: `UPDATE bravo_mock_events SET title = ?, exam_id = ?, subject_ids = ?, count_per_subject = ?,
+          duration_min = ?, edition_year = ?, seed = ?, starts_at = ?, close_at = ? WHERE id = ?`,
+    args: [
+      config.title, config.examId,
+      config.subjectIds ? JSON.stringify(config.subjectIds) : null,
+      config.countPerSubject ?? null,
+      config.durationMin, config.editionYear, config.seed, config.startsAt, config.closeAt, id,
+    ],
+  });
+  return { ok: true, mock: { id, ...config } };
+}
+
+/**
+ * Deletes a mock event. Only allowed while no scores exist for it
+ * (an event with results is kept and can be ended instead).
+ */
+export async function deleteMockEvent(db: Client, id: string): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
+  const ev = await getMockEvent(db, id);
+  if (!ev) return { ok: false, code: "not_found", message: "Mock event not found" };
+  if ((await eventScoreCount(db, id)) > 0) {
+    return { ok: false, code: "has_scores", message: "Event already has submitted scores; end it instead of deleting" };
+  }
+  await db.execute({ sql: "DELETE FROM bravo_mock_events WHERE id = ?", args: [id] });
+  return { ok: true };
+}

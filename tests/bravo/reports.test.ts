@@ -7,7 +7,7 @@ process.env.BRAVO_STAFF_TOKEN = STAFF_TOKEN;
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("@/lib/bravo/db", () => ({ getBravoDb: () => holder.db }));
 
-import { validateReportPayload, storeReport, listReports, resolveReport, ReportValidationError } from "@/lib/bravo/reports";
+import { validateReportPayload, storeReport, listReports, resolveReport, deleteReport, ReportValidationError } from "@/lib/bravo/reports";
 
 const questionBody = {
   id: "rep_0001Abcd",
@@ -76,6 +76,13 @@ describe("report storage", () => {
     expect(dup.created).toBe(false);
     const all = await listReports(db, { status: "all", limit: 10 });
     expect(all.filter((r) => r.id === questionBody.id)).toHaveLength(1);
+  });
+
+  it("deletes a report permanently", async () => {
+    await storeReport(db, validateReportPayload({ ...feedbackBody, id: "rep_deleteMe1" }), "2026-11-02T10:06:00.000Z");
+    expect(await deleteReport(db, "rep_deleteMe1")).toBe(true);
+    expect(await deleteReport(db, "rep_deleteMe1")).toBe(false);
+    expect((await listReports(db, { status: "all", limit: 50 })).find((r) => r.id === "rep_deleteMe1")).toBeUndefined();
   });
 
   it("filters by status and resolves a report with resolvedAt", async () => {

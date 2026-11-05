@@ -14,6 +14,8 @@ vi.mock("@/lib/bravo/vendor/license-core.js", async (importOriginal) => {
 
 import {
   createMockEvent,
+  updateMockEvent,
+  deleteMockEvent,
   endCurrentMock,
   getCurrentMock,
   getLeaderboard,
@@ -124,6 +126,29 @@ describe("closeAt cutoff and score validation", () => {
     if (!bad.accepted) expect(bad.code).toBe("invalid_score");
     const noEvent = await submitMockScore(db, "missing", scoreBody(), NOW);
     if (!noEvent.accepted) expect(noEvent.code).toBe("no_active_mock");
+  });
+});
+
+describe("mock edit/delete lock rules", () => {
+  it("allows editing before start with no scores, locks after start or with scores, deletes only without scores", async () => {
+    const future = { ...config, startsAt: "2026-12-01T09:00:00.000Z", closeAt: "2026-12-01T11:00:00.000Z" };
+    const event = await createMockEvent(db, validateMockConfig(future), NOW);
+
+    // editable before start
+    const edit = await updateMockEvent(db, event.id, validateMockConfig({ ...future, title: "Renamed" }), NOW);
+    expect(edit.ok).toBe(true);
+
+    // delete allowed while no scores
+    expect((await deleteMockEvent(db, event.id)).ok).toBe(true);
+    expect((await deleteMockEvent(db, event.id)).ok).toBe(false);
+
+    // started event is locked for edit and delete-with-scores
+    const started = await createMockEvent(db, validateMockConfig(config), NOW);
+    const lateEdit = await updateMockEvent(db, started.id, validateMockConfig(config), "2026-11-02T10:00:00.000Z");
+    if (!lateEdit.ok) expect(lateEdit.code).toBe("locked");
+    await submitMockScore(db, started.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 5, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:00:00.000Z" }, NOW);
+    const delWithScores = await deleteMockEvent(db, started.id);
+    if (!delWithScores.ok) expect(delWithScores.code).toBe("has_scores");
   });
 });
 

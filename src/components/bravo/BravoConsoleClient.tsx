@@ -41,6 +41,7 @@ type ReportRow = {
   resolved_at: string | null;
 };
 
+type LeaderboardEntry = { productId: string; score: number; total: number; submittedAt: string };
 type StaffCtx = { staffId: string; name: string; permissions: string[]; isSuperAdmin: boolean };
 type StaffRow = { id: string; name: string; permissions: string[]; active: boolean; created_at: string; revoked_at: string | null };
 
@@ -77,6 +78,8 @@ export function BravoConsoleClient() {
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffPerms, setNewStaffPerms] = useState<string[]>(["reports_review"]);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [editingMockId, setEditingMockId] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [allSubjects, setAllSubjects] = useState(true);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -111,7 +114,17 @@ export function BravoConsoleClient() {
         : Promise.resolve(null),
       me?.isSuperAdmin ? authedFetch("/api/staff") : Promise.resolve(null),
     ]);
-    if (mockRes.ok) setMock(((await mockRes.json()) as { mock: MockConfig | null }).mock);
+    let currentMock: MockConfig | null = null;
+    if (mockRes.ok) {
+      currentMock = ((await mockRes.json()) as { mock: MockConfig | null }).mock;
+      setMock(currentMock);
+    }
+    if (currentMock) {
+      const lbRes = await fetch(`/api/mock/${currentMock.id}/leaderboard?limit=100`, { cache: "no-store" });
+      if (lbRes.ok) setLeaderboard(((await lbRes.json()) as { leaderboard: LeaderboardEntry[] }).leaderboard);
+    } else {
+      setLeaderboard([]);
+    }
     if (can("mock_manage")) {
       const subRes = await fetch("/api/curriculum/subjects", { cache: "no-store" });
       if (subRes.ok) {
@@ -148,8 +161,8 @@ export function BravoConsoleClient() {
 
   async function publish() {
     try {
-      const res = await authedFetch("/api/mock/create", {
-        method: "POST",
+      const res = await authedFetch(editingMockId ? `/api/mock/${editingMockId}` : "/api/mock/create", {
+        method: editingMockId ? "PATCH" : "POST",
         body: JSON.stringify({
           title: form.title,
           examId: form.examId,
@@ -163,7 +176,8 @@ export function BravoConsoleClient() {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; mock?: MockConfig };
       if (!res.ok) throw new Error(data.error ?? "Failed to publish mock");
-      toast({ title: "Mock published", description: data.mock?.title });
+      toast({ title: editingMockId ? "Mock updated" : "Mock published", description: data.mock?.title });
+      setEditingMockId(null);
       setForm((f) => ({ ...f, examId: makeExamId(), seed: makeSeed(), title: "" }));
       await load();
     } catch (e) {
@@ -179,6 +193,44 @@ export function BravoConsoleClient() {
       await load();
     } catch (e) {
       toast({ title: "End failed", description: e instanceof Error ? e.message : "Unknown error" });
+    }
+  }
+
+  function startEdit(m: MockConfig) {
+    setEditingMockId(m.id);
+    setForm({
+      title: m.title,
+      examId: m.examId,
+      durationMin: String(m.durationMin),
+      editionYear: String(m.editionYear),
+      seed: m.seed,
+      startsAt: m.startsAt.slice(0, 16),
+      closeAt: m.closeAt.slice(0, 16),
+    });
+    setAllSubjects(!m.subjectIds);
+    setSelectedSubjects(m.subjectIds ?? []);
+  }
+
+  async function deleteMock(id: string) {
+    try {
+      const res = await authedFetch(`/api/mock/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(data.message ?? data.error ?? "Failed to delete mock");
+      toast({ title: "Mock deleted" });
+      await load();
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error" });
+    }
+  }
+
+  async function removeReport(id: string) {
+    try {
+      const res = await authedFetch(`/api/reports/${encodeURIComponent(id)}/delete`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to delete report");
+      toast({ title: "Report deleted" });
+      await load();
+    } catch (e) {
+      toast({ title: "Delete failed", description: e instanceof Error ? e.message : "Unknown error" });
     }
   }
 
@@ -294,7 +346,13 @@ export function BravoConsoleClient() {
                   <CardTitle>Current mock event</CardTitle>
                   <CardDescription>{mock ? "Live now — clients can start within the window." : "No active mock event."}</CardDescription>
                 </div>
-                {mock && <Button variant="destructive" size="sm" onClick={endMock}>End now</Button>}
+                {mock && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => startEdit(mock)}>Edit</Button>
+                    <Button variant="destructive" size="sm" onClick={endMock}>End now</Button>
+                    <Button variant="outline" size="sm" onClick={() => deleteMock(mock.id)}>Delete</Button>
+                  </div>
+                )}
               </CardHeader>
               {mock && (
                 <CardContent className="flex flex-wrap gap-2 text-sm">
@@ -312,8 +370,12 @@ export function BravoConsoleClient() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Publish mock event</CardTitle>
-                <CardDescription>Scheduled or immediate. closeAt is a hard cutoff.</CardDescription>
+                <CardTitle>{editingMockId ? "Edit mock event" : "Publish mock event"}</CardTitle>
+                <CardDescription>
+                  {editingMockId
+                    ? "Editable only before the event starts and while no scores exist."
+                    : "Scheduled or immediate. closeAt is a hard cutoff."}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -362,7 +424,42 @@ export function BravoConsoleClient() {
                     </div>
                   )}
                 </div>
-                <Button onClick={publish}>Publish event</Button>
+                <div className="flex gap-2">
+                  <Button onClick={publish}>{editingMockId ? "Save changes" : "Publish event"}</Button>
+                  {editingMockId && <Button variant="outline" onClick={() => { setEditingMockId(null); setForm((f) => ({ ...f, examId: makeExamId(), seed: makeSeed(), title: "" })); }}>Cancel</Button>}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Results &amp; ranking</CardTitle>
+                <CardDescription>Submitted scores for the current event (leaderboard-safe fields only).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!mock ? (
+                  <p className="text-sm text-black/60 dark:text-white/60">No active event.</p>
+                ) : leaderboard.length === 0 ? (
+                  <p className="text-sm text-black/60 dark:text-white/60">No scores submitted yet.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-black/10 text-left dark:border-white/10">
+                        <th className="py-2 pr-4">#</th><th className="py-2 pr-4">Product ID</th><th className="py-2 pr-4">Score</th><th className="py-2">Submitted</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboard.map((e, i) => (
+                        <tr key={e.productId} className="border-b border-black/5 dark:border-white/5">
+                          <td className="py-2 pr-4">{i + 1}</td>
+                          <td className="py-2 pr-4 font-mono text-xs">{e.productId}</td>
+                          <td className="py-2 pr-4 font-semibold">{e.score}/{e.total}</td>
+                          <td className="py-2 text-xs text-black/50 dark:text-white/50">{e.submittedAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -408,11 +505,11 @@ export function BravoConsoleClient() {
                             {r.year ? ` · ${r.year}` : ""}{r.model ? ` · ${r.model}` : ""} · {r.product_id}
                           </p>
                         )}
-                        {r.status === "open" ? (
-                          <Button size="sm" className="mt-2" onClick={() => resolve(r.id)}>Mark reviewed</Button>
-                        ) : (
-                          <p className="mt-2 text-xs text-black/50 dark:text-white/50">Resolved {r.resolved_at}</p>
-                        )}
+                        <div className="mt-2 flex gap-2">
+                          {r.status === "open" && <Button size="sm" onClick={() => resolve(r.id)}>Mark reviewed</Button>}
+                          <Button size="sm" variant="outline" onClick={() => removeReport(r.id)}>Delete</Button>
+                        </div>
+                        {r.status === "resolved" && <p className="mt-2 text-xs text-black/50 dark:text-white/50">Resolved {r.resolved_at}</p>}
                       </li>
                     ))}
                   </ul>

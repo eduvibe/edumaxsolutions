@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { BravoServiceError } from "./orders";
 import { BravoConfigError } from "./config";
 
-const NO_STORE = { "Cache-Control": "no-store, max-age=0" };
+const NO_STORE = {
+  "Cache-Control": "no-store, max-age=0",
+  // Lets us verify which git commit a deployment is serving (Vercel injects this at build time).
+  ...(process.env.VERCEL_GIT_COMMIT_SHA ? { "X-Deploy-Sha": process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7) } : {}),
+};
 
 export function jsonNoStore(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return NextResponse.json(body, { status, headers: { ...NO_STORE, ...extraHeaders } });

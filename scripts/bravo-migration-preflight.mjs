@@ -4,7 +4,10 @@
 // Usage:  TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... node scripts/bravo-migration-preflight.mjs
 // Exit codes: 0 = ledger and schema consistent with the migration files; 2 = reconciliation needed before db:migrate;
 //             1 = could not run the check.
-import "dotenv/config";
+import dotenv from "dotenv";
+// Next.js convention: .env.local first (git-ignored, per-developer), then .env.
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 import { createClient } from "@libsql/client";
 import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";

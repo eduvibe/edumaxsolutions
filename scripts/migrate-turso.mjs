@@ -4,7 +4,10 @@
 //   TURSO_DATABASE_URL=libsql://<db>-<org>.turso.io
 //   TURSO_AUTH_TOKEN=...
 // Secrets are read from the environment only and never printed.
-import "dotenv/config";
+import dotenv from "dotenv";
+// Next.js convention: .env.local first (git-ignored, per-developer), then .env.
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 import { createClient } from "@libsql/client";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

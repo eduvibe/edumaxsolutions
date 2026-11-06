@@ -274,6 +274,17 @@ export async function getLeaderboard(db: Client, eventId: string, limit = 100): 
   return entries;
 }
 
+export type MockEventSummary = MockEventConfig & { status: "active" | "ended" };
+
+/** All events, newest first — lets clients show past mocks and their results after they end. */
+export async function listMockEvents(db: Client, limit = 50): Promise<MockEventSummary[]> {
+  const result = await db.execute({
+    sql: "SELECT * FROM bravo_mock_events ORDER BY created_at DESC LIMIT ?",
+    args: [Math.min(Math.max(1, limit), 200)],
+  });
+  return (result.rows as unknown as MockEventDbRow[]).map((row) => ({ ...rowToConfig(row), status: row.status }));
+}
+
 export async function getMockEvent(db: Client, id: string): Promise<(MockEventConfig & { status: string }) | null> {
   const result = await db.execute({ sql: "SELECT * FROM bravo_mock_events WHERE id = ?", args: [id] });
   const row = result.rows[0] as unknown as MockEventDbRow | undefined;

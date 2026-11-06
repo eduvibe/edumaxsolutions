@@ -16,6 +16,8 @@ import {
   createMockEvent,
   updateMockEvent,
   deleteMockEvent,
+  listMockEvents,
+  getMockEvent,
   endCurrentMock,
   getCurrentMock,
   getLeaderboard,
@@ -209,6 +211,36 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
     if (!diff.accepted) expect(diff.code).toBe("duplicate_score");
     const board = await getLeaderboard(db, eventId, 10);
     expect(board[0].score).toBe(30); // original not overwritten
+  });
+});
+
+describe("mock history and ended-event access", () => {
+  it("history lists ended events and GET by id + leaderboard work after the mock ends", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 12, total: 180, startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z") }, NOW);
+    await endCurrentMock(db, NOW);
+
+    // current shows none, but history and by-id still expose the ended mock
+    expect(await getCurrentMock(db)).toBeNull();
+    const history = await listMockEvents(db, 50);
+    expect(history.find((e) => e.id === event.id)?.status).toBe("ended");
+    const byId = await getMockEvent(db, event.id);
+    expect(byId?.status).toBe("ended");
+    expect(byId?.editionYear).toBe(2026);
+    const board = await getLeaderboard(db, event.id, 10);
+    expect(board[0]).toMatchObject({ productId: VALID_PRODUCT_ID, score: 12, total: 180 });
+
+    // routes
+    const histRoute = (await import("@/app/api/mock/history/route")).GET;
+    const histRes = await histRoute(new Request("https://site.test/api/mock/history?limit=10"));
+    expect(histRes.status).toBe(200);
+    expect(histRes.headers.get("access-control-allow-origin")).toBe("*");
+    const idRoute = await import("@/app/api/mock/[id]/route");
+    const getRes = await idRoute.GET(new Request("https://site.test/api/mock/x"), { params: Promise.resolve({ id: event.id }) });
+    expect(getRes.status).toBe(200);
+    expect(((await getRes.json()) as { mock: { status: string } }).mock.status).toBe("ended");
+    const missing = await idRoute.GET(new Request("https://site.test/api/mock/x"), { params: Promise.resolve({ id: "nope" }) });
+    expect(missing.status).toBe(404);
   });
 });
 

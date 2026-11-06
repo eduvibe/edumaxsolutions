@@ -3,10 +3,24 @@
 import { requireBravoStaff } from "@/lib/bravo/staff";
 import { readJsonObject, jsonNoStore } from "@/lib/bravo/http";
 import { getBravoDb } from "@/lib/bravo/db";
-import { updateMockEvent, deleteMockEvent, validateMockConfig, MockValidationError } from "@/lib/bravo/mock";
+import { updateMockEvent, deleteMockEvent, getMockEvent, validateMockConfig, MockValidationError } from "@/lib/bravo/mock";
+import { CORS_HEADERS, corsPreflight } from "@/lib/bravo/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+export async function OPTIONS() {
+  return corsPreflight();
+}
+
+// GET /api/mock/:id — public configuration of a known event, including ended ones,
+// so students can revisit a finished central mock (with its leaderboard).
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const event = await getMockEvent(getBravoDb(), decodeURIComponent(id));
+  if (!event) return jsonNoStore({ error: "not_found", message: "Unknown mock event id" }, 404, CORS_HEADERS);
+  return jsonNoStore({ mock: event }, 200, CORS_HEADERS);
+}
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireBravoStaff(req, getBravoDb(), "mock_manage");

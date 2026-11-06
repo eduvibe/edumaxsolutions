@@ -104,6 +104,23 @@ export function sanitizeProfile(value: unknown): ScoreProfile {
   return out;
 }
 
+/**
+ * Extracts the candidate profile from a score payload: the `profile` object plus
+ * top-level `phone` / `email` / `contact` fields (contact formatted as "phone · email").
+ */
+export function extractProfile(body: Record<string, unknown>): ScoreProfile {
+  const out = sanitizeProfile(body.profile);
+  const top = sanitizeProfile({ name: undefined, email: body.email, phone: body.phone, state: undefined, school: undefined });
+  if (top.email) out.email = top.email;
+  if (top.phone) out.phone = top.phone;
+  if (typeof body.contact === "string") {
+    const [phone, email] = body.contact.split(/[·|]/).map((x) => x.trim());
+    if (phone && !out.phone) out.phone = phone.slice(0, PROFILE_FIELDS.phone);
+    if (email && !out.email) out.email = email.slice(0, PROFILE_FIELDS.email);
+  }
+  return out;
+}
+
 /** Merges non-empty profile details; never overwrites with empty values. */
 function mergeProfile(existing: ScoreProfile, incoming: ScoreProfile): ScoreProfile {
   const merged: ScoreProfile = { ...existing };
@@ -290,7 +307,7 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
     return { accepted: false, code: "invalid_window", message: "endedAt must be at/after startedAt" };
   }
 
-  const profile = sanitizeProfile(body.profile);
+  const profile = extractProfile(body);
 
   // One row per (event, product). Best score wins; retries merge profile details without
   // touching the best score, rank, or its submission time.

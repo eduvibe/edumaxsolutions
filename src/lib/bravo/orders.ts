@@ -355,6 +355,7 @@ export type PublicOrderStatus = {
   checkoutExpired: boolean;
   createdAt: string;
   paidAt: string | null;
+  editionYear: number | null;
   emailSent: boolean;
   /** Present only when status === "fulfilled" (payment verified and key issued). */
   activationKey: string | null;
@@ -383,6 +384,7 @@ async function toPublicStatus(deps: BravoDeps, order: OrderRow): Promise<PublicO
     checkoutExpired: expired,
     createdAt: order.created_at,
     paidAt: order.paid_at,
+    editionYear: order.edition_year === null || order.edition_year === undefined ? null : Number(order.edition_year),
     emailSent: key?.email_sent_at != null,
     activationKey: key?.activation_key ?? null,
     issuedAt: key?.issued_at ?? null,

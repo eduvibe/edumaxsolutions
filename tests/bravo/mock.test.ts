@@ -301,6 +301,23 @@ describe("leaderboard privacy", () => {
     expect(JSON.stringify(board[0])).not.toMatch(/ada@example|0801|YDR9/);
   });
 
+  it('maps top-level phone/email/contact into the protected profile', async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    const r = await submitMockScore(db, event.id, {
+      productId: VALID_PRODUCT_ID, activationKey: "k", score: 20, total: 180,
+      startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
+      email: "top@example.com", phone: "09099999999", contact: "08011112222 | contact@example.com",
+      profile: { name: "Bee" },
+    }, NOW);
+    expect(r.accepted).toBe(true);
+    const results = await getStaffResults(db, event.id, 10);
+    // profile object wins over top-level; contact fills gaps
+    expect(results[0].profile).toMatchObject({ name: "Bee", email: "top@example.com", phone: "09099999999" });
+    const board = await getLeaderboard(db, event.id, 10);
+    expect(board[0].label).toBe("Bee");
+    expect(JSON.stringify(board[0])).not.toMatch(/example\.com|0901|0801/);
+  });
+
   it("accepts submissions with no profile at all", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
     const r = await submitMockScore(db, event.id, {

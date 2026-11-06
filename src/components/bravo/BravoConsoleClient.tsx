@@ -186,8 +186,8 @@ export function BravoConsoleClient() {
           closeAt: toIso(form.closeAt),
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; mock?: MockConfig };
-      if (!res.ok) throw new Error(data.error ?? "Failed to publish mock");
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string; mock?: MockConfig };
+      if (!res.ok) throw new Error(data.message ?? data.error ?? "Failed to publish mock");
       toast({ title: editingMockId ? "Mock updated" : "Mock published", description: data.mock?.title });
       setEditingMockId(null);
       setForm((f) => ({ ...f, examId: makeExamId(), seed: makeSeed(), title: "" }));
@@ -411,7 +411,23 @@ export function BravoConsoleClient() {
                       The seed deterministically shuffles/selects questions from those already installed in the app, so every student gets a reproducible paper for this event.
                     </p>
                   </div>
-                  <div><Label>Starts at</Label><Input type="datetime-local" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></div>
+                  <div>
+                    <Label>Starts at</Label>
+                    <Input
+                      type="datetime-local"
+                      value={form.startsAt}
+                      onChange={(e) => {
+                        const startsAt = e.target.value;
+                        setForm((f) => {
+                          // suggest close = start + duration to avoid invalid windows
+                          const dur = Number(f.durationMin) || 60;
+                          const d = new Date(startsAt);
+                          const closeAt = Number.isNaN(d.getTime()) ? f.closeAt : new Date(d.getTime() + dur * 60000).toISOString().slice(0, 16);
+                          return { ...f, startsAt, closeAt };
+                        });
+                      }}
+                    />
+                  </div>
                   <div><Label>Close at (hard cutoff)</Label><Input type="datetime-local" value={form.closeAt} onChange={(e) => setForm({ ...form, closeAt: e.target.value })} /></div>
                 </div>
                 <div>

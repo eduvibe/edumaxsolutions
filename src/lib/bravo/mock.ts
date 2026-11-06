@@ -212,7 +212,7 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
   if (!ev) return { accepted: false, code: "no_active_mock", message: "Unknown mock event id" };
 
   const productId = requireString(body.productId, "productId", 40);
-  const activationKey = requireString(body.activationKey, "activationKey", 120);
+  const activationKey = requireString(body.activationKey, "activationKey", 400);
   const score = body.score;
   const total = body.total;
   if (!Number.isInteger(score) || !Number.isInteger(total) || (score as number) < 0 || (total as number) <= 0 || (score as number) > (total as number)) {

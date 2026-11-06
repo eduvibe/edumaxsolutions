@@ -74,6 +74,50 @@ function parseTimestamp(value: unknown, field: string): string {
   return requireIso(value, field);
 }
 
+export type ScoreProfile = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  state?: string;
+  school?: string;
+};
+
+const PROFILE_FIELDS: Record<keyof ScoreProfile, number> = {
+  name: 80,
+  email: 120,
+  phone: 30,
+  state: 60,
+  school: 120,
+};
+
+/** Sanitizes Bravo's optional profile object: allow-listed fields only, trimmed, length-capped, empties omitted. */
+export function sanitizeProfile(value: unknown): ScoreProfile {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const input = value as Record<string, unknown>;
+  const out: ScoreProfile = {};
+  for (const [field, max] of Object.entries(PROFILE_FIELDS) as [keyof ScoreProfile, number][]) {
+    const raw = input[field];
+    if (typeof raw !== "string") continue;
+    const v = raw.trim().slice(0, max);
+    if (v) out[field] = v;
+  }
+  return out;
+}
+
+/** Merges non-empty profile details; never overwrites with empty values. */
+function mergeProfile(existing: ScoreProfile, incoming: ScoreProfile): ScoreProfile {
+  const merged: ScoreProfile = { ...existing };
+  for (const [k, v] of Object.entries(incoming) as [keyof ScoreProfile, string][]) {
+    if (v) merged[k] = v;
+  }
+  return merged;
+}
+
+function maskProductId(productId: string): string {
+  if (productId.length <= 8) return "****";
+  return `${productId.slice(0, 4)}****${productId.slice(-4)}`;
+}
+
 /** Validates the staff-supplied event configuration (same fields as the Bravo Manager page). */
 export function validateMockConfig(body: Record<string, unknown>): Omit<MockEventConfig, "id"> {
   const title = requireString(body.title, "title", 200);
@@ -246,52 +290,132 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
     return { accepted: false, code: "invalid_window", message: "endedAt must be at/after startedAt" };
   }
 
-  // Idempotent per (event, product): check existing first. A retry of the identical accepted
-  // submission is acknowledged with the original id; a different one never overwrites.
+  const profile = sanitizeProfile(body.profile);
+
+  // One row per (event, product). Best score wins; retries merge profile details without
+  // touching the best score, rank, or its submission time.
   const existing = await db.execute({
-    sql: "SELECT id, score, total, started_at, ended_at FROM bravo_mock_scores WHERE event_id = ? AND product_id = ?",
+    sql: `SELECT id, score, total, started_at, ended_at, submitted_at, profile_name, profile_email, profile_phone, profile_state, profile_school
+          FROM bravo_mock_scores WHERE event_id = ? AND product_id = ?`,
     args: [eventId, productId],
   });
-  const prior = existing.rows[0] as unknown as { id: string; score: number; total: number; started_at: string; ended_at: string } | undefined;
+  const prior = existing.rows[0] as unknown as {
+    id: string; score: number; total: number; started_at: string; ended_at: string; submitted_at: string;
+    profile_name: string | null; profile_email: string | null; profile_phone: string | null;
+    profile_state: string | null; profile_school: string | null;
+  } | undefined;
+
   if (prior) {
     const identical = prior.score === score && prior.total === total && prior.started_at === startedAt && prior.ended_at === endedAt;
-    if (identical) return { accepted: true, id: prior.id, duplicate: true };
-    return { accepted: false, code: "duplicate_score", message: "A different score was already accepted for this product on this event" };
+    const merged = mergeProfile(
+      { name: prior.profile_name ?? undefined, email: prior.profile_email ?? undefined, phone: prior.profile_phone ?? undefined, state: prior.profile_state ?? undefined, school: prior.profile_school ?? undefined },
+      profile
+    );
+    if (identical && Object.keys(profile).length === 0) return { accepted: true, id: prior.id, duplicate: true };
+    if ((score as number) > prior.score) {
+      // new best score: replace score/timing, keep merged profile
+      await db.execute({
+        sql: `UPDATE bravo_mock_scores SET score = ?, total = ?, started_at = ?, ended_at = ?, submitted_at = ?,
+              profile_name = ?, profile_email = ?, profile_phone = ?, profile_state = ?, profile_school = ? WHERE id = ?`,
+        args: [score as number, total as number, startedAt, endedAt, now, merged.name ?? null, merged.email ?? null, merged.phone ?? null, merged.state ?? null, merged.school ?? null, prior.id],
+      });
+    } else {
+      // lower/equal score: keep best score and its submitted_at; merge any new profile details only
+      await db.execute({
+        sql: `UPDATE bravo_mock_scores SET profile_name = ?, profile_email = ?, profile_phone = ?, profile_state = ?, profile_school = ? WHERE id = ?`,
+        args: [merged.name ?? null, merged.email ?? null, merged.phone ?? null, merged.state ?? null, merged.school ?? null, prior.id],
+      });
+    }
+    return { accepted: true, id: prior.id, duplicate: true };
   }
 
   const id = randomUUID();
   await db.execute({
-    sql: `INSERT OR IGNORE INTO bravo_mock_scores (id, event_id, product_id, score, total, started_at, ended_at, submitted_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, eventId, productId, score as number, total as number, startedAt, endedAt, now],
+    sql: `INSERT OR IGNORE INTO bravo_mock_scores (id, event_id, product_id, score, total, started_at, ended_at, submitted_at,
+          profile_name, profile_email, profile_phone, profile_state, profile_school)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, eventId, productId, score as number, total as number, startedAt, endedAt, now,
+      profile.name ?? null, profile.email ?? null, profile.phone ?? null, profile.state ?? null, profile.school ?? null],
   });
   return { accepted: true, id };
 }
 
 export type LeaderboardEntry = {
-  productId: string;
+  /** Anonymous label: profile name if present, otherwise a masked product id. Never the raw product id. */
+  label: string;
   score: number;
   total: number;
   submittedAt: string;
 };
 
-/** Leaderboard-safe fields only: productId and score. Never email/phone/contact data. */
+type ScoreRow = ScoreProfile & {
+  productId: string;
+  score: number;
+  total: number;
+  startedAt: string;
+  endedAt: string;
+  submittedAt: string;
+};
+
+function rowToScore(r: Record<string, unknown>): ScoreRow {
+  return {
+    productId: r.product_id as string,
+    score: r.score as number,
+    total: r.total as number,
+    startedAt: r.started_at as string,
+    endedAt: r.ended_at as string,
+    submittedAt: r.submitted_at as string,
+    name: (r.profile_name as string) ?? undefined,
+    email: (r.profile_email as string) ?? undefined,
+    phone: (r.profile_phone as string) ?? undefined,
+    state: (r.profile_state as string) ?? undefined,
+    school: (r.profile_school as string) ?? undefined,
+  };
+}
+
+/** Public leaderboard: masked labels only — never raw product id, email, or phone. */
 export async function getLeaderboard(db: Client, eventId: string, limit = 100): Promise<LeaderboardEntry[]> {
-  // Best score per Product ID (one row per product), highest first.
   const result = await db.execute({
-    sql: `SELECT product_id AS productId, score, total, submitted_at AS submittedAt
-          FROM bravo_mock_scores WHERE event_id = ? ORDER BY score DESC, submitted_at ASC`,
+    sql: `SELECT product_id, profile_name, score, total, submitted_at FROM bravo_mock_scores
+          WHERE event_id = ? ORDER BY score DESC, submitted_at ASC`,
     args: [eventId],
   });
-  const seen = new Set<string>();
   const entries: LeaderboardEntry[] = [];
-  for (const row of result.rows as unknown as LeaderboardEntry[]) {
-    if (seen.has(row.productId)) continue;
-    seen.add(row.productId);
-    entries.push(row);
+  for (const r of result.rows as unknown as Record<string, unknown>[]) {
+    const row = rowToScore({ ...r, started_at: "", ended_at: "" });
+    entries.push({
+      label: row.name ?? maskProductId(row.productId),
+      score: row.score,
+      total: row.total,
+      submittedAt: row.submittedAt,
+    });
     if (entries.length >= Math.min(Math.max(1, limit), 500)) break;
   }
   return entries;
+}
+
+export type StaffResultEntry = LeaderboardEntry & {
+  productId: string;
+  profile: ScoreProfile;
+};
+
+/** Staff-only results: includes raw product id and full profile for contacting reward recipients. */
+export async function getStaffResults(db: Client, eventId: string, limit = 200): Promise<StaffResultEntry[]> {
+  const result = await db.execute({
+    sql: `SELECT * FROM bravo_mock_scores WHERE event_id = ? ORDER BY score DESC, submitted_at ASC`,
+    args: [eventId],
+  });
+  return (result.rows as unknown as Record<string, unknown>[]).slice(0, Math.min(Math.max(1, limit), 500)).map((r) => {
+    const row = rowToScore(r);
+    return {
+      label: row.name ?? maskProductId(row.productId),
+      productId: row.productId,
+      score: row.score,
+      total: row.total,
+      submittedAt: row.submittedAt,
+      profile: { name: row.name, email: row.email, phone: row.phone, state: row.state, school: row.school },
+    };
+  });
 }
 
 export type MockEventSummary = MockEventConfig & { status: "active" | "ended" };

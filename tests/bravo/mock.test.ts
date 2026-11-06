@@ -21,12 +21,14 @@ import {
   endCurrentMock,
   getCurrentMock,
   getLeaderboard,
+  getStaffResults,
   submitMockScore,
   validateMockConfig,
   MockValidationError,
 } from "@/lib/bravo/mock";
 
 const NOW = "2026-11-02T12:00:00.000Z";
+const maskedLabel = (pid: string) => `${pid.slice(0, 4)}****${pid.slice(-4)}`;
 const config = {
   title: "UTME Mock 1",
   examId: "utme",
@@ -207,16 +209,20 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
     expect(r.accepted).toBe(true);
   });
 
-  it("6. idempotent retry: identical resubmission acknowledged, different one rejected without overwrite", async () => {
+  it("6. idempotent retry: identical resubmission acknowledged; lower score never overwrites best, higher score becomes best", async () => {
     const first = await submitMockScore(db, eventId, base, NOW);
     expect(first.accepted).toBe(true);
     const retry = await submitMockScore(db, eventId, base, "2026-11-03T08:00:00.000Z");
     expect(retry.accepted).toBe(true);
     if (retry.accepted) expect(retry.duplicate).toBe(true);
-    const diff = await submitMockScore(db, eventId, { ...base, score: 99 }, NOW);
-    if (!diff.accepted) expect(diff.code).toBe("duplicate_score");
-    const board = await getLeaderboard(db, eventId, 10);
-    expect(board[0].score).toBe(30); // original not overwritten
+    // lower score: accepted but best score unchanged
+    const lower = await submitMockScore(db, eventId, { ...base, score: 10 }, NOW);
+    expect(lower.accepted).toBe(true);
+    expect((await getLeaderboard(db, eventId, 10))[0].score).toBe(30);
+    // higher score: becomes the best
+    const higher = await submitMockScore(db, eventId, { ...base, score: 99 }, NOW);
+    expect(higher.accepted).toBe(true);
+    expect((await getLeaderboard(db, eventId, 10))[0].score).toBe(99);
   });
 });
 
@@ -234,7 +240,8 @@ describe("mock history and ended-event access", () => {
     expect(byId?.status).toBe("ended");
     expect(byId?.editionYear).toBe(2026);
     const board = await getLeaderboard(db, event.id, 10);
-    expect(board[0]).toMatchObject({ productId: VALID_PRODUCT_ID, score: 12, total: 180 });
+    expect(board[0]).toMatchObject({ score: 12, total: 180 });
+    expect(board[0].label).toBe(maskedLabel(VALID_PRODUCT_ID));
 
     // routes
     const histRoute = (await import("@/app/api/mock/history/route")).GET;
@@ -259,10 +266,71 @@ describe("leaderboard privacy", () => {
 
     const board = await getLeaderboard(db, event.id, 10);
     expect(board).toHaveLength(2);
-    expect(board[0]).toMatchObject({ productId: VALID_PRODUCT_ID, score: 35, total: 40 });
+    expect(board[0]).toMatchObject({ score: 35, total: 40 });
     for (const entry of board) {
-      expect(Object.keys(entry).sort()).toEqual(["productId", "score", "submittedAt", "total"]);
+      expect(Object.keys(entry).sort()).toEqual(["label", "score", "submittedAt", "total"]);
+      expect(JSON.stringify(entry)).not.toContain(VALID_PRODUCT_ID); // raw id masked
+      expect(JSON.stringify(entry)).not.toMatch(/email|phone/i);
     }
+  });
+
+  it("sanitizes profiles, merges them on a lower-score retry without touching best score", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    const mk = (score: number, profile: unknown) => ({
+      productId: VALID_PRODUCT_ID, activationKey: "k", score, total: 180,
+      startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
+      profile,
+    });
+    // partial profile, plus junk fields that must be dropped
+    const first = await submitMockScore(db, event.id, mk(100, { name: "  Ada Lovelace ", email: "ada@example.com", hacker: "x", phone: " " }), NOW);
+    expect(first.accepted).toBe(true);
+    // lower score, newer profile details (phone + school), empty name must not erase existing
+    const retry = await submitMockScore(db, event.id, mk(40, { name: "", phone: "08012345678", school: "LAGOS HIGH" }), NOW);
+    expect(retry.accepted).toBe(true);
+
+    const results = await getStaffResults(db, event.id, 10);
+    expect(results).toHaveLength(1);
+    expect(results[0].score).toBe(100); // best score kept
+    expect(results[0].submittedAt).toBe(results[0].submittedAt); // unchanged best time
+    expect(results[0].profile).toMatchObject({ name: "Ada Lovelace", email: "ada@example.com", phone: "08012345678", school: "LAGOS HIGH" });
+    expect(JSON.stringify(results[0].profile)).not.toContain("hacker");
+
+    // public leaderboard shows the name as label, never email/phone/raw id
+    const board = await getLeaderboard(db, event.id, 10);
+    expect(board[0].label).toBe("Ada Lovelace");
+    expect(JSON.stringify(board[0])).not.toMatch(/ada@example|0801|YDR9/);
+  });
+
+  it("accepts submissions with no profile at all", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    const r = await submitMockScore(db, event.id, {
+      productId: VALID_PRODUCT_ID, activationKey: "k", score: 5, total: 180,
+      startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
+    }, NOW);
+    expect(r.accepted).toBe(true);
+    const board = await getLeaderboard(db, event.id, 10);
+    expect(board[0].label).toMatch(/^BCBT\*\*\*\*/); // masked id fallback
+  });
+});
+
+describe("staff results route authorization", () => {
+  const STAFF_TOKEN = "test-staff-token";
+  process.env.BRAVO_STAFF_TOKEN = STAFF_TOKEN;
+  it("rejects unauthenticated results access and returns profiles to staff", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    await submitMockScore(db, event.id, {
+      productId: VALID_PRODUCT_ID, activationKey: "k", score: 7, total: 180,
+      startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
+      profile: { name: "Grace", email: "g@x.io" },
+    }, NOW);
+    const route = (await import("@/app/api/mock/[id]/results/route")).GET;
+    const anon = await route(new Request("https://site.test/api/mock/x/results"), { params: Promise.resolve({ id: event.id }) });
+    expect(anon.status).toBe(401);
+    const authed = await route(new Request("https://site.test/api/mock/x/results", { headers: { authorization: `Bearer ${STAFF_TOKEN}` } }), { params: Promise.resolve({ id: event.id }) });
+    expect(authed.status).toBe(200);
+    const body = (await authed.json()) as { results: { productId: string; profile: { email: string } }[] };
+    expect(body.results[0].productId).toBe(VALID_PRODUCT_ID);
+    expect(body.results[0].profile.email).toBe("g@x.io");
   });
 });
 

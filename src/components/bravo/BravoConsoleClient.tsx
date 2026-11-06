@@ -43,7 +43,8 @@ type ReportRow = {
   resolved_at: string | null;
 };
 
-type LeaderboardEntry = { productId: string; score: number; total: number; submittedAt: string };
+type LeaderboardEntry = { label: string; score: number; total: number; submittedAt: string };
+type ResultEntry = LeaderboardEntry & { productId: string; profile: { name?: string; email?: string; phone?: string; state?: string; school?: string } };
 type StaffCtx = { staffId: string; name: string; permissions: string[]; isSuperAdmin: boolean };
 type StaffRow = { id: string; name: string; permissions: string[]; active: boolean; created_at: string; revoked_at: string | null };
 
@@ -81,7 +82,7 @@ export function BravoConsoleClient() {
   const [newStaffPerms, setNewStaffPerms] = useState<string[]>(["reports_review"]);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
   const [editingMockId, setEditingMockId] = useState<string | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<ResultEntry[]>([]);
   const [history, setHistory] = useState<MockEventSummary[]>([]);
   const [resultsEventId, setResultsEventId] = useState<string | null>(null);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
@@ -132,8 +133,9 @@ export function BravoConsoleClient() {
     const targetId = resultsEventId ?? currentMock?.id ?? events.find((e) => e.status === "ended")?.id ?? null;
     if (targetId) {
       if (!resultsEventId) setResultsEventId(targetId);
-      const lbRes = await fetch(`/api/mock/${targetId}/leaderboard?limit=100`, { cache: "no-store" });
-      if (lbRes.ok) setLeaderboard(((await lbRes.json()) as { leaderboard: LeaderboardEntry[] }).leaderboard);
+      // staff results (authenticated) include profile details; public leaderboard stays masked
+      const lbRes = await authedFetch(`/api/mock/${targetId}/results?limit=200`);
+      if (lbRes.ok) setLeaderboard(((await lbRes.json()) as { results: ResultEntry[] }).results);
     } else {
       setLeaderboard([]);
     }
@@ -488,15 +490,19 @@ export function BravoConsoleClient() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-black/10 text-left dark:border-white/10">
-                        <th className="py-2 pr-4">#</th><th className="py-2 pr-4">Product ID</th><th className="py-2 pr-4">Score</th><th className="py-2">Submitted</th>
+                        <th className="py-2 pr-4">#</th><th className="py-2 pr-4">Candidate</th><th className="py-2 pr-4">Product ID</th><th className="py-2 pr-4">Score</th><th className="py-2 pr-4">Contact</th><th className="py-2">Submitted</th>
                       </tr>
                     </thead>
                     <tbody>
                       {leaderboard.map((e, i) => (
                         <tr key={e.productId} className="border-b border-black/5 dark:border-white/5">
                           <td className="py-2 pr-4">{i + 1}</td>
+                          <td className="py-2 pr-4">{e.profile.name ?? e.label}</td>
                           <td className="py-2 pr-4 font-mono text-xs">{e.productId}</td>
                           <td className="py-2 pr-4 font-semibold">{e.score}/{e.total}</td>
+                          <td className="py-2 pr-4 text-xs text-black/60 dark:text-white/60">
+                            {[e.profile.email, e.profile.phone, e.profile.state, e.profile.school].filter(Boolean).join(" · ")}
+                          </td>
                           <td className="py-2 text-xs text-black/50 dark:text-white/50">{e.submittedAt}</td>
                         </tr>
                       ))}

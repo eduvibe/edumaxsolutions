@@ -26,6 +26,8 @@ type MockConfig = {
   closeAt: string;
 };
 
+type MockEventSummary = MockConfig & { status: "active" | "ended" };
+
 type ReportRow = {
   id: string;
   category: string;
@@ -80,6 +82,8 @@ export function BravoConsoleClient() {
   const [createdToken, setCreatedToken] = useState<string | null>(null);
   const [editingMockId, setEditingMockId] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [history, setHistory] = useState<MockEventSummary[]>([]);
+  const [resultsEventId, setResultsEventId] = useState<string | null>(null);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [allSubjects, setAllSubjects] = useState(true);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -119,8 +123,16 @@ export function BravoConsoleClient() {
       currentMock = ((await mockRes.json()) as { mock: MockConfig | null }).mock;
       setMock(currentMock);
     }
-    if (currentMock) {
-      const lbRes = await fetch(`/api/mock/${currentMock.id}/leaderboard?limit=100`, { cache: "no-store" });
+    const histRes = await fetch("/api/mock/history?limit=50", { cache: "no-store" });
+    let events: MockEventSummary[] = [];
+    if (histRes.ok) {
+      events = ((await histRes.json()) as { events: MockEventSummary[] }).events;
+      setHistory(events);
+    }
+    const targetId = resultsEventId ?? currentMock?.id ?? events.find((e) => e.status === "ended")?.id ?? null;
+    if (targetId) {
+      if (!resultsEventId) setResultsEventId(targetId);
+      const lbRes = await fetch(`/api/mock/${targetId}/leaderboard?limit=100`, { cache: "no-store" });
       if (lbRes.ok) setLeaderboard(((await lbRes.json()) as { leaderboard: LeaderboardEntry[] }).leaderboard);
     } else {
       setLeaderboard([]);
@@ -434,13 +446,25 @@ export function BravoConsoleClient() {
             <Card>
               <CardHeader>
                 <CardTitle>Results &amp; ranking</CardTitle>
-                <CardDescription>Submitted scores for the current event (leaderboard-safe fields only).</CardDescription>
+                <CardDescription>Scores per mock event (leaderboard-safe fields only). Pick an event to view its ranking.</CardDescription>
               </CardHeader>
-              <CardContent>
-                {!mock ? (
-                  <p className="text-sm text-black/60 dark:text-white/60">No active event.</p>
-                ) : leaderboard.length === 0 ? (
-                  <p className="text-sm text-black/60 dark:text-white/60">No scores submitted yet.</p>
+              <CardContent className="space-y-3">
+                {history.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {history.map((e) => (
+                      <Button
+                        key={e.id}
+                        size="sm"
+                        variant={resultsEventId === e.id ? "default" : "outline"}
+                        onClick={() => setResultsEventId(e.id)}
+                      >
+                        {e.title} {e.status === "ended" ? "(ended)" : "(live)"}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {leaderboard.length === 0 ? (
+                  <p className="text-sm text-black/60 dark:text-white/60">No scores submitted for this event yet.</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>

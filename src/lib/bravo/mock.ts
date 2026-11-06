@@ -45,8 +45,14 @@ function requireIso(value: unknown, field: string): string {
  * (number or numeric string) — Bravo's offline queue stores ms. Returns ISO 8601 UTC.
  */
 function parseTimestamp(value: unknown, field: string): string {
-  if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString();
-  if (typeof value === "string" && /^\d{10,14}$/.test(value.trim())) return new Date(Number(value.trim())).toISOString();
+  const asNumber = typeof value === "number" ? value : typeof value === "string" && /^\d{10,14}$/.test(value.trim()) ? Number(value.trim()) : NaN;
+  if (Number.isFinite(asNumber)) {
+    // Heuristic: values below 1e12 are Unix SECONDS, otherwise milliseconds.
+    const ms = asNumber < 1e12 ? asNumber * 1000 : asNumber;
+    const d = new Date(ms);
+    if (Number.isNaN(d.getTime())) throw new MockValidationError(`invalid_${field}`, `${field} is not a valid timestamp`);
+    return d.toISOString();
+  }
   return requireIso(value, field);
 }
 

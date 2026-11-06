@@ -201,6 +201,12 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
     if (!badScore.accepted) expect(badScore.code).toBe("invalid_score");
   });
 
+  it("accepts Unix seconds as well as milliseconds", async () => {
+    const secs = Math.floor(Date.parse("2026-11-02T09:30:00.000Z") / 1000);
+    const r = await submitMockScore(db, eventId, { ...base, startedAt: secs, endedAt: secs + 1800 }, NOW);
+    expect(r.accepted).toBe(true);
+  });
+
   it("6. idempotent retry: identical resubmission acknowledged, different one rejected without overwrite", async () => {
     const first = await submitMockScore(db, eventId, base, NOW);
     expect(first.accepted).toBe(true);

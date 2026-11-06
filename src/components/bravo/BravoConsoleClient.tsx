@@ -452,14 +452,16 @@ export function BravoConsoleClient() {
                 {history.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {history.map((e) => (
-                      <Button
-                        key={e.id}
-                        size="sm"
-                        variant={resultsEventId === e.id ? "default" : "outline"}
-                        onClick={() => setResultsEventId(e.id)}
-                      >
-                        {e.title} {e.status === "ended" ? "(ended)" : "(live)"}
-                      </Button>
+                      <span key={e.id} className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant={resultsEventId === e.id ? "default" : "outline"}
+                          onClick={() => setResultsEventId(e.id)}
+                        >
+                          {e.title} {e.status === "ended" ? "(ended)" : "(live)"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => deleteMock(e.id)}>✕</Button>
+                      </span>
                     ))}
                   </div>
                 )}

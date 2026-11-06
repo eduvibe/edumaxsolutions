@@ -4,6 +4,24 @@ import { randomUUID } from "node:crypto";
 import { verifyActivationKey } from "./vendor/license-core.js";
 import { BRAVO_ACTIVATION_PUBLIC_KEY_PEM } from "./activation-key";
 
+/**
+ * Trusted public keys for score-submission verification: the committed Bravo key always,
+ * plus an optional second key (BRAVO_ACTIVATION_PUBLIC_KEY_PEM_LOCAL) for locally issued
+ * activation keys (e.g. free student activations that never went through payment).
+ */
+function trustedPublicKeys(): string[] {
+  const local = process.env.BRAVO_ACTIVATION_PUBLIC_KEY_PEM_LOCAL?.trim();
+  return local ? [BRAVO_ACTIVATION_PUBLIC_KEY_PEM, local] : [BRAVO_ACTIVATION_PUBLIC_KEY_PEM];
+}
+
+async function verifyKeyAgainstAny(activationKey: string, productId: string): Promise<{ ok: boolean; reason?: string }> {
+  for (const publicKeyPem of trustedPublicKeys()) {
+    const check = await verifyActivationKey({ activationKey, productId, publicKeyPem });
+    if (check.ok) return { ok: true };
+  }
+  return { ok: false, reason: "no_trusted_key" };
+}
+
 export class MockValidationError extends Error {
   code: string;
   constructor(code: string, message: string) {
@@ -211,12 +229,8 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
 
   // Verify the activation key for this Product ID (offline-capable Bravo license check).
   // The key itself is never stored or logged.
-  const keyCheck = await verifyActivationKey({
-    activationKey,
-    productId,
-    publicKeyPem: BRAVO_ACTIVATION_PUBLIC_KEY_PEM,
-  });
-  if (!keyCheck.ok) return { accepted: false, code: "invalid_activation_key", message: `Activation key check failed: ${keyCheck.reason}` };
+  const keyCheck = await verifyKeyAgainstAny(activationKey, productId);
+  if (!keyCheck.ok) return { accepted: false, code: "invalid_activation_key", message: "Activation key check failed" };
 
   // Cutoff enforcement against the event's configured window (regardless of active status).
   if (Date.parse(startedAt) < Date.parse(ev.starts_at)) {

@@ -476,6 +476,7 @@ export function BravoConsoleClient() {
                         >
                           {e.title} {e.status === "ended" ? "(ended)" : "(live)"}
                         </Button>
+                        <code className="text-[10px] text-black/40 dark:text-white/40" title={e.id}>{e.id.slice(0, 8)}…</code>
                         <Button size="sm" variant="ghost" onClick={() => deleteMock(e.id)}>✕</Button>
                       </span>
                     ))}

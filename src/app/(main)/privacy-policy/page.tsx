@@ -53,10 +53,11 @@ export default function PrivacyPolicyPage() {
         <section id="overview" className="scroll-mt-24">
           <SectionHeading number="01" title="Overview" />
           <p>
-            Bravo CBT provides offline exam practice and connected services such as online activation, Central Mock,
-            and issue reporting. This notice explains what information those connected features handle and why. Information
-            used only within the offline app remains on the user&apos;s device; information is sent to EduMax when a user
-            deliberately uses a connected feature.
+            EduMax Solutions provides Bravo CBT as an offline exam-practice product with optional connected features. We do
+            not sell personal information. The offline app does not secretly collect device activity in the background; study
+            data remains on the user&apos;s device. Information is transmitted when a user deliberately activates a product,
+            makes an online payment, sets up or submits a Central Mock, contacts support, sends a report, or uses another
+            connected feature.
           </p>
         </section>
 
@@ -64,8 +65,10 @@ export default function PrivacyPolicyPage() {
           <SectionHeading number="02" title="Privacy for app and product users" />
           <h3 className="mb-2 mt-6 text-lg font-bold text-foreground">Offline use</h3>
           <p>
-            Bravo CBT is designed to work offline. Study activity and other app data that stay within the offline app remain
-            on the user&apos;s device and are not sent to EduMax simply because the app is being used offline.
+            Bravo CBT is designed to work offline. Study activity and other app data used only on the device remain there;
+            the offline app does not send background activity or usage logs. An internet connection is used when a user
+            deliberately activates a product, pays online, connects to Central Mock setup or submits a score, sends a report,
+            or contacts support.
           </p>
           <h3 className="mb-2 mt-6 text-lg font-bold text-foreground">Activation and licensing</h3>
           <p>
@@ -73,6 +76,8 @@ export default function PrivacyPolicyPage() {
             reference, payment state and, when supplied, an email address. The activation key is issued after payment is
             verified. The payment provider processes payment details; EduMax receives the payment result and transaction
             reference needed to complete the order. The full payment-card details are not required by the Bravo order API.
+            EduMax keeps licensing and order records in its database to validate existing licences and support renewal cases;
+            these records are separate from Central Mock submissions and are not removed by the mock-data cleanup.
           </p>
         </section>
 
@@ -104,14 +109,14 @@ export default function PrivacyPolicyPage() {
           <p>
             Online payments are handled through Paystack. For payment confirmation, the Bravo service stores order and
             transaction records and may use the email address supplied for an order to send its activation key through
-            Resend. Turso is used to store Bravo order, mock, and report records. These providers process information needed
-            for their respective services.
+            Resend. Bravo order, mock, and report records are stored using Turso.
           </p>
-          <h3 className="mb-2 mt-6 text-lg font-bold text-foreground">Technical and security information</h3>
+          <h3 className="mb-2 mt-6 text-lg font-bold text-foreground">Service providers</h3>
           <p>
-            Requests to connected services may be rate-limited and monitored to protect the service and investigate errors.
-            This can involve an IP address and limited request or event metadata, such as an event or order reference and an
-            error category. Activation keys and staff bearer tokens are not written to score-rejection logs.
+            Paystack handles payment processing, Resend delivers activation emails, and Turso provides the database service
+            used for Bravo order, mock, and report records. Each provider handles information it receives under its own
+            privacy terms and retention practices. EduMax does not set or control those providers&apos; independent retention
+            periods.
           </p>
         </section>
 
@@ -126,12 +131,12 @@ export default function PrivacyPolicyPage() {
             <li>protect the services, investigate faults, and prevent abuse.</li>
           </ul>
           <p>
-            Central Mock submission records are retained for 12 months from submission and then deleted from the active
-            service database. Study data that remains solely on a user&apos;s device is not held in that database.
-          </p>
-          <p className="mt-4 rounded-xl border border-border bg-muted/20 p-4 text-sm">
-            Retention periods for payment and licensing records, technical logs, and any backup copies are not specified in this
-            notice. No specific deletion time for those records is stated here.
+            Central Mock submission records, including the submitted score and profile/contact details, are kept for 12
+            months from submission and then deleted from EduMax&apos;s active mock records. This 12-month cleanup applies to
+            mock records only. Licensing and order records are kept separately to validate licences and support renewals;
+            they are not removed by the mock-data cleanup. Report submissions remain available for staff review and can be
+            resolved or deleted by authorized staff; they do not have a 12-month automatic deletion rule. Data stored only
+            on a user&apos;s device remains there.
           </p>
         </section>
 
@@ -162,11 +167,13 @@ export default function PrivacyPolicyPage() {
         <section id="disclaimer" className="scroll-mt-24">
           <SectionHeading number="08" title="Product and content disclaimer" />
           <p>
-            Bravo CBT includes past questions made publicly available for study as well as original practice questions
-            designed by EduMax Solutions. Original questions are designed to assess the same concepts, rigour, and skills
-            covered by the publicly available syllabus, and are subjected to multiple checks for accuracy, relevance, and
-            reliability. They are supplementary practice materials and do not replace the syllabus or official examination
-            guidance. We do not present original practice questions as official past-paper questions.
+            Bravo CBT is a product of EduMax Solutions and is not endorsed by or affiliated with an examination body unless
+            expressly stated. It includes examination questions made publicly available for study and original practice
+            questions designed by EduMax Solutions. Examination content remains attributable to the relevant examination
+            body or content provider. We do not knowingly include illegally obtained content. Original questions are
+            designed to assess the same concepts, rigour, and skills covered by the publicly available syllabus, and undergo
+            multiple checks for accuracy, relevance, and reliability. They are supplementary practice materials, not official
+            past-paper questions, and do not replace the syllabus or official examination guidance.
           </p>
         </section>
 

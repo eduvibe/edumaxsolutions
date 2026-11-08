@@ -1,16 +1,21 @@
-// Mock scheduling, closeAt cutoff, activation-key score validation, and leaderboard privacy.
+// Mock scheduling, closeAt cutoff, scoreClaim eligibility validation, and leaderboard privacy.
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb, VALID_PRODUCT_ID } from "./helpers";
 
-const holder = vi.hoisted(() => ({ db: null as unknown, keyOk: true }));
-vi.mock("@/lib/bravo/db", () => ({ getBravoDb: () => holder.db }));
-vi.mock("@/lib/bravo/vendor/license-core.js", async (importOriginal) => {
-  const original = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...original,
-    verifyActivationKey: async () => (holder.keyOk ? { ok: true } : { ok: false, reason: "bad_signature" }),
-  };
+const holder = vi.hoisted(() => {
+  class MockScoreClaimError extends Error {
+    constructor(readonly code: string, message: string) { super(message); }
+  }
+  return { db: null as unknown, claimOk: true, MockScoreClaimError };
 });
+vi.mock("@/lib/bravo/db", () => ({ getBravoDb: () => holder.db }));
+vi.mock("@/lib/bravo/score-claim", () => ({
+  ScoreClaimError: holder.MockScoreClaimError,
+  verifyScoreClaim: () => {
+    if (!holder.claimOk) throw new holder.MockScoreClaimError("invalid_score_claim", "bad test claim");
+    return {};
+  },
+}));
 
 import {
   createMockEvent,
@@ -28,7 +33,6 @@ import {
 } from "@/lib/bravo/mock";
 
 const NOW = "2026-11-02T12:00:00.000Z";
-const maskedLabel = (pid: string) => `${pid.slice(0, 4)}****${pid.slice(-4)}`;
 const config = {
   title: "UTME Mock 1",
   examId: "utme",
@@ -50,7 +54,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  holder.keyOk = true;
+  holder.claimOk = true;
   await db.execute("DELETE FROM bravo_mock_scores");
   await db.execute("DELETE FROM bravo_mock_events");
 });
@@ -86,7 +90,7 @@ describe("closeAt cutoff and score validation", () => {
 
   const scoreBody = (overrides: Record<string, unknown> = {}) => ({
     productId: VALID_PRODUCT_ID,
-    activationKey: "BCBTK1-TEST",
+    scoreClaim: "BCBTSC1-TEST",
     score: 30,
     total: 40,
     startedAt: "2026-11-02T09:30:00.000Z",
@@ -94,14 +98,23 @@ describe("closeAt cutoff and score validation", () => {
     ...overrides,
   });
 
-  it("accepts an in-window attempt and rejects an invalid activation key", async () => {
+  it("accepts an in-window attempt and rejects an invalid signed scoreClaim", async () => {
     const ok = await submitMockScore(db, eventId, scoreBody(), NOW);
     expect(ok.accepted).toBe(true);
 
-    holder.keyOk = false;
+    holder.claimOk = false;
     const bad = await submitMockScore(db, eventId, scoreBody({ startedAt: "2026-11-02T09:31:00.000Z" }), NOW);
     expect(bad.accepted).toBe(false);
-    if (!bad.accepted) expect(bad.code).toBe("invalid_activation_key");
+    if (!bad.accepted) expect(bad.code).toBe("invalid_score_claim");
+  });
+
+  it("rejects raw activationKey even when a scoreClaim is also present", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    const result = await submitMockScore(db, event.id, {
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", activationKey: "must-not-be-accepted",
+      score: 1, total: 1, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T09:11:00.000Z",
+    }, NOW);
+    expect(result).toMatchObject({ accepted: false, code: "raw_activation_key_rejected" });
   });
 
   it("blocks starts before startsAt, at/after closeAt, and attempts ending after closeAt", async () => {
@@ -150,7 +163,7 @@ describe("mock edit/delete lock rules", () => {
     const started = await createMockEvent(db, validateMockConfig(config), NOW);
     const lateEdit = await updateMockEvent(db, started.id, validateMockConfig(config), "2026-11-02T10:00:00.000Z");
     if (!lateEdit.ok) expect(lateEdit.code).toBe("locked");
-    await submitMockScore(db, started.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 5, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:00:00.000Z" }, NOW);
+    await submitMockScore(db, started.id, { productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 5, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:00:00.000Z" }, NOW);
     const delWithScores = await deleteMockEvent(db, started.id);
     if (!delWithScores.ok) expect(delWithScores.code).toBe("has_scores");
   });
@@ -160,7 +173,7 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
   const MS = (iso: string) => Date.parse(iso); // Bravo sends Unix ms
   const base = {
     productId: VALID_PRODUCT_ID,
-    activationKey: "BCBTK1-TEST",
+    scoreClaim: "BCBTSC1-TEST",
     score: 30,
     total: 400,
     startedAt: MS("2026-11-02T09:30:00.000Z"),
@@ -195,10 +208,10 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
   });
 
   it("5. rejects invalid activation key and invalid score", async () => {
-    holder.keyOk = false;
+    holder.claimOk = false;
     const badKey = await submitMockScore(db, eventId, base, NOW);
-    if (!badKey.accepted) expect(badKey.code).toBe("invalid_activation_key");
-    holder.keyOk = true;
+    if (!badKey.accepted) expect(badKey.code).toBe("invalid_score_claim");
+    holder.claimOk = true;
     const badScore = await submitMockScore(db, eventId, { ...base, score: 401, total: 400 }, NOW);
     if (!badScore.accepted) expect(badScore.code).toBe("invalid_score");
   });
@@ -229,7 +242,7 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
 describe("mock history and ended-event access", () => {
   it("history lists ended events and GET by id + leaderboard work after the mock ends", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
-    await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 12, total: 180, startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z") }, NOW);
+    await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 12, total: 180, startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z") }, NOW);
     await endCurrentMock(db, NOW);
 
     // current shows none, but history and by-id still expose the ended mock
@@ -240,8 +253,7 @@ describe("mock history and ended-event access", () => {
     expect(byId?.status).toBe("ended");
     expect(byId?.editionYear).toBe(2026);
     const board = await getLeaderboard(db, event.id, 10);
-    expect(board[0]).toMatchObject({ score: 12, total: 180 });
-    expect(board[0].label).toBe(maskedLabel(VALID_PRODUCT_ID));
+    expect(board[0]).toEqual({ name: "Candidate", score: 12 });
 
     // routes
     const histRoute = (await import("@/app/api/mock/history/route")).GET;
@@ -261,30 +273,29 @@ describe("leaderboard privacy", () => {
   it("exposes only leaderboard-safe fields, best score per product", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
     // one accepted score per product now; submit the best directly
-    await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, activationKey: "k", score: 35, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:10:00.000Z" }, NOW);
-    await submitMockScore(db, event.id, { productId: "BCBT-OTHER-0001", activationKey: "k", score: 20, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:10:00.000Z" }, NOW);
+    await submitMockScore(db, event.id, { productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 35, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:10:00.000Z" }, NOW);
+    await submitMockScore(db, event.id, { productId: "BCBT-AAAA-BBBB-0001", scoreClaim: "BCBTSC1-TEST", score: 20, total: 40, startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:10:00.000Z" }, NOW);
 
     const board = await getLeaderboard(db, event.id, 10);
     expect(board).toHaveLength(2);
-    expect(board[0]).toMatchObject({ score: 35, total: 40 });
+    expect(board[0]).toEqual({ name: "Candidate", score: 35 });
     for (const entry of board) {
-      expect(Object.keys(entry).sort()).toEqual(["label", "score", "submittedAt", "total"]);
-      expect(JSON.stringify(entry)).not.toContain(VALID_PRODUCT_ID); // raw id masked
-      expect(JSON.stringify(entry)).not.toMatch(/email|phone/i);
+      expect(Object.keys(entry).sort()).toEqual(["name", "score"]);
+      expect(JSON.stringify(entry)).not.toMatch(/productId|total|submittedAt|phone/i);
     }
   });
 
   it("sanitizes profiles, merges them on a lower-score retry without touching best score", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
     const mk = (score: number, profile: unknown) => ({
-      productId: VALID_PRODUCT_ID, activationKey: "k", score, total: 180,
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score, total: 180,
       startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
       profile,
     });
     // partial profile, plus junk fields that must be dropped
     const first = await submitMockScore(db, event.id, mk(100, { name: "  Ada Lovelace ", email: "ada@example.com", hacker: "x", phone: " " }), NOW);
     expect(first.accepted).toBe(true);
-    // lower score, newer profile details (phone + school), empty name must not erase existing
+    // lower score, newer phone, empty name must not erase the existing name
     const retry = await submitMockScore(db, event.id, mk(40, { name: "", phone: "08012345678", school: "LAGOS HIGH" }), NOW);
     expect(retry.accepted).toBe(true);
 
@@ -292,41 +303,52 @@ describe("leaderboard privacy", () => {
     expect(results).toHaveLength(1);
     expect(results[0].score).toBe(100); // best score kept
     expect(results[0].submittedAt).toBe(results[0].submittedAt); // unchanged best time
-    expect(results[0].profile).toMatchObject({ name: "Ada Lovelace", email: "ada@example.com", phone: "08012345678", school: "LAGOS HIGH" });
+    expect(results[0].profile).toEqual({ name: "Ada Lovelace", phone: "08012345678" });
     expect(JSON.stringify(results[0].profile)).not.toContain("hacker");
 
-    // public leaderboard shows the name as label, never email/phone/raw id
+    // public leaderboard contains only candidate name and score
     const board = await getLeaderboard(db, event.id, 10);
-    expect(board[0].label).toBe("Ada Lovelace");
-    expect(JSON.stringify(board[0])).not.toMatch(/ada@example|0801|YDR9/);
+    expect(board[0]).toEqual({ name: "Ada Lovelace", score: 100 });
+    expect(JSON.stringify(board[0])).not.toMatch(/ada@example|0801|YDR9|total|submittedAt|productId/);
   });
 
-  it('maps top-level phone/email/contact into the protected profile', async () => {
+  it("returns only name and score from the public leaderboard route", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    await submitMockScore(db, event.id, {
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 17, total: 25,
+      startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:00:00.000Z",
+      profile: { name: "Candidate Name", phone: "08012345678" },
+    }, NOW);
+    const route = (await import("@/app/api/mock/[id]/leaderboard/route")).GET;
+    const response = await route(new Request("https://site.test/api/mock/x/leaderboard"), { params: Promise.resolve({ id: event.id }) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ leaderboard: [{ name: "Candidate Name", score: 17 }] });
+  });
+
+  it("accepts profile name and phone, keeps them staff-only, and ignores extra fields", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
     const r = await submitMockScore(db, event.id, {
-      productId: VALID_PRODUCT_ID, activationKey: "k", score: 20, total: 180,
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 20, total: 180,
       startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
-      email: "top@example.com", phone: "09099999999", contact: "08011112222 | contact@example.com",
-      profile: { name: "Bee" },
+      phone: "top-level-ignored", profile: { name: "Bee", phone: "09099999999", email: "not-stored@example.com", state: "hidden" },
     }, NOW);
     expect(r.accepted).toBe(true);
     const results = await getStaffResults(db, event.id, 10);
-    // profile object wins over top-level; contact fills gaps
-    expect(results[0].profile).toMatchObject({ name: "Bee", email: "top@example.com", phone: "09099999999" });
+    expect(results[0].profile).toEqual({ name: "Bee", phone: "09099999999" });
     const board = await getLeaderboard(db, event.id, 10);
-    expect(board[0].label).toBe("Bee");
-    expect(JSON.stringify(board[0])).not.toMatch(/example\.com|0901|0801/);
+    expect(board[0]).toEqual({ name: "Bee", score: 20 });
+    expect(JSON.stringify(board[0])).not.toMatch(/0909|not-stored|productId|total|submittedAt/);
   });
 
   it("accepts submissions with no profile at all", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
     const r = await submitMockScore(db, event.id, {
-      productId: VALID_PRODUCT_ID, activationKey: "k", score: 5, total: 180,
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 5, total: 180,
       startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
     }, NOW);
     expect(r.accepted).toBe(true);
     const board = await getLeaderboard(db, event.id, 10);
-    expect(board[0].label).toMatch(/^BCBT\*\*\*\*/); // masked id fallback
+    expect(board[0]).toEqual({ name: "Candidate", score: 5 });
   });
 });
 
@@ -336,24 +358,46 @@ describe("staff results route authorization", () => {
   it("rejects unauthenticated results access and returns profiles to staff", async () => {
     const event = await createMockEvent(db, validateMockConfig(config), NOW);
     await submitMockScore(db, event.id, {
-      productId: VALID_PRODUCT_ID, activationKey: "k", score: 7, total: 180,
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 7, total: 180,
       startedAt: Date.parse("2026-11-02T09:10:00.000Z"), endedAt: Date.parse("2026-11-02T10:00:00.000Z"),
-      profile: { name: "Grace", email: "g@x.io" },
+      profile: { name: "Grace", phone: "08012345678" },
     }, NOW);
     const route = (await import("@/app/api/mock/[id]/results/route")).GET;
     const anon = await route(new Request("https://site.test/api/mock/x/results"), { params: Promise.resolve({ id: event.id }) });
     expect(anon.status).toBe(401);
     const authed = await route(new Request("https://site.test/api/mock/x/results", { headers: { authorization: `Bearer ${STAFF_TOKEN}` } }), { params: Promise.resolve({ id: event.id }) });
     expect(authed.status).toBe(200);
-    const body = (await authed.json()) as { results: { productId: string; profile: { email: string } }[] };
+    const body = (await authed.json()) as { results: { productId: string; profile: { name?: string; phone?: string } }[] };
     expect(body.results[0].productId).toBe(VALID_PRODUCT_ID);
-    expect(body.results[0].profile.email).toBe("g@x.io");
+    expect(body.results[0].profile).toEqual({ name: "Grace", phone: "08012345678" });
   });
 });
 
 describe("mock routes", () => {
   const STAFF_TOKEN = "test-staff-token";
   process.env.BRAVO_STAFF_TOKEN = STAFF_TOKEN;
+
+  it("POST /api/mock/:id/score returns the unchanged 201 success contract and rejects raw keys", async () => {
+    const event = await createMockEvent(db, validateMockConfig(config), NOW);
+    const postScore = (await import("@/app/api/mock/[id]/score/route")).POST;
+    const request = (body: Record<string, unknown>) => new Request(`https://site.test/api/mock/${event.id}/score`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const base = {
+      productId: VALID_PRODUCT_ID, scoreClaim: "BCBTSC1-TEST", score: 18, total: 25,
+      startedAt: "2026-11-02T09:10:00.000Z", endedAt: "2026-11-02T10:00:00.000Z",
+      profile: { name: "A Candidate", phone: "08012345678" },
+    };
+    const accepted = await postScore(request(base), { params: Promise.resolve({ id: event.id }) });
+    expect(accepted.status).toBe(201);
+    expect(Object.keys(await accepted.json()).sort()).toEqual(["id", "ok"]);
+
+    const rejected = await postScore(request({ ...base, activationKey: "raw-key-is-not-accepted" }), { params: Promise.resolve({ id: event.id }) });
+    expect(rejected.status).toBe(400);
+    expect((await rejected.json()).error).toBe("raw_activation_key_rejected");
+  });
 
   it("GET /api/mock/current returns {mock:null} or config; create/end require admin", async () => {
     const current = (await import("@/app/api/mock/current/route")).GET;

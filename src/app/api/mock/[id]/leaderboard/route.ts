@@ -1,4 +1,4 @@
-// GET /api/mock/:id/leaderboard — public. Leaderboard-safe fields only (productId, score, total).
+// GET /api/mock/:id/leaderboard — public. Exposes candidate name (or Candidate) and score only.
 import { jsonNoStore } from "@/lib/bravo/http";
 import { getBravoDb } from "@/lib/bravo/db";
 import { getLeaderboard } from "@/lib/bravo/mock";

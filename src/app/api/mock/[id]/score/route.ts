@@ -1,6 +1,6 @@
-// POST /api/mock/:id/score — public. Validates the activation key for the Product ID,
-// enforces startsAt/closeAt, and stores the score. Offline submissions are accepted
-// late only when the attempt started before closeAt and ended at/before closeAt.
+// POST /api/mock/:id/score — public. Verifies Bravo's signed scoreClaim for licence
+// eligibility, enforces startsAt/closeAt, and stores the score. The claim does not sign
+// score, timing, profile, or event ID. Offline submissions are accepted when timing permits.
 import { getClientIp, checkRateLimit } from "@/app/api/_lib/rateLimit";
 import { readJsonObject, jsonNoStore, CORS_HEADERS, corsPreflight } from "@/lib/bravo/http";
 import { getBravoDb } from "@/lib/bravo/db";

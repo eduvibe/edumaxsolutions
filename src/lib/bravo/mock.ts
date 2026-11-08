@@ -1,26 +1,8 @@
-// Central mock event configuration, closeAt enforcement, and activation-key-verified scores.
+// Central mock event configuration, closeAt enforcement, and signed scoreClaim eligibility.
 import type { Client } from "@libsql/client";
 import { randomUUID } from "node:crypto";
-import { verifyActivationKey } from "./vendor/license-core.js";
-import { BRAVO_ACTIVATION_PUBLIC_KEY_PEM } from "./activation-key";
-
-/**
- * Trusted public keys for score-submission verification: the committed Bravo key always,
- * plus an optional second key (BRAVO_ACTIVATION_PUBLIC_KEY_PEM_LOCAL) for locally issued
- * activation keys (e.g. free student activations that never went through payment).
- */
-function trustedPublicKeys(): string[] {
-  const local = process.env.BRAVO_ACTIVATION_PUBLIC_KEY_PEM_LOCAL?.trim();
-  return local ? [BRAVO_ACTIVATION_PUBLIC_KEY_PEM, local] : [BRAVO_ACTIVATION_PUBLIC_KEY_PEM];
-}
-
-async function verifyKeyAgainstAny(activationKey: string, productId: string): Promise<{ ok: boolean; reason?: string }> {
-  for (const publicKeyPem of trustedPublicKeys()) {
-    const check = await verifyActivationKey({ activationKey, productId, publicKeyPem });
-    if (check.ok) return { ok: true };
-  }
-  return { ok: false, reason: "no_trusted_key" };
-}
+import { normalizeProductId } from "./vendor/license-core.js";
+import { ScoreClaimError, verifyScoreClaim } from "./score-claim";
 
 export class MockValidationError extends Error {
   code: string;
@@ -76,21 +58,15 @@ function parseTimestamp(value: unknown, field: string): string {
 
 export type ScoreProfile = {
   name?: string;
-  email?: string;
   phone?: string;
-  state?: string;
-  school?: string;
 };
 
 const PROFILE_FIELDS: Record<keyof ScoreProfile, number> = {
   name: 80,
-  email: 120,
   phone: 30,
-  state: 60,
-  school: 120,
 };
 
-/** Sanitizes Bravo's optional profile object: allow-listed fields only, trimmed, length-capped, empties omitted. */
+/** Accept only the candidate name and phone that staff results are permitted to expose. */
 export function sanitizeProfile(value: unknown): ScoreProfile {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const input = value as Record<string, unknown>;
@@ -104,21 +80,9 @@ export function sanitizeProfile(value: unknown): ScoreProfile {
   return out;
 }
 
-/**
- * Extracts the candidate profile from a score payload: the `profile` object plus
- * top-level `phone` / `email` / `contact` fields (contact formatted as "phone · email").
- */
+/** Candidate name and phone are accepted only inside profile; other fields are ignored. */
 export function extractProfile(body: Record<string, unknown>): ScoreProfile {
-  const out = sanitizeProfile(body.profile);
-  const top = sanitizeProfile({ name: undefined, email: body.email, phone: body.phone, state: undefined, school: undefined });
-  if (top.email) out.email = top.email;
-  if (top.phone) out.phone = top.phone;
-  if (typeof body.contact === "string") {
-    const [phone, email] = body.contact.split(/[·|]/).map((x) => x.trim());
-    if (phone && !out.phone) out.phone = phone.slice(0, PROFILE_FIELDS.phone);
-    if (email && !out.email) out.email = email.slice(0, PROFILE_FIELDS.email);
-  }
-  return out;
+  return sanitizeProfile(body.profile);
 }
 
 /** Merges non-empty profile details; never overwrites with empty values. */
@@ -250,20 +214,20 @@ export async function endCurrentMock(db: Client, now: string): Promise<boolean> 
 
 export type ScoreSubmission = {
   productId: string;
-  activationKey: string;
+  scoreClaim: string;
   score: number;
   total: number;
   startedAt: string;
   endedAt: string;
+  profile?: ScoreProfile;
 };
 
 export type ScoreResult = { accepted: true; id: string; duplicate?: boolean } | { accepted: false; code: string; message: string };
 
 /**
- * Validates an activation key against its Product ID using the vendored Bravo
- * verification logic, enforces startsAt/closeAt, and stores the score.
- * Offline submissions are accepted late only when the validated attempt started
- * before closeAt and ended at or before closeAt.
+ * Verifies Bravo's signed scoreClaim for licence eligibility, enforces score/timing
+ * rules, and stores the score. The claim does not authenticate score, timing, profile,
+ * or event ID. Offline submissions are accepted only when the attempt fits the event window.
  */
 export async function submitMockScore(db: Client, eventId: string, body: Record<string, unknown>, now: string): Promise<ScoreResult> {
   // Look up the mock by the ID in the path — a closed/ended mock must still accept delayed
@@ -272,8 +236,12 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
   const ev = event.rows[0] as unknown as MockEventDbRow | undefined;
   if (!ev) return { accepted: false, code: "no_active_mock", message: "Unknown mock event id" };
 
-  const productId = requireString(body.productId, "productId", 40);
-  const activationKey = requireString(body.activationKey, "activationKey", 400);
+  if (Object.prototype.hasOwnProperty.call(body, "activationKey")) {
+    return { accepted: false, code: "raw_activation_key_rejected", message: "Send scoreClaim instead of activationKey" };
+  }
+  const rawProductId = requireString(body.productId, "productId", 40);
+  const productId = normalizeProductId(rawProductId);
+  if (!productId) throw new MockValidationError("invalid_product_id", "Enter a valid Bravo Product ID");
   const score = body.score;
   const total = body.total;
   if (!Number.isInteger(score) || !Number.isInteger(total) || (score as number) < 0 || (total as number) <= 0 || (score as number) > (total as number)) {
@@ -288,10 +256,18 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
     return { accepted: false, code: (e as MockValidationError).code, message: (e as Error).message };
   }
 
-  // Verify the activation key for this Product ID (offline-capable Bravo license check).
-  // The key itself is never stored or logged.
-  const keyCheck = await verifyKeyAgainstAny(activationKey, productId);
-  if (!keyCheck.ok) return { accepted: false, code: "invalid_activation_key", message: "Activation key check failed" };
+  // The signed claim proves licence eligibility only; score/timing/profile/event fields
+  // remain separately validated and are not covered by this signature.
+  try {
+    verifyScoreClaim(body.scoreClaim, productId, {
+      title: ev.title,
+      exam_id: ev.exam_id,
+      edition_year: ev.edition_year,
+    }, Date.parse(now));
+  } catch (error) {
+    if (error instanceof ScoreClaimError) return { accepted: false, code: error.code, message: error.message };
+    throw error;
+  }
 
   // Cutoff enforcement against the event's configured window (regardless of active status).
   if (Date.parse(startedAt) < Date.parse(ev.starts_at)) {
@@ -312,20 +288,19 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
   // One row per (event, product). Best score wins; retries merge profile details without
   // touching the best score, rank, or its submission time.
   const existing = await db.execute({
-    sql: `SELECT id, score, total, started_at, ended_at, submitted_at, profile_name, profile_email, profile_phone, profile_state, profile_school
+    sql: `SELECT id, score, total, started_at, ended_at, submitted_at, profile_name, profile_phone
           FROM bravo_mock_scores WHERE event_id = ? AND product_id = ?`,
     args: [eventId, productId],
   });
   const prior = existing.rows[0] as unknown as {
     id: string; score: number; total: number; started_at: string; ended_at: string; submitted_at: string;
-    profile_name: string | null; profile_email: string | null; profile_phone: string | null;
-    profile_state: string | null; profile_school: string | null;
+    profile_name: string | null; profile_phone: string | null;
   } | undefined;
 
   if (prior) {
     const identical = prior.score === score && prior.total === total && prior.started_at === startedAt && prior.ended_at === endedAt;
     const merged = mergeProfile(
-      { name: prior.profile_name ?? undefined, email: prior.profile_email ?? undefined, phone: prior.profile_phone ?? undefined, state: prior.profile_state ?? undefined, school: prior.profile_school ?? undefined },
+      { name: prior.profile_name ?? undefined, phone: prior.profile_phone ?? undefined },
       profile
     );
     if (identical && Object.keys(profile).length === 0) return { accepted: true, id: prior.id, duplicate: true };
@@ -333,14 +308,14 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
       // new best score: replace score/timing, keep merged profile
       await db.execute({
         sql: `UPDATE bravo_mock_scores SET score = ?, total = ?, started_at = ?, ended_at = ?, submitted_at = ?,
-              profile_name = ?, profile_email = ?, profile_phone = ?, profile_state = ?, profile_school = ? WHERE id = ?`,
-        args: [score as number, total as number, startedAt, endedAt, now, merged.name ?? null, merged.email ?? null, merged.phone ?? null, merged.state ?? null, merged.school ?? null, prior.id],
+              profile_name = ?, profile_phone = ? WHERE id = ?`,
+        args: [score as number, total as number, startedAt, endedAt, now, merged.name ?? null, merged.phone ?? null, prior.id],
       });
     } else {
       // lower/equal score: keep best score and its submitted_at; merge any new profile details only
       await db.execute({
-        sql: `UPDATE bravo_mock_scores SET profile_name = ?, profile_email = ?, profile_phone = ?, profile_state = ?, profile_school = ? WHERE id = ?`,
-        args: [merged.name ?? null, merged.email ?? null, merged.phone ?? null, merged.state ?? null, merged.school ?? null, prior.id],
+        sql: `UPDATE bravo_mock_scores SET profile_name = ?, profile_phone = ? WHERE id = ?`,
+        args: [merged.name ?? null, merged.phone ?? null, prior.id],
       });
     }
     return { accepted: true, id: prior.id, duplicate: true };
@@ -349,20 +324,17 @@ export async function submitMockScore(db: Client, eventId: string, body: Record<
   const id = randomUUID();
   await db.execute({
     sql: `INSERT OR IGNORE INTO bravo_mock_scores (id, event_id, product_id, score, total, started_at, ended_at, submitted_at,
-          profile_name, profile_email, profile_phone, profile_state, profile_school)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          profile_name, profile_phone)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [id, eventId, productId, score as number, total as number, startedAt, endedAt, now,
-      profile.name ?? null, profile.email ?? null, profile.phone ?? null, profile.state ?? null, profile.school ?? null],
+      profile.name ?? null, profile.phone ?? null],
   });
   return { accepted: true, id };
 }
 
 export type LeaderboardEntry = {
-  /** Anonymous label: profile name if present, otherwise a masked product id. Never the raw product id. */
-  label: string;
+  name: string;
   score: number;
-  total: number;
-  submittedAt: string;
 };
 
 type ScoreRow = ScoreProfile & {
@@ -383,36 +355,28 @@ function rowToScore(r: Record<string, unknown>): ScoreRow {
     endedAt: r.ended_at as string,
     submittedAt: r.submitted_at as string,
     name: (r.profile_name as string) ?? undefined,
-    email: (r.profile_email as string) ?? undefined,
     phone: (r.profile_phone as string) ?? undefined,
-    state: (r.profile_state as string) ?? undefined,
-    school: (r.profile_school as string) ?? undefined,
   };
 }
 
-/** Public leaderboard: masked labels only — never raw product id, email, or phone. */
+/** Public leaderboard returns only candidate name (or Candidate) and score. */
 export async function getLeaderboard(db: Client, eventId: string, limit = 100): Promise<LeaderboardEntry[]> {
   const result = await db.execute({
-    sql: `SELECT product_id, profile_name, score, total, submitted_at FROM bravo_mock_scores
+    sql: `SELECT profile_name, score FROM bravo_mock_scores
           WHERE event_id = ? ORDER BY score DESC, submitted_at ASC`,
     args: [eventId],
   });
-  const entries: LeaderboardEntry[] = [];
-  for (const r of result.rows as unknown as Record<string, unknown>[]) {
-    const row = rowToScore({ ...r, started_at: "", ended_at: "" });
-    entries.push({
-      label: row.name ?? maskProductId(row.productId),
-      score: row.score,
-      total: row.total,
-      submittedAt: row.submittedAt,
-    });
-    if (entries.length >= Math.min(Math.max(1, limit), 500)) break;
-  }
-  return entries;
+  return (result.rows as unknown as Record<string, unknown>[])
+    .slice(0, Math.min(Math.max(1, limit), 500))
+    .map((row) => ({ name: (row.profile_name as string)?.trim() || "Candidate", score: Number(row.score) }));
 }
 
-export type StaffResultEntry = LeaderboardEntry & {
+export type StaffResultEntry = {
+  label: string;
   productId: string;
+  score: number;
+  total: number;
+  submittedAt: string;
   profile: ScoreProfile;
 };
 
@@ -430,7 +394,7 @@ export async function getStaffResults(db: Client, eventId: string, limit = 200):
       score: row.score,
       total: row.total,
       submittedAt: row.submittedAt,
-      profile: { name: row.name, email: row.email, phone: row.phone, state: row.state, school: row.school },
+      profile: { name: row.name, phone: row.phone },
     };
   });
 }

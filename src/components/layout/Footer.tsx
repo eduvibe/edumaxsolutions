@@ -53,9 +53,14 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-border pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} EduMax Solutions. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4">
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} EduMax Solutions. All rights reserved.
+            </p>
+            <Link href="/privacy-policy" className="text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline">
+              Privacy notice
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -10,7 +10,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Bravo CBT — Offline JAMB & WAEC Practice | EduMax Solutions",
   description:
-    "Bravo CBT is a fully offline computer-based test app for Nigerian students. Practice JAMB UTME and WAEC SSCE past questions from 2015 to current edition — no internet required after activation.",
+    "Bravo CBT is a fully offline computer-based test app for Nigerian students. Practise JAMB UTME and WAEC SSCE past questions plus original syllabus-aligned questions checked for accuracy, relevance, and reliability — no internet required after activation.",
 };
 
 export default function BravoPage() {

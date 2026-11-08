@@ -39,9 +39,7 @@ export function BravoHero() {
             </h1>
 
             <p className="text-base md:text-[1.05rem] text-muted-foreground leading-relaxed max-w-[420px]">
-              Bravo CBT gives Nigerian students a full exam environment on their own device
-              — timed mock exams, past questions, instant scoring, and a wrong-answer
-              notebook — all without an internet connection.
+              Bravo CBT gives Nigerian students a full exam environment on their own device — timed mock exams, past questions, and original syllabus-aligned questions designed to test the same concepts, rigour, and skills. Original questions go through multiple checks for accuracy, relevance, and reliability. Instant scoring and a wrong-answer notebook work offline.
             </p>
 
             {/* CTAs — primary solid + secondary explicit-colour border */}

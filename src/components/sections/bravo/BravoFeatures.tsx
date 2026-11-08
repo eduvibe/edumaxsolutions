@@ -16,16 +16,21 @@ const capabilities = [
   },
   {
     number: "04",
+    title: "Original questions, carefully quality-checked",
+    body: "Alongside publicly available past questions, students practise with original questions designed to assess the same concepts, rigour, and skills set out in the syllabus. Each goes through multiple checks for accuracy, relevance, and reliability.",
+  },
+  {
+    number: "05",
     title: "Score ring and UTME /400 projection",
     body: "After every session a score ring shows subject-by-subject performance and projects a UTME total out of 400 — students see exactly where they stand.",
   },
   {
-    number: "05",
+    number: "06",
     title: "Automatic wrong-answer notebook",
     body: "Every question answered incorrectly is silently saved. Students revisit a focused revision list without having to note anything themselves.",
   },
   {
-    number: "06",
+    number: "07",
     title: "One activation. Zero ongoing internet.",
     body: "Install, activate once, and the app is yours. Exams, results, and the notebook stay on the device — no data, no Wi-Fi, no subscription.",
   },
@@ -69,6 +74,13 @@ export function BravoFeatures() {
             </div>
           ))}
         </div>
+
+        <aside id="disclaimer" className="mt-12 max-w-3xl border-t border-border/60 pt-6">
+          <h3 className="text-sm font-bold text-foreground">Question content disclaimer</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Bravo CBT combines publicly available past questions with original practice questions designed to assess the same concepts, rigour, and skills covered by the published syllabus. Original questions undergo multiple checks for accuracy, relevance, and reliability. They are supplementary practice materials; use the official syllabus and exam guidance as the authoritative source.
+          </p>
+        </aside>
       </div>
     </section>
   );

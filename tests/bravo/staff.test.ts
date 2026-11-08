@@ -80,7 +80,7 @@ describe("permission enforcement on routes", () => {
     expect(
       (
         await mockCreate(
-          jsonReq("https://site.test/api/mock/create", { title: "T", examId: "utme", durationMin: 60, editionYear: 2026, seed: "s", startsAt: "2026-11-02T09:00:00.000Z", closeAt: "2026-11-02T11:00:00.000Z" }, reviewer)
+          jsonReq("https://site.test/api/mock/create", { title: "T", examId: "jamb", durationMin: 60, editionYear: 2026, seed: "s", startsAt: "2026-11-02T09:00:00.000Z", closeAt: "2026-11-02T11:00:00.000Z" }, reviewer)
         )
       ).status
     ).toBe(403);
@@ -88,7 +88,7 @@ describe("permission enforcement on routes", () => {
     expect(
       (
         await mockCreate(
-          jsonReq("https://site.test/api/mock/create", { title: "T", examId: "utme", durationMin: 60, editionYear: 2026, seed: "s", startsAt: "2026-11-02T09:00:00.000Z", closeAt: "2026-11-02T11:00:00.000Z" }, manager)
+          jsonReq("https://site.test/api/mock/create", { title: "T", examId: "jamb", durationMin: 60, editionYear: 2026, seed: "s", startsAt: "2026-11-02T09:00:00.000Z", closeAt: "2026-11-02T11:00:00.000Z" }, manager)
         )
       ).status
     ).toBe(201);

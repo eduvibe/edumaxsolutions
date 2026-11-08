@@ -50,14 +50,6 @@ type StaffRow = { id: string; name: string; permissions: string[]; active: boole
 
 const ALL_PERMISSIONS = ["mock_manage", "reports_review", "reports_export"] as const;
 
-/** Auto-generated exam id, e.g. mock-20261103-a7f2. */
-function makeExamId(): string {
-  const d = new Date();
-  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  const rand = Math.random().toString(16).slice(2, 6);
-  return `mock-${ymd}-${rand}`;
-}
-
 function makeSeed(): string {
   return Math.random().toString(16).slice(2, 10);
 }
@@ -90,7 +82,7 @@ export function BravoConsoleClient() {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [form, setForm] = useState({
     title: "",
-    examId: makeExamId(),
+    examId: "jamb",
     durationMin: "60",
     editionYear: String(new Date().getFullYear()),
     seed: makeSeed(),
@@ -192,7 +184,7 @@ export function BravoConsoleClient() {
       if (!res.ok) throw new Error(data.message ?? data.error ?? "Failed to publish mock");
       toast({ title: editingMockId ? "Mock updated" : "Mock published", description: data.mock?.title });
       setEditingMockId(null);
-      setForm((f) => ({ ...f, examId: makeExamId(), seed: makeSeed(), title: "" }));
+setForm((f) => ({ ...f, examId: "jamb", seed: makeSeed(), title: "" }));
       await load();
     } catch (e) {
       toast({ title: "Publish failed", description: e instanceof Error ? e.message : "Unknown error" });
@@ -395,11 +387,16 @@ export function BravoConsoleClient() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
                   <div>
-                    <Label>Exam ID (auto-generated)</Label>
-                    <div className="flex gap-2">
-                      <Input readOnly value={form.examId} className="bg-black/5 dark:bg-white/5" />
-                      <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, examId: makeExamId() })}>New</Button>
-                    </div>
+                    <Label htmlFor="mock-exam-id">Exam family</Label>
+                    <select
+                      id="mock-exam-id"
+                      className="mt-1 h-10 w-full rounded-md border border-black/15 bg-transparent px-3 text-sm dark:border-white/15"
+                      value={form.examId}
+                      onChange={(e) => setForm({ ...form, examId: e.target.value })}
+                    >
+                      <option value="jamb">JAMB</option>
+                      <option value="waec">WAEC</option>
+                    </select>
                   </div>
                   <div><Label>Duration (min)</Label><Input type="number" value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: e.target.value })} /></div>
                   <div><Label>Edition year</Label><Input type="number" value={form.editionYear} onChange={(e) => setForm({ ...form, editionYear: e.target.value })} /></div>
@@ -456,7 +453,7 @@ export function BravoConsoleClient() {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={publish}>{editingMockId ? "Save changes" : "Publish event"}</Button>
-                  {editingMockId && <Button variant="outline" onClick={() => { setEditingMockId(null); setForm((f) => ({ ...f, examId: makeExamId(), seed: makeSeed(), title: "" })); }}>Cancel</Button>}
+                  {editingMockId && <Button variant="outline" onClick={() => { setEditingMockId(null); setForm((f) => ({ ...f, examId: "jamb", seed: makeSeed(), title: "" })); }}>Cancel</Button>}
                 </div>
               </CardContent>
             </Card>

@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS bravo_mock_events (
 
 CREATE INDEX IF NOT EXISTS bravo_mock_events_status_idx ON bravo_mock_events (status, created_at);
 
--- Mock scores, tied to an event and a verified Product ID (activation key checked server-side).
+-- Mock scores, tied to an event and a verified Product ID (signed scoreClaim checks licence eligibility server-side).
 -- started_at/ended_at are the validated attempt window; submission may arrive later (offline queue),
 -- but only when started_at < close_at AND ended_at <= close_at.
 CREATE TABLE IF NOT EXISTS bravo_mock_scores (

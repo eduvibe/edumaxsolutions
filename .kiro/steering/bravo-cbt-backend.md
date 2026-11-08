@@ -112,7 +112,7 @@ curl -X POST https://edumaxsolutions.ng/api/mock/create \
 
 - Students see a **CENTRAL MOCK LIVE** banner on the dashboard.
 - They can take it until it expires.
-- On submit the score is `POST`-ed with the activation key — the server verifies the key **offline-style with the committed public key** before accepting, so only activated installs count.
+- On submit, the score is `POST`-ed with a signed Bravo `scoreClaim` v1. The server verifies its signature with the committed public key for licence eligibility. Never send a raw `activationKey`; the claim does not authenticate the score, attempt times, profile, or mock ID.
 
 ### Leaderboard
 

@@ -5,7 +5,7 @@ import { ScoreClaimError, verifyScoreClaim, type ScoreClaimMock } from "@/lib/br
 import { VALID_PRODUCT_ID } from "./helpers";
 
 const TEST_NOW = Date.parse("2026-11-02T12:00:00.000Z");
-const mock: ScoreClaimMock = { title: "UTME Mock", exam_id: "mock-20261102-abcd", edition_year: 2026 };
+const mock: ScoreClaimMock = { title: "WAEC Mock", exam_id: "jamb", edition_year: 2026 };
 const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const publicKeyPem = publicKey.export({ type: "spki", format: "pem" }).toString();
 
@@ -47,6 +47,17 @@ function expectClaimRejected(claim: string, productId = VALID_PRODUCT_ID, target
   expect(() => verifyScoreClaim(claim, productId, target, TEST_NOW, publicKeyPem)).toThrow(ScoreClaimError);
 }
 
+function expectClaimErrorCode(claim: string, target: ScoreClaimMock, code: string) {
+  let caught: unknown;
+  try {
+    verifyScoreClaim(claim, VALID_PRODUCT_ID, target, TEST_NOW, publicKeyPem);
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(ScoreClaimError);
+  expect(caught).toMatchObject({ code });
+}
+
 describe("Bravo scoreClaim v1", () => {
   it("verifies the P-256/SHA-256 raw P1363 signature and matching Product ID", () => {
     const claim = makeClaim();
@@ -75,10 +86,19 @@ describe("Bravo scoreClaim v1", () => {
     expectClaimRejected(makeClaim({ bundle: 2 }));
   });
 
-  it("accepts BOTH for JAMB, WAEC, or ambiguous events and requires BOTH for an ambiguous event", () => {
+  it("authorizes from normalized exam_id only; a misleading title cannot override it", () => {
+    const jambMock = { ...mock, title: "WAEC nationwide mock", exam_id: "  JAMB  " };
+    const waecMock = { ...mock, title: "JAMB practice paper", exam_id: " WAEC " };
+    expect(() => verifyScoreClaim(makeClaim({ bundle: 1 }), VALID_PRODUCT_ID, jambMock, TEST_NOW, publicKeyPem)).not.toThrow();
+    expectClaimRejected(makeClaim({ bundle: 2 }), VALID_PRODUCT_ID, jambMock);
+    expect(() => verifyScoreClaim(makeClaim({ bundle: 2 }), VALID_PRODUCT_ID, waecMock, TEST_NOW, publicKeyPem)).not.toThrow();
+    expectClaimRejected(makeClaim({ bundle: 1 }), VALID_PRODUCT_ID, waecMock);
+  });
+
+  it("rejects unknown exam IDs, including both, even for a BOTH-bundle claim", () => {
     const bothClaim = makeClaim({ bundle: 3 });
-    expect(() => verifyScoreClaim(bothClaim, VALID_PRODUCT_ID, mock, TEST_NOW, publicKeyPem)).not.toThrow();
-    expect(() => verifyScoreClaim(bothClaim, VALID_PRODUCT_ID, { ...mock, title: "General Mock", exam_id: "mock-1" }, TEST_NOW, publicKeyPem)).not.toThrow();
-    expectClaimRejected(makeClaim({ bundle: 1 }), VALID_PRODUCT_ID, { ...mock, title: "WAEC Mock" });
+    for (const examId of ["both", "mock-20261102-abcd", "utme", "ssce"]) {
+      expectClaimErrorCode(bothClaim, { ...mock, title: "JAMB and WAEC Combined Mock", exam_id: examId }, "unsupported_exam_id");
+    }
   });
 });

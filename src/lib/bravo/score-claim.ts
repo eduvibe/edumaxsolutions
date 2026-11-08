@@ -85,20 +85,15 @@ function unpackPayload(bytes: Buffer): ScoreClaimPayload {
   };
 }
 
-function requiredBundleForMock(mock: ScoreClaimMock): 1 | 2 | 3 {
-  // Event IDs are generated identifiers, so use the organizer-supplied title as the
-  // family hint. Ambiguous/generic titles conservatively require the BOTH bundle.
-  const label = `${mock.title} ${mock.exam_id}`.toLowerCase();
-  const jamb = /\b(?:jamb|utme)\b/.test(label);
-  const waec = /\b(?:waec|ssce)\b/.test(label);
-  if (jamb && waec) return 3;
-  if (jamb) return 1;
-  if (waec) return 2;
-  return 3;
+function requiredBundleForMock(mock: ScoreClaimMock): 1 | 2 {
+  // Authorization is based only on the normalized schema exam ID. Titles are display text.
+  const examId = mock.exam_id.trim().toLowerCase();
+  if (examId === "jamb") return 1;
+  if (examId === "waec") return 2;
+  throw new ScoreClaimError("unsupported_exam_id", "Mock exam ID is not supported");
 }
 
-function bundleCovers(bundle: number, required: 1 | 2 | 3): boolean {
-  if (required === 3) return bundle === 3;
+function bundleCovers(bundle: number, required: 1 | 2): boolean {
   return bundle === required || bundle === 3;
 }
 

@@ -35,7 +35,7 @@ import {
 const NOW = "2026-11-02T12:00:00.000Z";
 const config = {
   title: "UTME Mock 1",
-  examId: "utme",
+  examId: "jamb",
   subjectIds: ["mathematics", "english"],
   countPerSubject: 20,
   durationMin: 60,
@@ -64,7 +64,11 @@ describe("mock scheduling", () => {
     expect(() => validateMockConfig({ ...config, closeAt: config.startsAt })).toThrow(MockValidationError);
     expect(() => validateMockConfig({ ...config, durationMin: 0 })).toThrow(MockValidationError);
     expect(() => validateMockConfig({ ...config, editionYear: 99 })).toThrow(MockValidationError);
-    expect(validateMockConfig(config).examId).toBe("utme");
+    expect(validateMockConfig(config).examId).toBe("jamb");
+    expect(validateMockConfig({ ...config, examId: " WAEC " }).examId).toBe("waec");
+    for (const examId of ["both", "utme", "mock-20261102-abcd"]) {
+      expect(() => validateMockConfig({ ...config, examId })).toThrow(MockValidationError);
+    }
   });
 
   it("publishes an event, returns it as current, and creating another ends the first", async () => {
@@ -207,7 +211,7 @@ describe("score endpoint contract (ms timestamps, closed-mock delayed sync, idem
     if (!r.accepted) expect(r.code).toBe("no_active_mock");
   });
 
-  it("5. rejects invalid activation key and invalid score", async () => {
+  it("5. rejects invalid scoreClaim and invalid score", async () => {
     holder.claimOk = false;
     const badKey = await submitMockScore(db, eventId, base, NOW);
     if (!badKey.accepted) expect(badKey.code).toBe("invalid_score_claim");
@@ -418,7 +422,7 @@ describe("mock routes", () => {
     expect(created.status).toBe(201);
     const cur = await current();
     const body = (await cur.json()) as { mock: MockConfigLike | null };
-    expect(body.mock?.examId).toBe("utme");
+    expect(body.mock?.examId).toBe("jamb");
     expect(body.mock && "closeAt" in body.mock).toBe(true);
     expect(body.mock?.editionYear).toBe(2026);
     expect(typeof body.mock?.seed).toBe("string");

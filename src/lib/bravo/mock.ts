@@ -102,7 +102,10 @@ function maskProductId(productId: string): string {
 /** Validates the staff-supplied event configuration (same fields as the Bravo Manager page). */
 export function validateMockConfig(body: Record<string, unknown>): Omit<MockEventConfig, "id"> {
   const title = requireString(body.title, "title", 200);
-  const examId = requireString(body.examId, "examId", 60);
+  const examId = requireString(body.examId, "examId", 60).toLowerCase();
+  if (examId !== "jamb" && examId !== "waec") {
+    throw new MockValidationError("invalid_examId", "examId must be jamb or waec");
+  }
   const durationMin = body.durationMin;
   if (!Number.isInteger(durationMin) || (durationMin as number) <= 0 || (durationMin as number) > 24 * 60) {
     throw new MockValidationError("invalid_durationMin", "durationMin must be a positive integer of minutes");

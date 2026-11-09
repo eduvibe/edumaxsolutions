@@ -1,5 +1,8 @@
 import { createPrivateKey, createPublicKey } from "node:crypto";
 import type { PlanId } from "./pricing";
+import { isSupportedBravoEditionYear } from "./edition";
+import { deriveActivationContentClaims, type ContentRootKeySet } from "./content-key-core";
+import type { BravoSignedReleaseKeyContext } from "./release-context";
 import {
   BUNDLE,
   normalizeProductId,
@@ -31,18 +34,21 @@ export type ActivationKeySigner = (request: ActivationKeyRequest) => Promise<str
 export class ActivationKeyUnavailableError extends Error {}
 
 /**
- * Default signer. It intentionally FAILS CLOSED: no key can be issued until the
- * non-secret Bravo `shared/license-core.js` has been vendored and wired in here.
+ * Default signer. It intentionally FAILS CLOSED until v3 issuance is wired to the
+ * protected content roots and the signed installed-release key context is verified.
  * See docs/bravo-online-payment.md ("Activation key signer").
  */
 export const unvendoredActivationKeySigner: ActivationKeySigner = async () => {
   throw new ActivationKeyUnavailableError(
-    "Activation key format (Bravo shared/license-core.js) is not vendored yet; refusing to issue keys."
+    "Bravo v3 issuance is unavailable until content roots and the signed-release key context are verified."
   );
 };
 
 export type LicenseCoreSignerOptions = {
   privateKeyPem: string;
+  contentRootKeySet: ContentRootKeySet;
+  /** Must come from the signature-verified installed release, never from env/test fixtures. */
+  releaseKeyContext: BravoSignedReleaseKeyContext;
   /** Bravo bundle: JAMB=1, WAEC=2, BOTH=3. Defaults to BOTH until orders carry a bundle. */
   bundle?: number;
   /** Used to self-check every issued key. Defaults to the committed Bravo public key. */
@@ -59,29 +65,45 @@ export function createLicenseCoreSigner(opts: LicenseCoreSignerOptions): Activat
   const publicKeyPem = opts.publicKeyPem ?? BRAVO_ACTIVATION_PUBLIC_KEY_PEM;
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
 
+  if (!opts.contentRootKeySet || !opts.releaseKeyContext) {
+    throw new ActivationKeyUnavailableError("v3 content roots and verified release context are required");
+  }
+  if (opts.contentRootKeySet.keyEpoch !== opts.releaseKeyContext.keyEpoch ||
+      opts.contentRootKeySet.rootYear !== opts.releaseKeyContext.rootYear) {
+    throw new ActivationKeyUnavailableError("content root-key context does not match the verified signed release");
+  }
+
   return async ({ productId, editionYear }) => {
     const pid = normalizeProductId(productId);
     if (!pid) throw new Error("signer received an invalid product id");
-    if (!Number.isInteger(editionYear) || editionYear < 2000 || editionYear > 2100) {
-      throw new Error("signer received an invalid editionYear");
+    if (!isSupportedBravoEditionYear(editionYear)) {
+      throw new Error("signer received an unsupported editionYear (supported bank range: 2015–2026)");
+    }
+    const claims = deriveActivationContentClaims(opts.contentRootKeySet, { editionYear, bundle });
+    if (claims.keyEpoch !== opts.releaseKeyContext.keyEpoch || claims.rootYear !== opts.releaseKeyContext.rootYear) {
+      throw new ActivationKeyUnavailableError("derived content-key context does not match the verified signed release");
     }
     const key: string = await signActivationKey({
       privateKeyPem: opts.privateKeyPem,
       productId: pid,
       bundle,
       editionYear,
+      ...claims,
       issuedAt: now(),
       expiresAt: 0,
       flags: 1,
+      includeScoreClaim: true,
     });
-    const check = await verifyActivationKey({
-      activationKey: key,
-      productId: pid,
-      publicKeyPem,
-      now: now(),
-    });
-    if (!check.ok) {
-      throw new Error(`self-check of issued key failed: ${check.reason}`);
+    const check = await verifyActivationKey({ activationKey: key, productId: pid, publicKeyPem, now: now() });
+    if (!check.ok || !check.payload || (check.payload as { version?: number }).version !== 3) {
+      throw new Error(`self-check of issued v3 key failed: ${check.reason ?? "unexpected version"}`);
+    }
+    const payload = check.payload as { keyEpoch?: number; rootYear?: number; contentKeys?: Record<string, Uint8Array>; scoreClaim?: string };
+    if (payload.keyEpoch !== claims.keyEpoch || payload.rootYear !== claims.rootYear || !payload.scoreClaim) {
+      throw new Error("self-check of issued v3 content claims failed");
+    }
+    for (const exam of Object.keys(claims.contentKeys)) {
+      if (!payload.contentKeys?.[exam]) throw new Error("self-check of issued v3 exam key failed");
     }
     return key;
   };

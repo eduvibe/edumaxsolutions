@@ -214,10 +214,21 @@ describe("edition is recorded per order", () => {
     });
   });
 
+  it("rejects editions outside the verified bank range before checkout", async () => {
+    const { deps } = await makeEnv();
+    for (const editionYear of [2014, 2027]) {
+      deps.editionYear = editionYear;
+      await expect(createPendingOrder(deps, { productId: VALID_PRODUCT_ID, plan: "first" })).rejects.toMatchObject({
+        status: 503,
+        code: "not_configured",
+      });
+    }
+  });
+
   it("signs with the edition stored on the order, even if the setting changes later", async () => {
     const { db, deps, paystack, signer } = await makeEnv();
     const order = await createCheckedOutOrder(deps, { plan: "first" }); // stored as 2026
-    deps.editionYear = 2027; // a new edition is configured before this payment is verified
+    deps.editionYear = 2025; // a different supported edition is configured before payment verification
     paystack.state.transactions.set(order.orderRef, transactionFor(order.orderRef, FIRST_KOBO));
 
     const { body, signature } = signedWebhook(chargeSuccessEvent(order.orderRef));
@@ -462,7 +473,7 @@ describe("verification mismatches never issue a key", () => {
 });
 
 describe("fail-closed key issuance", () => {
-  it("while the Bravo key format is not vendored, the webhook returns 500 and the order stays paid (no key)", async () => {
+  it("while the default signer is fail-closed, the webhook returns 500 and the order stays paid (no key)", async () => {
     const { db, deps, paystack } = await makeEnv({ signer: unvendoredActivationKeySigner } as never);
     const order = await createCheckedOutOrder(deps);
     paystack.state.transactions.set(order.orderRef, transactionFor(order.orderRef, FIRST_KOBO));
@@ -496,7 +507,7 @@ describe("fail-closed key issuance", () => {
   });
 
   it("the default signer throws a clear error and never returns a key", async () => {
-    await expect(unvendoredActivationKeySigner({ productId: VALID_PRODUCT_ID, plan: "first", orderRef: "BCBT_x", editionYear: 2026 })).rejects.toThrow(/not vendored/);
+    await expect(unvendoredActivationKeySigner({ productId: VALID_PRODUCT_ID, plan: "first", orderRef: "BCBT_x", editionYear: 2026 })).rejects.toThrow(/signed-release key context/);
   });
 });
 

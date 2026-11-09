@@ -12,6 +12,7 @@ import {
   type ActivationKeySigner,
 } from "./activation-key";
 import type { BravoDeps } from "./orders";
+import { BRAVO_SIGNED_RELEASE_KEY_CONTEXT } from "./release-context";
 
 let cached: BravoDeps | null = null;
 
@@ -22,10 +23,15 @@ export function getBravoDeps(): BravoDeps {
     assertActivationPrivateKeyMatchesPublicKey(config.activationPrivateKeyPem);
   }
 
-  // Keys are issued only when the private key is configured. Each key's edition comes from the order.
+  // Production issuance fails closed until the installed signed-release key context is verified.
+  // No env-provided epoch/year can override this source-controlled release metadata.
   let signer: ActivationKeySigner = unvendoredActivationKeySigner;
-  if (config.activationPrivateKeyPem) {
-    signer = createLicenseCoreSigner({ privateKeyPem: config.activationPrivateKeyPem });
+  if (config.activationPrivateKeyPem && config.contentRootKeySet && BRAVO_SIGNED_RELEASE_KEY_CONTEXT) {
+    signer = createLicenseCoreSigner({
+      privateKeyPem: config.activationPrivateKeyPem,
+      contentRootKeySet: config.contentRootKeySet,
+      releaseKeyContext: BRAVO_SIGNED_RELEASE_KEY_CONTEXT,
+    });
   }
 
   const db: Client = createClient({ url: config.tursoUrl, authToken: config.tursoAuthToken });

@@ -164,20 +164,23 @@ Product ID alone never grants access to an order.
 
 ## Activation key signer
 
-Keys use the format in the Bravo app's `shared/license-core.js` (ECDSA P-256 over a 20-byte payload, base32, `BCBTK1-` prefix).
-A copy is vendored at `src/lib/bravo/vendor/license-core.js` (verbatim from `eduvibe/bravo` main, commit `7feb3ca`), with types in `license-core.d.ts`.
+Bravo v3 keys use the signed content-key payload and separate minimal score claim from `shared/license-core.js` at pinned source commit `69cdfdf3948dfcfb30d67b4d0c64ec0a663ecd73`. The vendored implementation is at `src/lib/bravo/vendor/license-core.js` with matching declarations in `license-core.d.ts`. V3 activation keys use `BCBTK3-`; their score credential uses `BCBTSC1-` and contains no content keys.
 
-`createLicenseCoreSigner` (in `src/lib/bravo/activation-key.ts`) signs each key and then **verifies it against the committed public key** before returning it. A wrong private key therefore cannot reach a buyer.
+`createLicenseCoreSigner` (in `src/lib/bravo/activation-key.ts`) derives only bundle-included exam keys, signs the v3 activation and score claim with the existing vendor signing key, then self-verifies the activation against the committed public key. Score submissions continue to send only `scoreClaim`, never the full activation key.
 
-**Edition per order.** `BRAVO_EDITION_YEAR` is read when an order is created and stored on that order (`bravo_orders.edition_year`, migration `0002`). The key is signed with the order's stored edition, so changing the variable later never changes keys for orders already placed. Order creation returns `503 not_configured` while the variable is unset. Keys are issued only when `BRAVO_ACTIVATION_PRIVATE_KEY` is set.
+Content roots are loaded server-side from `BRAVO_CONTENT_ROOT_KEYS_FILE` (preferred; protected UTF-8 JSON file outside the repository) or `BRAVO_CONTENT_ROOT_KEYS_JSON` (raw JSON fallback, takes precedence if both are set). The document uses numeric `schemaVersion: 1`, `keyEpoch`, and `rootYear`, and `roots.jamb` / `roots.waec` as canonical unpadded base64url encodings of 32-byte roots. Both roots are required; root values are never returned to the browser or logged.
 
-**Editions.** The edition is the year of the app build a key unlocks. The app decides renewal versus new activation from the device, not from the key. When a new edition ships, change `BRAVO_EDITION_YEAR` before the first sale of that edition. Mock tests and question edits within the year do not need a new edition year.
+**Release context:** the installed signed release context supplied for this work is `keyEpoch: 1`, `rootYear: 2035`, pinned in `src/lib/bravo/release-context.ts`. The service compares both values with the protected root-key document before v3 issuance; mismatches fail closed. Do not replace these with test fixture metadata.
+
+**Edition per order.** `BRAVO_EDITION_YEAR` is read when an order is created and stored on that order (`bravo_orders.edition_year`, migration `0002`). The key is signed with the order's stored edition, so changing the variable later never changes keys for orders already placed. Order creation returns `503 not_configured` while the variable is unset. V3 keys require the existing signing key, protected content roots, and a verified installed-release key context; until all are present, issuance remains fail-closed.
+
+**Editions.** The edition is the year of the app build a key unlocks. Issuance accepts only the verified bank range 2015–2026 inclusive; configuration, order creation, and the signer reject anything outside it. The app decides renewal versus new activation from the device, not from the key. Mock tests and question edits within the year do not need a new edition year.
 
 Current defaults, which are product decisions and should be confirmed:
 - Bundle: `BOTH` (3) for every order. Orders do not carry a bundle yet.
 - Expiry: lifetime (`expiresAt = 0`), `flags = 1`. Keys do not expire.
 
-The committed public key matches the key pair from the Bravo repo (checked against the PEM supplied for this work).
+The committed verifier public key is the Bravo app verification key. The production issuer private-key match has not been verified; do not enable issuance or claim a key-pair match based only on the public verifier key.
 
 ## Environment variables
 
@@ -189,14 +192,16 @@ The committed public key matches the key pair from the Bravo repo (checked again
 | `RESEND_API_KEY` | server | key | key | Sensitive |
 | `EMAIL_FROM` | server | `Bravo CBT <no-reply@edumaxsolutions.ng>` | same | Domain must be verified in Resend |
 | `BRAVO_ACTIVATION_PRIVATE_KEY` | server | **leave unset** (see below) | production PKCS#8 PEM | Sensitive. Must match the committed public key |
-| `BRAVO_EDITION_YEAR` | server | `2026` (current edition) | same | Four-digit year recorded on each new order. Order creation fails while unset. Change it when a new edition ships |
+| `BRAVO_EDITION_YEAR` | server | `2026` (current edition) | same | Supported range 2015–2026. Year is recorded on each new order; creation fails while unset or unsupported |
+| `BRAVO_CONTENT_ROOT_KEYS_FILE` | server | protected test-only file outside repo | protected production secret file | Preferred root-key source; UTF-8 JSON schema documented above. Issuance also requires verified release context |
+| `BRAVO_CONTENT_ROOT_KEYS_JSON` | server | test-only JSON | production JSON only if file mounts unavailable | Raw JSON fallback; takes precedence over `_FILE`. Sensitive; never log or commit |
 | `BRAVO_SITE_URL` | server | Preview origin | `https://www.edumaxsolutions.com.ng` | Used in Paystack callback URL |
 
 No variable here uses the `NEXT_PUBLIC_` prefix. Nothing is committed to Git. `.env.example` lists the names with empty values.
 
 **Preview and the signing key.** A Preview deployment accepts test payments from anyone who can reach its URL. If it had the
 production signing key, a test-mode payment could mint a valid activation key. Leave `BRAVO_ACTIVATION_PRIVATE_KEY` unset in Preview.
-Checkout and payment verification still work there, and keys fail closed (500, retry) until the signer is wired.
+Checkout and payment verification still work there; v3 key issuance remains fail-closed (500, retry) unless the required signing key and matching protected content-root document are configured.
 
 ## Webhook URLs
 

@@ -1,6 +1,9 @@
 // Server-only configuration. Never import this from a client component.
 // Secrets are read from process.env at call time and are never logged or returned to the browser.
 
+import { BRAVO_BANK_FIRST_YEAR, BRAVO_BANK_LAST_YEAR } from "./edition";
+import { loadContentRootKeySetFromEnv, type ContentRootKeySet } from "./content-key-core";
+
 export class BravoConfigError extends Error {}
 
 export type BravoServerConfig = {
@@ -14,6 +17,8 @@ export type BravoServerConfig = {
   activationPrivateKeyPem: string | undefined;
   /** From BRAVO_EDITION_YEAR. Undefined means keys fail closed until it is set. */
   editionYear: number | undefined;
+  /** Protected server-only content roots. Null means the secret is not configured. */
+  contentRootKeySet: ContentRootKeySet | null;
   siteUrl: string;
 };
 
@@ -49,9 +54,17 @@ export function getBravoServerConfig(env: Record<string, string | undefined> = p
   let editionYear: number | undefined;
   if (editionRaw) {
     editionYear = Number(editionRaw);
-    if (!/^\d{4}$/.test(editionRaw) || editionYear < 2000 || editionYear > 2100) {
-      throw new BravoConfigError("BRAVO_EDITION_YEAR must be a four-digit year, e.g. 2025");
+    if (!/^\d{4}$/.test(editionRaw) || editionYear < BRAVO_BANK_FIRST_YEAR || editionYear > BRAVO_BANK_LAST_YEAR) {
+      throw new BravoConfigError(`BRAVO_EDITION_YEAR must be a supported bank year (${BRAVO_BANK_FIRST_YEAR}–${BRAVO_BANK_LAST_YEAR})`);
     }
+  }
+
+  let contentRootKeySet: ContentRootKeySet | null;
+  try {
+    contentRootKeySet = loadContentRootKeySetFromEnv({ env, repositoryRoot: process.cwd() });
+  } catch {
+    // Deliberately omit parser/path details so neither document contents nor secret paths leak.
+    throw new BravoConfigError("BRAVO_CONTENT_ROOT_KEYS_FILE or BRAVO_CONTENT_ROOT_KEYS_JSON is invalid or inaccessible");
   }
 
   return {
@@ -63,6 +76,7 @@ export function getBravoServerConfig(env: Record<string, string | undefined> = p
     emailFrom: required("EMAIL_FROM"),
     activationPrivateKeyPem,
     editionYear,
+    contentRootKeySet,
     siteUrl: (env.BRAVO_SITE_URL?.trim() || DEFAULT_SITE_URL).replace(/\/+$/, ""),
   };
 }

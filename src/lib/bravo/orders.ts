@@ -15,6 +15,7 @@ import { PLANS, normalizeEmail, normalizeProductId, isPlanId, maskEmail, CURRENC
 import type { PaystackClient, PaystackTransaction } from "./paystack";
 import { verifyPaystackWebhookSignature } from "./paystack";
 import type { ActivationKeySigner } from "./activation-key";
+import { isSupportedBravoEditionYear } from "./edition";
 import type { Mailer } from "./email";
 import { logBravoSignal } from "./monitoring";
 
@@ -213,7 +214,7 @@ export async function createPendingOrder(
   if (!isPlanId(input.plan)) throw new BravoServiceError(400, "invalid_plan", "Choose a valid plan");
   const email = parseOptionalEmail(input.email);
 
-  if (!deps.editionYear) {
+  if (!isSupportedBravoEditionYear(deps.editionYear)) {
     throw new BravoServiceError(503, "not_configured", "Online payment is temporarily unavailable.");
   }
   const plan = PLANS[input.plan];
